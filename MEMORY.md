@@ -8,15 +8,15 @@
 ## Scope
 
 ### Was dieses Projekt IST
-- Interaktiver **Klick-Dummy** / Concept Prototype für eine **Leapmotor Event-Aktivierung**
+- Interaktiver **spielbarer Concept Prototype** für eine **Leapmotor Event-Aktivierung**
 - Mobile-first statische Web-App für Messen, Showrooms, Pop-up-Events
 - Zeigt: Flow, Look & Feel, Interaktionskonzept, Brand-Tone
-- **Kein echtes Spiel** – keine persistente Daten, kein Backend, kein echtes Scoring
+- **Echte Mini-Game-Mechanik** mit Paddle, Ball, Block-Grid, Kollisionen und 30-Sekunden-Run
 
 ### Was dieses Projekt NICHT ist
 - Keine Produkt-App
 - Kein Multi-Player System
-- Kein echtes Leaderboard (Daten sind Fake / Mock)
+- Kein echtes persistentes Leaderboard (Daten sind Fake / Mock)
 - Keine offizielle Leapmotor-Anwendung (Brand-Approximation)
 
 ---
@@ -30,7 +30,7 @@
 | Fonts | Google Fonts CDN | Orbitron für Sporty-Display, kein lokales Asset-Management |
 | State-Management | Einfaches Objekt (`state = {}`) | Prototype-Komplexität angemessen |
 | Screens | CSS-Transitions (opacity + translateX) | Smooth, performant, kein JS-Framework nötig |
-| Gameplay | Tap-Mechanic (30s, Energy-Bar, Combo) | Niedrigschwellig, universell verständlich, funktioniert One-handed |
+| Gameplay | Breakout-/Tischtennis-Mechanik auf Canvas | Mechanik ist sofort verständlich, deutlich näher an Event-Game und Tischtennis-Narrativ |
 | Leaderboard | Fake-Daten + dynamische Einfügung | Demo-Zweck, zeigt Konzept ohne Backend |
 | Assets | Nur Emojis + CSS-Shapes | Keine Download-Abhängigkeiten, keine IP-Probleme |
 
@@ -56,16 +56,17 @@ Für **Produktion** zu ersetzen durch:
 ## Gameplay-Parameter (Tuning)
 
 ```js
-GAME_DURATION  = 30     // Sekunden – gut für Event (nicht zu lang)
-ENERGY_PER_TAP = 1.4    // Base-Energie pro Tap
-COMBO_TIMEOUT  = 700    // ms Pause → Combo Reset
-COMBO_TRIGGER  = 300    // ms zwischen Taps → Combo baut auf
-MAX_COMBO      = 5      // Maximaler Multiplikator
+GAME_DURATION     = 30   // Sekunden – gut fuer Event (nicht zu lang)
+MAX_COMBO         = 5    // Maximaler Multiplikator
+INITIAL_BALL_SPEED = moderat
+WAVE_SPEED_GAIN    = 6%  // pro abgeraeumter Welle
+GRID_SIZE          = 4x6 // kompakt fuer Mobile
 ```
 
 **Tuning-Richtlinien:**
-- `ENERGY_PER_TAP` erhöhen → einfacher (für ältere Besucher)
+- Ballgeschwindigkeit leicht senken → einfacher fuer Messe-Publikum
 - `GAME_DURATION` auf 20s senken → schnelleres Event-Throughput
+- Block-Grid kleiner halten → schnelleres Erfolgserlebnis
 - `MAX_COMBO` auf 3 senken → weniger Skill-Gap
 
 ---
@@ -99,7 +100,10 @@ MAX_COMBO      = 5      // Maximaler Multiplikator
 - `navigator.clipboard` Fallback für ältere Browser (getSelection workaround vorhanden)
 - Google Fonts CDN-Abhängigkeit → für Offline-Events: Fonts local embedden
 - Fake-Leaderboard-Daten sind hardcoded → bei echtem Event: API-Endpoint
+- Kein Resize-Handler waehrend laufendem Spiel, Rotation sollte per Restart behandelt werden
+- Nur ein Block-Treffer pro Frame, bei sehr hoher Geschwindigkeit koennen Edge-Cases auftreten
 - 2026-06-08 Hotfix: `#game-hud` explizit im Markup gesetzt, damit Countdown/Gameplay nach "Let's Race" korrekt startet
+- 2026-06-08 Mechanik-Upgrade: Canvas-Breakout ersetzt die fruehere Tap-Demo
 
 ---
 
