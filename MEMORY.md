@@ -104,6 +104,7 @@ GRID_SIZE          = 4x6 // kompakt fuer Mobile
 - Nur ein Block-Treffer pro Frame, bei sehr hoher Geschwindigkeit koennen Edge-Cases auftreten
 - 2026-06-08 Hotfix: `#game-hud` explizit im Markup gesetzt, damit Countdown/Gameplay nach "Let's Race" korrekt startet
 - 2026-06-08 Mechanik-Upgrade: Canvas-Breakout ersetzt die fruehere Tap-Demo
+- 2026-06-08 Cache-Busting fuer `css/style.css` und `js/app.js` hinzugefuegt, weil mobile Browser/GitHub-Pages-Clients teils neues HTML mit altem JS/CSS gemischt geladen haben
 
 ---
 
