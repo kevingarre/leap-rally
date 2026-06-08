@@ -178,6 +178,9 @@ function resetGameState() {
     ghostEl.style.left = '65%';
   }
 
+  const gameCarEl = document.getElementById('game-car');
+  if (gameCarEl) gameCarEl.classList.remove('boost-mode');
+
   const comboEl = document.getElementById('combo-value');
   if (comboEl) comboEl.className = 'hud-value combo-val';
 
@@ -643,11 +646,7 @@ function renderBlocks() {
       roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
       ctx.stroke();
 
-      ctx.font = `700 ${Math.max(10, Math.round(b.h * 0.52))}px 'Inter', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText('🚗', b.x + b.w / 2, b.y + b.h / 2 + 0.5);
+      drawCarBlock(b.x, b.y, b.w, b.h);
     }
     ctx.restore();
   }
@@ -860,7 +859,7 @@ function flashFullCharge() {
   const ghostEl2 = document.getElementById('ghost-car');
   const carEl = document.getElementById('game-car');
   if (carEl) {
-    carEl.textContent = '🏎️';
+    carEl.classList.add('boost-mode');     // switch to green race SVG
     carProg?.classList.add('boosting');
 
     if (ghostEl2) {
@@ -874,7 +873,7 @@ function flashFullCharge() {
 
     setTimeout(() => {
       if (!state.gameActive) return;
-      carEl.textContent = '🚗';
+      carEl.classList.remove('boost-mode'); // back to orange SUV
       carProg?.classList.remove('boosting');
     }, 1800);
   }
@@ -1057,6 +1056,48 @@ Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
 
 Kannst du meinen Leapmotor-Score schlagen?
 #LeapMotor #LeapCharge #Tischtennis #EMobility`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CAR BLOCK ICON (canvas-drawn car silhouette for targets)
+// ═══════════════════════════════════════════════════════════
+function drawCarBlock(bx, by, bw, bh) {
+  // Draw a simplified top-side car silhouette inside the block cell.
+  // Kept to a few shapes so it reads clearly even at ~14-18 px block height.
+  const cx   = bx + bw / 2;
+  const cy   = by + bh / 2;
+  const half = Math.min(bw * 0.32, bh * 0.42); // icon half-width
+  const hh   = half * 0.55;                     // icon half-height
+
+  ctx.save();
+  ctx.fillStyle    = '#FFFFFF';
+  ctx.globalAlpha  = 0.9;
+  ctx.shadowColor  = 'rgba(255,255,255,0.5)';
+  ctx.shadowBlur   = 4;
+
+  // Body rectangle (lower mass)
+  const bodyTop = cy - hh * 0.22;
+  const bodyH   = hh * 1.1;
+  roundRect(ctx, cx - half, bodyTop, half * 2, bodyH, 2);
+  ctx.fill();
+
+  // Cabin trapezoid (upper cabin)
+  ctx.beginPath();
+  ctx.moveTo(cx - half * 0.64, bodyTop);
+  ctx.lineTo(cx - half * 0.38, cy - hh);
+  ctx.lineTo(cx + half * 0.42, cy - hh);
+  ctx.lineTo(cx + half * 0.64, bodyTop);
+  ctx.closePath();
+  ctx.fill();
+
+  // Wheels (dark overlapping circles)
+  const wr = hh * 0.36;
+  ctx.globalAlpha = 0.65;
+  ctx.fillStyle   = 'rgba(10,10,28,0.85)';
+  ctx.beginPath(); ctx.arc(cx - half * 0.58, bodyTop + bodyH, wr, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + half * 0.58, bodyTop + bodyH, wr, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
 }
 
 // ═══════════════════════════════════════════════════════════

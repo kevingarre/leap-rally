@@ -1,7 +1,7 @@
 # MEMORY – LEAP RALLY Project
 
 > Projekt-lokale Entscheidungen, Scope-Definitionen und nächste Schritte.
-> Letzte Aktualisierung: 2026-06-08 (Polishing-Runde v2)
+> Letzte Aktualisierung: 2026-06-08 (Silhouetten-Runde v3)
 
 ---
 
@@ -32,7 +32,7 @@
 | Screens | CSS-Transitions (opacity + translateX) | Smooth, performant, kein JS-Framework nötig |
 | Gameplay | Breakout-/Tischtennis-Mechanik auf Canvas | Mechanik ist sofort verständlich, deutlich näher an Event-Game und Tischtennis-Narrativ |
 | Leaderboard | Fake-Daten + dynamische Einfügung | Demo-Zweck, zeigt Konzept ohne Backend |
-| Assets | Nur Emojis + CSS-Shapes | Keine Download-Abhängigkeiten, keine IP-Probleme |
+| Assets | Inline SVG-Silhouetten + CSS-Shapes | Keine Download-Abhängigkeiten, keine IP-Probleme; Fahrzeug-Silhouetten ersetzen Emojis |
 
 ---
 
@@ -73,6 +73,19 @@ FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 
 ---
 
+## Umgesetzte Silhouetten-Punkte (2026-06-08 v3)
+
+- [x] **Player-Car** als stilisierte Crossover/SUV-Silhouette (Inline SVG, 44×26px, orange #FF5500, Leapmotor-inspiriertes horizontales LED-Lichtband vorne)
+- [x] **Boost-Variante** des Player-Cars (grüne Karosserie #39FF14, Renn-Mittelstreifen, grüne LED-Akzente) – via CSS-Klasse `.boost-mode` auf `#game-car` umgeschaltet (kein textContent-Overwrite mehr)
+- [x] **Ghost-Car/Gegner** als kompakte Schrägheck-Silhouette (Inline SVG, 34×20px, blaugrau #4B5E7A), klar kleiner und farblich abgegrenzt vom Player-Car
+- [x] **Hero-Car** auf Start-Screen ebenfalls als SVG-Silhouette (64×36px Player-Car-Variante)
+- [x] **Block-Ziel-Icon** im Canvas neu: `drawCarBlock()` zeichnet eine stilisierte Fahrzeug-Silhouette (Body + Kabine + Räder als weiße Canvas-Shapes) statt `fillText('🚗')`
+- [x] `resetGameState()` entfernt `.boost-mode`-Klasse sauber beim Neustart
+- [x] Cache-Busting auf `v=20260608g` angehoben
+- [x] JS-Syntax OK (node --check); HTML-Smoke-Check OK (alle 8 Prüfpunkte grün)
+- [x] Keine User-facing Texte verändert (nur Gameplay-Visuals)
+- [x] Statisch deploybar, kein Build-Step
+
 ## Umgesetzte Polishing-Punkte (2026-06-08 v2)
 
 - [x] Texte auf Tischtennis + Leapmotor + Charge/E-Drive umgestellt (kein Rally/Rallye mehr in user-facing Text)
@@ -90,7 +103,7 @@ FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 
 ### P0 – Für Event-Einsatz notwendig
 - [ ] **Echte Brand-Assets einbauen** (Logo SVG, offizielle Farben)
-- [ ] **Fahrzeug-Illustration** (Leapmotor C10/T03 Silhouette als SVG ersetzen statt 🚗)
+- [x] **Fahrzeug-Silhouetten eingebaut** (stilisierter Crossover/SUV als Player-Car, kompakter Hatchback als Ghost-Car, beide als Inline SVG)
 - [ ] **Name-Eingabe** vor Start für echten Leaderboard-Eintrag
 - [ ] **Touch-Optimierung testen** auf echten Geräten (iOS Safari, Android Chrome)
 
@@ -122,6 +135,7 @@ FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 - 2026-06-08 Cache-Busting fuer `css/style.css` und `js/app.js` hinzugefuegt, weil mobile Browser/GitHub-Pages-Clients teils neues HTML mit altem JS/CSS gemischt geladen haben
 - 2026-06-08 Upgrade fuer bessere Wiedererkennung und Pace: Paddle als Tischtennis-Schlaeger gerendert, Spielgeschwindigkeit erhoeht, Auto-Zielbloecke mit Extra-Bonus und Full-Charge-Turbo eingebaut
 - 2026-06-08 Polishing v2: Rebranding LEAP RALLY -> LEAP CHARGE; Texte weg von Rally/Rallye, hin zu Tischtennis + Leapmotor + Charge; Ghost-Car/Gegner auf Track mit Overtake-Animation bei Turbo-Boost; DOM boost-overlay bei 100% Batterie; Home-Button im Endscreen; car-target-hit bounce animation; Cache-Busting auf v=20260608f
+- 2026-06-08 Silhouetten v3: Alle Auto-Emojis durch stilisierte Inline-SVG-Fahrzeugsilhouetten ersetzt (Player=SUV/Crossover orange, Boost=Rennvariante grün, Ghost=Kompakter blaugrau, Hero-Car=SVG, Block-Target=Canvas drawCarBlock()); Cache-Busting auf v=20260608g
 
 ---
 
