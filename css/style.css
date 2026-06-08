@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LEAP RALLY – Style Sheet
+   LEAP CHARGE – Style Sheet
    Theme: Leapmotor × Tischtennis × E-Mobility
    Mobile-first, single-page prototype
 ═══════════════════════════════════════════════════════════ */
@@ -266,7 +266,8 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   display: block;
   color: var(--white);
 }
-.title-rally {
+.title-rally,
+.title-charge {
   display: block;
   background: linear-gradient(135deg, var(--orange), var(--blue));
   -webkit-background-clip: text;
@@ -623,6 +624,67 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   50%       { transform: translateX(-3px) scale(0.8); opacity: 0.3; }
 }
 
+/* Ghost car – competitor on the track */
+.ghost-car {
+  position: absolute;
+  font-size: 22px;
+  top: 50%;
+  left: 65%;
+  transform: translateY(-50%);
+  opacity: 0.45;
+  filter: grayscale(0.5) hue-rotate(160deg) brightness(0.85);
+  transition: left 0.4s ease, opacity 0.3s, transform 0.3s, filter 0.3s;
+  z-index: 1;
+  pointer-events: none;
+}
+.ghost-car.ghost-overtaken {
+  opacity: 0.12;
+  filter: grayscale(1) brightness(0.3);
+  transform: translateY(-50%) scale(0.75);
+  animation: ghost-shake 0.35s ease-in-out;
+}
+.ghost-car.ghost-reset {
+  opacity: 0.45;
+  filter: grayscale(0.5) hue-rotate(160deg) brightness(0.85);
+  transform: translateY(-50%);
+  left: 25% !important;
+}
+@keyframes ghost-shake {
+  0%, 100% { transform: translateY(-50%) translateX(0) scale(0.75); }
+  30%       { transform: translateY(-50%) translateX(5px) scale(0.8); }
+  70%       { transform: translateY(-50%) translateX(-4px) scale(0.7); }
+}
+
+/* Car-progress boost state (on full charge) */
+.car-progress.boosting .car-emoji {
+  animation: boost-pulse 0.25s ease-in-out infinite !important;
+  filter: drop-shadow(0 0 10px #39FF14) drop-shadow(0 0 24px #FFB800) !important;
+}
+.car-progress.boosting .car-exhaust {
+  opacity: 1 !important;
+}
+.car-progress.boosting .car-exhaust span {
+  color: var(--green);
+  animation: boost-spark 0.12s step-end infinite;
+}
+@keyframes boost-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.18); }
+}
+@keyframes boost-spark {
+  0%, 100% { opacity: 1; transform: translateX(-5px) scale(1.3); }
+  50%       { opacity: 0; transform: translateX(-10px) scale(0.7); }
+}
+
+/* Car-target-hit brief bounce */
+.car-progress.car-target-hit .car-emoji {
+  animation: target-bounce 0.35s ease-in-out;
+}
+@keyframes target-bounce {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.35) rotate(12deg); }
+}
+
 .track-line {
   flex: 1;
   height: 2px;
@@ -687,6 +749,11 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .battery-fill.full {
   background: linear-gradient(90deg, var(--blue), var(--green));
   box-shadow: 0 0 16px var(--green-glow);
+  animation: battery-charged 0.6s ease-out;
+}
+@keyframes battery-charged {
+  0%   { box-shadow: 0 0 50px rgba(57,255,20,0.9), 0 0 100px rgba(57,255,20,0.5); }
+  100% { box-shadow: 0 0 16px var(--green-glow); }
 }
 .battery-spark-line {
   position: absolute;
@@ -707,6 +774,46 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 }
 
 /* Float texts are rendered on canvas; no DOM overlay needed */
+
+/* Boost overlay – appears on full charge, positioned over game screen */
+.boost-overlay {
+  position: absolute;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: rgba(57,255,20,0.12);
+  border: 1.5px solid var(--green);
+  border-radius: 12px;
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 20;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+  box-shadow: 0 0 20px rgba(57,255,20,0.25);
+}
+.boost-overlay.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.boost-overlay .boost-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 2px;
+  filter: drop-shadow(0 0 6px var(--green));
+}
+.boost-overlay .boost-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
 
 /* ══════════════════════════════════════════════════════════
    SCREEN 4 · END / LEADERBOARD
@@ -911,6 +1018,30 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 }
 .end-cta .btn-primary { width: 100%; }
 .end-cta .btn-outline  { width: 100%; font-size: 14px; }
+
+/* Home button on end screen */
+.btn-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 50px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: var(--dark-card);
+  color: var(--muted);
+  border: 1px solid var(--dark-border);
+  transition: var(--transition);
+}
+.btn-home:active {
+  background: rgba(255,255,255,0.09);
+  color: var(--white);
+}
 
 /* ══════════════════════════════════════════════════════════
    MODALS

@@ -6,12 +6,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0A0A1A">
-  <meta name="description" content="LEAP RALLY – Schlag den Ball, zerstöre Blöcke, lade deinen Leapmotor auf. Event Activation Mini-Game.">
-  <title>LEAP RALLY – Charge Your Ride</title>
+  <meta name="description" content="LEAP CHARGE – Tischtennis Breakout, Leapmotor aufladen, Turbo-Boost freischalten. Event Activation Mini-Game.">
+  <title>LEAP CHARGE – Tischtennis × E-Drive</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260608e">
+  <link rel="stylesheet" href="css/style.css?v=20260608f">
 </head>
 <body>
 <div id="app">
@@ -33,9 +33,9 @@
     <div class="start-hero">
       <h1 class="game-title">
         <span class="title-leap">LEAP</span>
-        <span class="title-rally">RALLY</span>
+        <span class="title-charge">CHARGE</span>
       </h1>
-      <p class="game-tagline">Schläger · Ball · Energie · Sieg</p>
+      <p class="game-tagline">Schläger · Ball · Aufladen · Sieg</p>
 
       <div class="hero-scene">
         <div class="hero-ball" id="hero-ball">🏓</div>
@@ -52,8 +52,8 @@
 
       <div class="start-pills">
         <span class="pill">🏓 Tischtennis</span>
-        <span class="pill">⚡ E-Mobility</span>
-        <span class="pill">🏁 Rally</span>
+        <span class="pill">⚡ E-Drive</span>
+        <span class="pill">🚗 Leapmotor</span>
       </div>
     </div>
 
@@ -61,7 +61,7 @@
       <button class="btn btn-primary glow-btn" id="btn-start" onclick="showScreen('screen-rules')">
         START GAME <span class="btn-icon">→</span>
       </button>
-      <p class="start-hint">Schläger bewegen · 🚗 Ziele treffen · Turbo kassieren</p>
+      <p class="start-hint">Schläger steuern · 🚗 Auto-Ziele treffen · Leapmotor vollaufladen</p>
     </div>
 
     <div class="scan-line"></div>
@@ -81,10 +81,10 @@
 
     <div class="rules-body">
       <div class="rules-trophy">🏆</div>
-      <h2 class="rules-headline">Rally für<br><span class="text-orange">E-Mobility</span></h2>
+      <h2 class="rules-headline">Tischtennis<br><span class="text-orange">× Leapmotor</span></h2>
       <p class="rules-intro">
         Jeder zerstörte Block erzeugt Strom.<br>
-        Lade deinen Leapmotor voll – und gewinne das Rally!
+        Lade deinen Leapmotor auf – und schreib einen neuen Highscore!
       </p>
 
       <div class="rules-steps">
@@ -106,7 +106,7 @@
           <div class="step-icon">💥</div>
           <div class="step-content">
             <strong>BLÖCKE + 🚗 ZIELE TREFFEN</strong>
-            <p>Markierte 🚗-Ziele geben Extra-Punkte und laden die Batterie schneller</p>
+            <p>Markierte 🚗-Ziele geben Extra-Punkte und laden die Batterie schneller auf</p>
           </div>
         </div>
         <div class="rule-step">
@@ -120,7 +120,7 @@
           <div class="step-icon">⏱️</div>
           <div class="step-content">
             <strong>30 SEKUNDEN</strong>
-            <p>100% Ladung = Turbo + Punkte-Bonus. Spiele schnell, dann jagt das Auto nach vorn</p>
+            <p>100% Ladung = Turbo-Boost + Punkte-Bonus. Dein Leapmotor überholt den Gegner!</p>
           </div>
         </div>
       </div>
@@ -128,7 +128,7 @@
 
     <div class="rules-cta">
       <button class="btn btn-primary glow-btn" onclick="startGame()">
-        LET'S RACE! <span class="btn-icon">🏁</span>
+        LET'S CHARGE! <span class="btn-icon">⚡</span>
       </button>
     </div>
   </section>
@@ -173,8 +173,9 @@
             <span>✦</span><span>✦</span><span>✦</span>
           </div>
         </div>
+        <div class="ghost-car" id="ghost-car">🚙</div>
         <div class="track-line"></div>
-        <div class="track-flag">🏁</div>
+        <div class="track-flag">⚡</div>
       </div>
       <div class="battery-section">
         <div class="battery-label">
@@ -186,6 +187,12 @@
           <div class="battery-spark-line" id="spark-line"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Boost overlay: shows on full charge -->
+    <div class="boost-overlay" id="boost-overlay">
+      <span class="boost-title">⚡ TURBO-BOOST AKTIVIERT!</span>
+      <span class="boost-sub">LEAPMOTOR VOLLGELADEN · +400 PTS</span>
     </div>
   </section>
 
@@ -234,8 +241,11 @@
     </div>
 
     <div class="end-cta">
-      <button class="btn btn-primary glow-btn" onclick="restartGame()">
+      <button class="btn btn-primary glow-btn" onclick="playAgainDirect()">
         🔄 NOCHMAL SPIELEN
+      </button>
+      <button class="btn btn-home" onclick="goHome()">
+        🏠 ZUM STARTSCREEN
       </button>
       <button class="btn btn-outline" onclick="showShareModal()">
         📤 SCORE TEILEN
@@ -251,7 +261,7 @@
 <div id="share-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-icon">📤</div>
-    <h3>Dein Score</h3>
+    <h3>Dein Leapmotor Score</h3>
     <div class="share-text-box" id="share-text-box"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="copyShareText()">📋 Kopieren</button>
@@ -270,6 +280,6 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260608e"></script>
+<script src="js/app.js?v=20260608f"></script>
 </body>
 </html>

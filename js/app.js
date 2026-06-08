@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LEAP RALLY – Breakout Edition
+   LEAP CHARGE – Breakout Edition
    Leapmotor × Tischtennis × E-Mobility
    Mobile-first · No build step · No backend
 ═══════════════════════════════════════════════════════════ */
@@ -55,7 +55,7 @@ const FAKE_LEADERBOARD = [
   { name: 'PingPong_Pro',   score: 3010, energy: 92,  blocks: 34 },
   { name: 'LeapFan2025',    score: 2780, energy: 87,  blocks: 29 },
   { name: 'ChargeMaster',   score: 2490, energy: 79,  blocks: 26 },
-  { name: 'RallyKing_MUC',  score: 2220, energy: 72,  blocks: 23 },
+  { name: 'PingAce_MUC',    score: 2220, energy: 72,  blocks: 23 },
   { name: 'VoltSmasher',    score: 1950, energy: 66,  blocks: 19 },
   { name: 'E_Champ2025',    score: 1680, energy: 59,  blocks: 15 },
   { name: 'NewDriver',      score: 1300, energy: 48,  blocks: 10 },
@@ -166,6 +166,17 @@ function resetGameState() {
 
   const spark = document.getElementById('spark-line');
   if (spark) spark.classList.remove('active');
+
+  // Reset boost overlay
+  const boostOverlay = document.getElementById('boost-overlay');
+  if (boostOverlay) boostOverlay.classList.remove('show');
+
+  // Reset ghost car
+  const ghostEl = document.getElementById('ghost-car');
+  if (ghostEl) {
+    ghostEl.classList.remove('ghost-overtaken', 'ghost-reset');
+    ghostEl.style.left = '65%';
+  }
 
   const comboEl = document.getElementById('combo-value');
   if (comboEl) comboEl.className = 'hud-value combo-val';
@@ -512,7 +523,15 @@ function checkBlockCollisions() {
       state.energy  = Math.min(state.energy + energyGain, MAX_ENERGY);
       state.score  += scoreGain;
       state.hits++;
-      if (b.carTarget) state.carTargetsHit++;
+      if (b.carTarget) {
+        state.carTargetsHit++;
+        // Brief bounce animation on car
+        const carProgress = document.getElementById('car-progress');
+        if (carProgress) {
+          carProgress.classList.add('car-target-hit');
+          setTimeout(() => carProgress.classList.remove('car-target-hit'), 380);
+        }
+      }
 
       setEl('hit-count', String(state.hits));
       updateEnergyUI();
@@ -800,7 +819,14 @@ function updateCarUI() {
   if (!carProgress) return;
   const track   = document.querySelector('.car-track');
   const trackW  = track ? track.offsetWidth : 200;
-  carProgress.style.left = `${8 + pct * (trackW - 50 - 36)}px`;
+  const playerMax = trackW - 50 - 36;
+  carProgress.style.left = `${8 + pct * playerMax}px`;
+
+  // Position ghost car at ~65% of track (only if not currently overtaken)
+  const ghostEl = document.getElementById('ghost-car');
+  if (ghostEl && !ghostEl.classList.contains('ghost-overtaken')) {
+    ghostEl.style.left = `${8 + 0.65 * playerMax}px`;
+  }
 
   const carEl = document.getElementById('game-car');
   if (carEl) {
@@ -818,7 +844,7 @@ function flashFullCharge() {
   state.score += FULL_CHARGE_BONUS_SCORE;
   state.fullChargeBonuses++;
   newWaveFlash = Math.max(newWaveFlash, 0.6);
-  spawnFloatText(cw / 2, ch * 0.54, `⚡ TURBO +${FULL_CHARGE_BONUS_SCORE}`, '#39FF14');
+  spawnFloatText(cw / 2, ch * 0.40, `⚡ TURBO-BOOST +${FULL_CHARGE_BONUS_SCORE}`, '#39FF14');
 
   const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
   const turboSpeed = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
@@ -829,13 +855,35 @@ function flashFullCharge() {
   }
   state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
 
+  // Car: race car emoji + boost CSS + ghost-car overtake
+  const carProg  = document.getElementById('car-progress');
+  const ghostEl2 = document.getElementById('ghost-car');
   const carEl = document.getElementById('game-car');
   if (carEl) {
     carEl.textContent = '🏎️';
+    carProg?.classList.add('boosting');
+
+    if (ghostEl2) {
+      ghostEl2.classList.add('ghost-overtaken');
+      setTimeout(() => {
+        ghostEl2.classList.remove('ghost-overtaken');
+        ghostEl2.classList.add('ghost-reset');
+        setTimeout(() => ghostEl2.classList.remove('ghost-reset'), 500);
+      }, 1600);
+    }
+
     setTimeout(() => {
       if (!state.gameActive) return;
       carEl.textContent = '🚗';
-    }, 1400);
+      carProg?.classList.remove('boosting');
+    }, 1800);
+  }
+
+  // Show boost overlay above battery bar
+  const boostOverlay = document.getElementById('boost-overlay');
+  if (boostOverlay) {
+    boostOverlay.classList.add('show');
+    setTimeout(() => boostOverlay.classList.remove('show'), 2200);
   }
 
   document.getElementById('battery-pct').textContent = '100% ⚡';
@@ -892,16 +940,16 @@ function populateEndScreen(energyPct) {
   let title, sub;
   if (energyPct >= 100) {
     title = 'VOLLGELADEN! ⚡';
-    sub   = 'Perfekte Aufladung – Leapmotor ready to race!';
+    sub   = 'Perfekte Aufladung – Leapmotor voll geladen, Turbo aktiv!';
   } else if (energyPct >= 75) {
-    title = 'FAST AM ZIEL!';
-    sub   = `${energyPct}% Energie – starke Leistung!`;
+    title = 'FAST VOLL!';
+    sub   = `${energyPct}% Batterie – starke Tischtennis-Performance!`;
   } else if (energyPct >= 40) {
     title = 'GUTES TEMPO!';
-    sub   = `${energyPct}% Batterie – nächstes Mal schaffst du es!`;
+    sub   = `${energyPct}% geladen – nächstes Spiel schaffst du 100%!`;
   } else {
     title = 'WEITER ÜBEN!';
-    sub   = `${energyPct}% – Halte den Ball länger im Spiel!`;
+    sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
   }
   setEl('end-title', title);
   setEl('end-sub',   sub);
@@ -960,9 +1008,22 @@ function buildLeaderboard(playerScore, playerEnergy) {
 // ═══════════════════════════════════════════════════════════
 // RESTART / SHARE
 // ═══════════════════════════════════════════════════════════
-function restartGame() {
+// Go to start screen (home)
+function goHome() {
   showScreen('screen-start');
   resetGameState();
+}
+
+// Play again directly – skip start screen
+function playAgainDirect() {
+  resetGameState();
+  showScreen('screen-game');
+  runCountdown();
+}
+
+// Backward-compat alias
+function restartGame() {
+  goHome();
 }
 
 function showShareModal() {
@@ -988,14 +1049,14 @@ function copyShareText() {
   });
 }
 function buildShareText() {
-  return `🏓⚡🚗 LEAP RALLY – Breakout Edition
+  return `🏓⚡🚗 LEAP CHARGE – Tischtennis × E-Drive
 
-Score:   ${state.score.toLocaleString('de-DE')} Punkte
-Blöcke:  ${state.hits} zerstört · Max Combo ×${state.maxCombo}
+Score:    ${state.score.toLocaleString('de-DE')} Punkte
+Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
 Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
 
-Kannst du meinen Score schlagen?
-#LeapMotor #LeapRally #EMobility`;
+Kannst du meinen Leapmotor-Score schlagen?
+#LeapMotor #LeapCharge #Tischtennis #EMobility`;
 }
 
 // ═══════════════════════════════════════════════════════════

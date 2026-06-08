@@ -1,7 +1,7 @@
 # MEMORY – LEAP RALLY Project
 
 > Projekt-lokale Entscheidungen, Scope-Definitionen und nächste Schritte.
-> Letzte Aktualisierung: 2026-06-08
+> Letzte Aktualisierung: 2026-06-08 (Polishing-Runde v2)
 
 ---
 
@@ -73,6 +73,19 @@ FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 
 ---
 
+## Umgesetzte Polishing-Punkte (2026-06-08 v2)
+
+- [x] Texte auf Tischtennis + Leapmotor + Charge/E-Drive umgestellt (kein Rally/Rallye mehr in user-facing Text)
+- [x] Ghost-Car als Gegner auf dem Track; überholt bei 100%-Turbo-Boost sichtbar
+- [x] Boost-Overlay DOM-Banner (`⚡ TURBO-BOOST AKTIVIERT!`) erscheint über Batteriebalken bei Vollladung
+- [x] Battery-charged CSS-Animation (grüner Glow-Burst bei 100%)
+- [x] car-target-hit Bounce-Animation bei Auto-Zielblock-Treffer
+- [x] Endscreen: "🏠 ZUM STARTSCREEN" Button (goHome) neben "🔄 NOCHMAL SPIELEN" (playAgainDirect)
+- [x] Cache-Busting Assets auf `v=20260608f` angehoben
+- [x] JS-Syntax OK (node --check)
+
+---
+
 ## Nächste Schritte (Priorisiert)
 
 ### P0 – Für Event-Einsatz notwendig
@@ -108,6 +121,7 @@ FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 - 2026-06-08 Mechanik-Upgrade: Canvas-Breakout ersetzt die fruehere Tap-Demo
 - 2026-06-08 Cache-Busting fuer `css/style.css` und `js/app.js` hinzugefuegt, weil mobile Browser/GitHub-Pages-Clients teils neues HTML mit altem JS/CSS gemischt geladen haben
 - 2026-06-08 Upgrade fuer bessere Wiedererkennung und Pace: Paddle als Tischtennis-Schlaeger gerendert, Spielgeschwindigkeit erhoeht, Auto-Zielbloecke mit Extra-Bonus und Full-Charge-Turbo eingebaut
+- 2026-06-08 Polishing v2: Rebranding LEAP RALLY -> LEAP CHARGE; Texte weg von Rally/Rallye, hin zu Tischtennis + Leapmotor + Charge; Ghost-Car/Gegner auf Track mit Overtake-Animation bei Turbo-Boost; DOM boost-overlay bei 100% Batterie; Home-Button im Endscreen; car-target-hit bounce animation; Cache-Busting auf v=20260608f
 
 ---
 
