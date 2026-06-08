@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0A0A1A">
-  <meta name="description" content="LEAP RALLY – Tap the ball, charge the car, win the rally. Leapmotor Event Activation.">
+  <meta name="description" content="LEAP RALLY – Schlag den Ball, zerstöre Blöcke, lade deinen Leapmotor auf. Event Activation Mini-Game.">
   <title>LEAP RALLY – Charge Your Ride</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
         <span class="title-leap">LEAP</span>
         <span class="title-rally">RALLY</span>
       </h1>
-      <p class="game-tagline">Charge Your Ride with Every Hit</p>
+      <p class="game-tagline">Schläger · Ball · Energie · Sieg</p>
 
       <div class="hero-scene">
         <div class="hero-ball" id="hero-ball">🏓</div>
@@ -61,7 +61,7 @@
       <button class="btn btn-primary glow-btn" id="btn-start" onclick="showScreen('screen-rules')">
         START GAME <span class="btn-icon">→</span>
       </button>
-      <p class="start-hint">Tap the ball · Charge the car · Win the rally</p>
+      <p class="start-hint">Schläger bewegen · Ball ablenken · Blöcke zerstören</p>
     </div>
 
     <div class="scan-line"></div>
@@ -81,39 +81,46 @@
 
     <div class="rules-body">
       <div class="rules-trophy">🏆</div>
-      <h2 class="rules-headline">Rally for<br><span class="text-orange">E-Mobility</span></h2>
+      <h2 class="rules-headline">Rally für<br><span class="text-orange">E-Mobility</span></h2>
       <p class="rules-intro">
-        Jeder Aufschlag erzeugt saubere Energie.<br>
-        Lade deinen Leapmotor – und gewinne das Rally!
+        Jeder zerstörte Block erzeugt Strom.<br>
+        Lade deinen Leapmotor voll – und gewinne das Rally!
       </p>
 
       <div class="rules-steps">
         <div class="rule-step">
           <div class="step-icon">👆</div>
           <div class="step-content">
-            <strong>TIPPE DEN BALL</strong>
-            <p>Tippe so schnell wie möglich auf den Tischtennisball</p>
+            <strong>SCHLÄGER STEUERN</strong>
+            <p>Ziehe den orangefarbenen Schläger unten mit dem Finger nach links/rechts</p>
           </div>
         </div>
         <div class="rule-step">
-          <div class="step-icon">⚡</div>
+          <div class="step-icon">🏓</div>
           <div class="step-content">
-            <strong>ERZEUGE ENERGIE</strong>
-            <p>Jeder Treffer lädt die Leapmotor-Batterie auf</p>
+            <strong>BALL IM SPIEL HALTEN</strong>
+            <p>Schlag den Ball zurück – verpass ihn nicht, sonst startet er neu</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <div class="step-icon">💥</div>
+          <div class="step-content">
+            <strong>BLÖCKE ZERSTÖREN</strong>
+            <p>Der Ball trifft Energie-Blöcke oben und lädt die Leapmotor-Batterie auf</p>
           </div>
         </div>
         <div class="rule-step">
           <div class="step-icon">🔥</div>
           <div class="step-content">
-            <strong>COMBO-BONUS</strong>
-            <p>Schnelle Treffer aktivieren einen Speed-Multiplikator</p>
+            <strong>COMBO AUFBAUEN</strong>
+            <p>Mehrere Paddle-Treffer hintereinander steigern den Energie-Multiplikator</p>
           </div>
         </div>
         <div class="rule-step">
           <div class="step-icon">⏱️</div>
           <div class="step-content">
             <strong>30 SEKUNDEN</strong>
-            <p>Erreiche 100% Ladestand bevor die Zeit abläuft</p>
+            <p>Erreiche 100% Ladestand bevor die Zeit abläuft – Wellen bringen Bonus</p>
           </div>
         </div>
       </div>
@@ -132,10 +139,11 @@
   <section id="screen-game" class="screen">
     <div class="screen-bg bg-game"></div>
 
+    <!-- HUD -->
     <div class="game-hud" id="game-hud">
       <div class="hud-block">
         <div class="hud-value" id="hit-count">0</div>
-        <div class="hud-label">HITS</div>
+        <div class="hud-label">BLÖCKE</div>
       </div>
       <div class="hud-timer-wrap">
         <svg class="timer-ring" viewBox="0 0 60 60">
@@ -151,18 +159,12 @@
       </div>
     </div>
 
+    <!-- Canvas arena: Breakout game renders here -->
     <div class="game-arena">
-      <div class="tap-zone">
-        <div class="ripple-container" id="ripple-container"></div>
-        <button class="tap-ball" id="tap-ball" ontouchstart="handleTap(event)" onclick="handleTap(event)">
-          <span class="ball-inner">🏓</span>
-          <span class="ball-pulse"></span>
-          <span class="ball-glow"></span>
-        </button>
-        <div class="tap-hint-label" id="tap-hint">TAP!</div>
-      </div>
+      <canvas id="game-canvas"></canvas>
     </div>
 
+    <!-- Floor: car progress + battery -->
     <div class="game-floor">
       <div class="car-track">
         <div class="car-progress" id="car-progress">
@@ -185,8 +187,6 @@
         </div>
       </div>
     </div>
-
-    <div class="floating-hits" id="floating-hits"></div>
   </section>
 
   <!-- ═══════════════════════════════════════════════
@@ -207,7 +207,7 @@
 
     <div class="result-card">
       <div class="result-row">
-        <span class="result-label">🏓 Treffer</span>
+        <span class="result-label">💥 Blöcke zerstört</span>
         <span class="result-val" id="res-hits">0</span>
       </div>
       <div class="result-row">
@@ -217,6 +217,10 @@
       <div class="result-row">
         <span class="result-label">⚡ Energie</span>
         <span class="result-val accent" id="res-energy">0%</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">🌊 Wellen</span>
+        <span class="result-val" id="res-waves">0</span>
       </div>
       <div class="result-row big-row">
         <span class="result-label">🏆 SCORE</span>

@@ -547,121 +547,23 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   50%       { opacity: 0.4; }
 }
 
-/* Game arena */
+/* Game arena: fills remaining vertical space */
 .game-arena {
   position: relative;
   z-index: 5;
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.tap-zone {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 0;   /* important: lets flex child shrink/grow properly */
+  overflow: hidden;
 }
 
-/* The tap ball */
-.tap-ball {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 38% 35%, rgba(255,255,255,0.12), transparent 60%),
-              radial-gradient(circle, rgba(245,230,66,0.08), transparent 70%);
-  border: 2px solid rgba(245,230,66,0.25);
-  cursor: pointer;
-  transition: transform 0.08s ease;
-  animation: ball-float 2s ease-in-out infinite;
+/* Canvas fills the arena */
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;   /* prevent browser scroll/zoom on touch */
   -webkit-tap-highlight-color: transparent;
-}
-@keyframes ball-float {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-8px) scale(1.02); }
-}
-.tap-ball:active {
-  transform: scale(0.92) !important;
-  animation: none;
-}
-.ball-inner {
-  font-size: 80px;
-  pointer-events: none;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-}
-.ball-pulse {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 2px solid rgba(245,230,66,0.3);
-  animation: ball-pulse-ring 2s ease-in-out infinite;
-}
-@keyframes ball-pulse-ring {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50%       { transform: scale(1.15); opacity: 0; }
-}
-.ball-glow {
-  position: absolute;
-  inset: -20px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245,230,66,0.12), transparent 70%);
-  animation: glow-breathe 2s ease-in-out infinite;
-}
-@keyframes glow-breathe {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 1; }
-}
-
-/* Tap flash effect */
-.tap-ball.tapped {
-  animation: ball-tap 0.15s ease-out forwards;
-}
-@keyframes ball-tap {
-  0%   { transform: scale(0.88); filter: brightness(2); }
-  100% { transform: scale(1); filter: brightness(1); }
-}
-
-/* Hint label */
-.tap-hint-label {
-  position: absolute;
-  top: -36px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--muted);
-  animation: hint-pulse 1.5s ease-in-out infinite;
-}
-.tap-hint-label.hidden { display: none; }
-@keyframes hint-pulse {
-  0%, 100% { opacity: 0.4; transform: translateY(0); }
-  50%       { opacity: 1;   transform: translateY(-3px); }
-}
-
-/* Ripple container */
-.ripple-container {
-  position: absolute;
-  inset: -40px;
-  pointer-events: none;
-  z-index: 1;
-}
-.ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,85,0,0.3), transparent);
-  animation: ripple-out 0.6s ease-out forwards;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-}
-@keyframes ripple-out {
-  to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+  cursor: none;          /* hide cursor – paddle follows pointer */
 }
 
 /* Game floor */
@@ -804,26 +706,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   50%       { opacity: 0; }
 }
 
-/* Floating hit numbers */
-.floating-hits {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 20;
-  overflow: hidden;
-}
-.float-num {
-  position: absolute;
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 900;
-  pointer-events: none;
-  animation: float-up 0.8s ease-out forwards;
-}
-@keyframes float-up {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  100% { transform: translateY(-80px) scale(0.6); opacity: 0; }
-}
+/* Float texts are rendered on canvas; no DOM overlay needed */
 
 /* ══════════════════════════════════════════════════════════
    SCREEN 4 · END / LEADERBOARD
@@ -1141,11 +1024,7 @@ button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   .rules-trophy { font-size: 36px; }
   .rules-steps { gap: 8px; }
   .rule-step { padding: 12px; }
-  .tap-ball { width: 130px; height: 130px; }
-  .ball-inner { font-size: 64px; }
 }
 @media (min-height: 800px) {
   .game-title { font-size: 72px; }
-  .tap-ball { width: 180px; height: 180px; }
-  .ball-inner { font-size: 90px; }
 }
