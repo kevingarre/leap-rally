@@ -56,15 +56,17 @@ Für **Produktion** zu ersetzen durch:
 ## Gameplay-Parameter (Tuning)
 
 ```js
-GAME_DURATION     = 30   // Sekunden – gut fuer Event (nicht zu lang)
-MAX_COMBO         = 5    // Maximaler Multiplikator
-INITIAL_BALL_SPEED = moderat
-WAVE_SPEED_GAIN    = 6%  // pro abgeraeumter Welle
-GRID_SIZE          = 4x6 // kompakt fuer Mobile
+GAME_DURATION      = 30    // Sekunden – gut fuer Event (nicht zu lang)
+MAX_COMBO          = 5     // Maximaler Multiplikator
+BALL_BASE_SPEED    = hoch  // schnelleres Match-Gefuehl
+WAVE_SPEED_GAIN    = 10%   // pro abgeraeumter Welle
+GRID_SIZE          = 4x6   // kompakt fuer Mobile
+CAR_TARGET_BONUS   = +140 Score, +3 Energie
+FULL_CHARGE_REWARD = +400 Score + Turbo-Boost
 ```
 
 **Tuning-Richtlinien:**
-- Ballgeschwindigkeit leicht senken → einfacher fuer Messe-Publikum
+- Ballgeschwindigkeit fuer Event-Audience fein justieren (aktuell bewusst schneller)
 - `GAME_DURATION` auf 20s senken → schnelleres Event-Throughput
 - Block-Grid kleiner halten → schnelleres Erfolgserlebnis
 - `MAX_COMBO` auf 3 senken → weniger Skill-Gap
@@ -105,6 +107,7 @@ GRID_SIZE          = 4x6 // kompakt fuer Mobile
 - 2026-06-08 Hotfix: `#game-hud` explizit im Markup gesetzt, damit Countdown/Gameplay nach "Let's Race" korrekt startet
 - 2026-06-08 Mechanik-Upgrade: Canvas-Breakout ersetzt die fruehere Tap-Demo
 - 2026-06-08 Cache-Busting fuer `css/style.css` und `js/app.js` hinzugefuegt, weil mobile Browser/GitHub-Pages-Clients teils neues HTML mit altem JS/CSS gemischt geladen haben
+- 2026-06-08 Upgrade fuer bessere Wiedererkennung und Pace: Paddle als Tischtennis-Schlaeger gerendert, Spielgeschwindigkeit erhoeht, Auto-Zielbloecke mit Extra-Bonus und Full-Charge-Turbo eingebaut
 
 ---
 

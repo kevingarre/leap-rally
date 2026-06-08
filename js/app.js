@@ -12,6 +12,9 @@
 const GAME_DURATION       = 30;
 const MAX_ENERGY          = 100;
 const TIMER_CIRCUMFERENCE = 163.4; // 2π × 26 (SVG ring)
+const FULL_CHARGE_BONUS_SCORE = 400;
+const CAR_TARGET_BONUS_SCORE  = 140;
+const CAR_TARGET_BONUS_ENERGY = 3;
 
 // Block grid
 const BLOCK_ROWS    = 4;
@@ -30,16 +33,16 @@ const BLOCK_COLORS = [
 ];
 
 // Ball physics (fractions of canvas height per second)
-const BALL_BASE_SPEED  = 0.42;
-const BALL_MAX_SPEED   = 0.80;
-const BALL_WAVE_ACCEL  = 1.06; // ×speed per wave cleared
+const BALL_BASE_SPEED  = 0.54;
+const BALL_MAX_SPEED   = 0.98;
+const BALL_WAVE_ACCEL  = 1.10; // ×speed per wave cleared
 const BALL_MIN_VY_FRAC = 0.30; // minimum vertical component fraction
 
 // Paddle
 const PADDLE_WIDTH_FRAC  = 0.28;  // fraction of canvas width
 const PADDLE_HEIGHT      = 12;    // logical px
 const PADDLE_BOTTOM_PAD  = 18;    // px from canvas bottom
-const PADDLE_LERP_FACTOR = 14;    // lerp speed (multiplied by dt)
+const PADDLE_LERP_FACTOR = 18;    // lerp speed (multiplied by dt)
 
 // FX
 const PARTICLE_COUNT = 8;
@@ -71,6 +74,9 @@ let state = {
   score:         0,
   timeLeft:      GAME_DURATION,
   wavesCleared:  0,
+  carTargetsHit: 0,
+  fullChargeBonuses: 0,
+  fullChargeRewarded: false,
   gameInterval:  null,      // setInterval 1s timer
   rafId:         null,      // requestAnimationFrame id
   lastFrameTime: 0,
@@ -86,7 +92,7 @@ let cw = 0, ch = 0;        // logical canvas dimensions
 const paddle = { x: 0, y: 0, w: 0, h: PADDLE_HEIGHT, targetX: 0 };
 const ball   = { x: 0, y: 0, vx: 0, vy: 0, r: 0 };
 
-let blocks      = [];  // { x, y, w, h, row, alive }
+let blocks      = [];  // { x, y, w, h, row, alive, carTarget }
 let particles   = [];  // { x, y, vx, vy, life, maxLife, color, size }
 let floatTexts  = [];  // { x, y, vy, text, color, life, maxLife }
 
@@ -133,6 +139,9 @@ function resetGameState() {
     score:         0,
     timeLeft:      GAME_DURATION,
     wavesCleared:  0,
+    carTargetsHit: 0,
+    fullChargeBonuses: 0,
+    fullChargeRewarded: false,
     gameInterval:  null,
     rafId:         null,
     lastFrameTime: 0,
@@ -207,7 +216,7 @@ function runCountdown() {
         numEl.style.filter = 'drop-shadow(0 0 30px var(--green))';
       }
     }
-  }, 900);
+  }, 650);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -285,6 +294,7 @@ function initBlocks() {
   const blockH  = Math.max(14, Math.round(ch * 0.055));
 
   for (let row = 0; row < BLOCK_ROWS; row++) {
+    const carCol = (row * 2 + 1) % BLOCK_COLS;
     for (let col = 0; col < BLOCK_COLS; col++) {
       blocks.push({
         x:     BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
@@ -293,6 +303,7 @@ function initBlocks() {
         h:     blockH,
         row,
         alive: true,
+        carTarget: col === carCol,
       });
     }
   }
@@ -462,7 +473,7 @@ function onBallMiss() {
   setTimeout(() => {
     if (!state.gameActive) return;
     launchBall();
-  }, 700);
+  }, 420);
 }
 
 function checkBlockCollisions() {
@@ -495,11 +506,13 @@ function checkBlockCollisions() {
       }
 
       // Energy & score
-      const energyGain = BLOCK_ROW_ENERGY[b.row] * state.combo;
-      const scoreGain  = BLOCK_ROW_ENERGY[b.row] * 10 * state.combo;
+      const carBonusEnergy = b.carTarget ? CAR_TARGET_BONUS_ENERGY : 0;
+      const energyGain = BLOCK_ROW_ENERGY[b.row] * state.combo + carBonusEnergy;
+      const scoreGain  = BLOCK_ROW_ENERGY[b.row] * 10 * state.combo + (b.carTarget ? CAR_TARGET_BONUS_SCORE : 0);
       state.energy  = Math.min(state.energy + energyGain, MAX_ENERGY);
       state.score  += scoreGain;
       state.hits++;
+      if (b.carTarget) state.carTargetsHit++;
 
       setEl('hit-count', String(state.hits));
       updateEnergyUI();
@@ -507,10 +520,14 @@ function checkBlockCollisions() {
 
       // FX
       spawnParticles(b.x + b.w / 2, b.y + b.h / 2, BLOCK_COLORS[b.row]);
-      const label = state.combo > 1 ? `+${energyGain}⚡ ×${state.combo}🔥` : `+${energyGain}⚡`;
+      const baseLabel = state.combo > 1 ? `+${energyGain}⚡ ×${state.combo}🔥` : `+${energyGain}⚡`;
+      const label = b.carTarget ? `${baseLabel} · 🚗 BONUS` : baseLabel;
       spawnFloatText(b.x + b.w / 2, b.y + b.h / 2, label, BLOCK_COLORS[b.row]);
 
-      if (state.energy >= MAX_ENERGY) flashFullCharge();
+      if (state.energy >= MAX_ENERGY && !state.fullChargeRewarded) {
+        flashFullCharge();
+        state.fullChargeRewarded = true;
+      }
 
       break; // one block per frame – prevents tunnelling artefacts
     }
@@ -600,26 +617,59 @@ function renderBlocks() {
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, 3, 1.5);
     ctx.fill();
+
+    if (b.carTarget) {
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
+      ctx.stroke();
+
+      ctx.font = `700 ${Math.max(10, Math.round(b.h * 0.52))}px 'Inter', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText('🚗', b.x + b.w / 2, b.y + b.h / 2 + 0.5);
+    }
     ctx.restore();
   }
 }
 
 function renderPaddle() {
+  const cx = paddle.x + paddle.w / 2;
+  const headW = paddle.w * 0.72;
+  const headH = paddle.h * 1.9;
+  const headCy = paddle.y + paddle.h * 0.2;
+  const handleW = Math.max(9, paddle.w * 0.15);
+  const handleH = Math.max(14, paddle.h * 1.4);
+  const handleX = cx - handleW / 2;
+  const handleY = headCy + headH * 0.35;
+
   ctx.save();
-  ctx.shadowColor = '#FF5500';
-  ctx.shadowBlur  = 18;
+  ctx.shadowColor = '#FF6A2A';
+  ctx.shadowBlur  = 16;
 
-  const g = ctx.createLinearGradient(paddle.x, paddle.y, paddle.x, paddle.y + paddle.h);
-  g.addColorStop(0, '#FF8040');
-  g.addColorStop(1, '#CC2200');
+  const hg = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
+  hg.addColorStop(0, '#D6B38A');
+  hg.addColorStop(1, '#8D5A2B');
+  roundRect(ctx, handleX, handleY, handleW, handleH, handleW / 3);
+  ctx.fillStyle = hg;
+  ctx.fill();
 
-  roundRect(ctx, paddle.x, paddle.y, paddle.w, paddle.h, paddle.h / 2);
+  ctx.beginPath();
+  ctx.ellipse(cx, headCy, headW / 2, headH / 2, 0, 0, Math.PI * 2);
+  const g = ctx.createLinearGradient(cx, headCy - headH / 2, cx, headCy + headH / 2);
+  g.addColorStop(0, '#FF8A55');
+  g.addColorStop(1, '#C82300');
   ctx.fillStyle = g;
   ctx.fill();
 
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  roundRect(ctx, paddle.x + 5, paddle.y + 2, paddle.w - 10, 4, 2);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(cx - headW * 0.12, headCy - headH * 0.1, headW * 0.22, headH * 0.18, -0.2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.26)';
   ctx.fill();
 
   ctx.restore();
@@ -687,14 +737,14 @@ function renderFloatTexts() {
 
 function renderHint() {
   const hintY    = ch - PADDLE_BOTTOM_PAD - PADDLE_HEIGHT - ball.r - 28;
-  const fontSize = Math.max(9, Math.round(cw * 0.033));
+  const fontSize = Math.max(9, Math.round(cw * 0.031));
   ctx.save();
   ctx.globalAlpha  = hintAlpha * 0.7;
   ctx.fillStyle    = '#FFFFFF';
   ctx.font         = `600 ${fontSize}px 'Inter', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('← Schläger bewegen →', cw / 2, hintY);
+  ctx.fillText('← Schläger bewegen · 🚗 Ziele treffen →', cw / 2, hintY);
   ctx.restore();
 }
 
@@ -765,7 +815,29 @@ function updateCarUI() {
 }
 
 function flashFullCharge() {
+  state.score += FULL_CHARGE_BONUS_SCORE;
+  state.fullChargeBonuses++;
   newWaveFlash = Math.max(newWaveFlash, 0.6);
+  spawnFloatText(cw / 2, ch * 0.54, `⚡ TURBO +${FULL_CHARGE_BONUS_SCORE}`, '#39FF14');
+
+  const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
+  const turboSpeed = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
+  if (currentSpeed > 0) {
+    const k = turboSpeed / currentSpeed;
+    ball.vx *= k;
+    ball.vy *= k;
+  }
+  state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
+
+  const carEl = document.getElementById('game-car');
+  if (carEl) {
+    carEl.textContent = '🏎️';
+    setTimeout(() => {
+      if (!state.gameActive) return;
+      carEl.textContent = '🚗';
+    }, 1400);
+  }
+
   document.getElementById('battery-pct').textContent = '100% ⚡';
 }
 
@@ -799,7 +871,9 @@ function endGame() {
     state.hits          * 18 +
     (state.maxCombo - 1) * state.hits * 8 +
     energyPct           * 12 +
-    state.wavesCleared  * 250
+    state.wavesCleared  * 250 +
+    state.carTargetsHit * CAR_TARGET_BONUS_SCORE +
+    state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE
   );
 
   setTimeout(() => {
