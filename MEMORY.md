@@ -99,6 +99,7 @@ MAX_COMBO      = 5      // Maximaler Multiplikator
 - `navigator.clipboard` Fallback für ältere Browser (getSelection workaround vorhanden)
 - Google Fonts CDN-Abhängigkeit → für Offline-Events: Fonts local embedden
 - Fake-Leaderboard-Daten sind hardcoded → bei echtem Event: API-Endpoint
+- 2026-06-08 Hotfix: `#game-hud` explizit im Markup gesetzt, damit Countdown/Gameplay nach "Let's Race" korrekt startet
 
 ---
 
