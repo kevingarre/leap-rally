@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0A0A1A">
+  <meta name="description" content="LEAP RALLY – Tap the ball, charge the car, win the rally. Leapmotor Event Activation.">
+  <title>LEAP RALLY – Charge Your Ride</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 1 · START
+  ═══════════════════════════════════════════════ -->
+  <section id="screen-start" class="screen active">
+    <div class="screen-bg bg-start"></div>
+
+    <div class="brand-bar">
+      <div class="brand-logo-wrap">
+        <span class="brand-name">LEAP<span>MOTOR</span></span>
+        <span class="brand-line">|</span>
+        <span class="brand-tag">EVENT ACTIVATION</span>
+      </div>
+    </div>
+
+    <div class="start-hero">
+      <h1 class="game-title">
+        <span class="title-leap">LEAP</span>
+        <span class="title-rally">RALLY</span>
+      </h1>
+      <p class="game-tagline">Charge Your Ride with Every Hit</p>
+
+      <div class="hero-scene">
+        <div class="hero-ball" id="hero-ball">🏓</div>
+        <div class="hero-flow">
+          <div class="flow-bolt">⚡</div>
+          <div class="flow-bolt delay1">⚡</div>
+          <div class="flow-bolt delay2">⚡</div>
+        </div>
+        <div class="hero-car" id="hero-car">
+          <div class="car-body">🚗</div>
+          <div class="car-charge-ring"></div>
+        </div>
+      </div>
+
+      <div class="start-pills">
+        <span class="pill">🏓 Tischtennis</span>
+        <span class="pill">⚡ E-Mobility</span>
+        <span class="pill">🏁 Rally</span>
+      </div>
+    </div>
+
+    <div class="start-cta">
+      <button class="btn btn-primary glow-btn" id="btn-start" onclick="showScreen('screen-rules')">
+        START GAME <span class="btn-icon">→</span>
+      </button>
+      <p class="start-hint">Tap the ball · Charge the car · Win the rally</p>
+    </div>
+
+    <div class="scan-line"></div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 2 · RULES / INTRO
+  ═══════════════════════════════════════════════ -->
+  <section id="screen-rules" class="screen">
+    <div class="screen-bg bg-rules"></div>
+
+    <div class="nav-bar">
+      <button class="btn-back" onclick="showScreen('screen-start')">← Back</button>
+      <span class="nav-title">HOW TO PLAY</span>
+      <span class="nav-filler"></span>
+    </div>
+
+    <div class="rules-body">
+      <div class="rules-trophy">🏆</div>
+      <h2 class="rules-headline">Rally for<br><span class="text-orange">E-Mobility</span></h2>
+      <p class="rules-intro">
+        Jeder Aufschlag erzeugt saubere Energie.<br>
+        Lade deinen Leapmotor – und gewinne das Rally!
+      </p>
+
+      <div class="rules-steps">
+        <div class="rule-step">
+          <div class="step-icon">👆</div>
+          <div class="step-content">
+            <strong>TIPPE DEN BALL</strong>
+            <p>Tippe so schnell wie möglich auf den Tischtennisball</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <div class="step-icon">⚡</div>
+          <div class="step-content">
+            <strong>ERZEUGE ENERGIE</strong>
+            <p>Jeder Treffer lädt die Leapmotor-Batterie auf</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <div class="step-icon">🔥</div>
+          <div class="step-content">
+            <strong>COMBO-BONUS</strong>
+            <p>Schnelle Treffer aktivieren einen Speed-Multiplikator</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <div class="step-icon">⏱️</div>
+          <div class="step-content">
+            <strong>30 SEKUNDEN</strong>
+            <p>Erreiche 100% Ladestand bevor die Zeit abläuft</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rules-cta">
+      <button class="btn btn-primary glow-btn" onclick="startGame()">
+        LET'S RACE! <span class="btn-icon">🏁</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 3 · GAMEPLAY
+  ═══════════════════════════════════════════════ -->
+  <section id="screen-game" class="screen">
+    <div class="screen-bg bg-game"></div>
+
+    <div class="game-hud">
+      <div class="hud-block">
+        <div class="hud-value" id="hit-count">0</div>
+        <div class="hud-label">HITS</div>
+      </div>
+      <div class="hud-timer-wrap">
+        <svg class="timer-ring" viewBox="0 0 60 60">
+          <circle class="timer-ring-bg" cx="30" cy="30" r="26"/>
+          <circle class="timer-ring-fill" id="timer-ring-fill" cx="30" cy="30" r="26"
+                  stroke-dasharray="163.4" stroke-dashoffset="0"/>
+        </svg>
+        <div class="hud-timer" id="timer-display">30</div>
+      </div>
+      <div class="hud-block right">
+        <div class="hud-value combo-val" id="combo-value">×1</div>
+        <div class="hud-label">COMBO</div>
+      </div>
+    </div>
+
+    <div class="game-arena">
+      <div class="tap-zone">
+        <div class="ripple-container" id="ripple-container"></div>
+        <button class="tap-ball" id="tap-ball" ontouchstart="handleTap(event)" onclick="handleTap(event)">
+          <span class="ball-inner">🏓</span>
+          <span class="ball-pulse"></span>
+          <span class="ball-glow"></span>
+        </button>
+        <div class="tap-hint-label" id="tap-hint">TAP!</div>
+      </div>
+    </div>
+
+    <div class="game-floor">
+      <div class="car-track">
+        <div class="car-progress" id="car-progress">
+          <div class="car-emoji" id="game-car">🚗</div>
+          <div class="car-exhaust" id="car-exhaust">
+            <span>✦</span><span>✦</span><span>✦</span>
+          </div>
+        </div>
+        <div class="track-line"></div>
+        <div class="track-flag">🏁</div>
+      </div>
+      <div class="battery-section">
+        <div class="battery-label">
+          <span>⚡ BATTERIE</span>
+          <span class="battery-pct" id="battery-pct">0%</span>
+        </div>
+        <div class="battery-track">
+          <div class="battery-fill" id="battery-fill"></div>
+          <div class="battery-spark-line" id="spark-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="floating-hits" id="floating-hits"></div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SCREEN 4 · END / LEADERBOARD
+  ═══════════════════════════════════════════════ -->
+  <section id="screen-end" class="screen">
+    <div class="screen-bg bg-end"></div>
+
+    <div class="end-header">
+      <div class="end-trophy-wrap">
+        <div class="end-trophy" id="end-trophy">🏆</div>
+        <div class="trophy-ring-outer"></div>
+        <div class="trophy-ring-inner"></div>
+      </div>
+      <h2 class="end-title" id="end-title">VOLLGELADEN!</h2>
+      <p class="end-sub" id="end-sub">Du hast den Leapmotor zum Laufen gebracht!</p>
+    </div>
+
+    <div class="result-card">
+      <div class="result-row">
+        <span class="result-label">🏓 Treffer</span>
+        <span class="result-val" id="res-hits">0</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">🔥 Max Combo</span>
+        <span class="result-val" id="res-combo">×1</span>
+      </div>
+      <div class="result-row">
+        <span class="result-label">⚡ Energie</span>
+        <span class="result-val accent" id="res-energy">0%</span>
+      </div>
+      <div class="result-row big-row">
+        <span class="result-label">🏆 SCORE</span>
+        <span class="result-val score-big" id="res-score">0</span>
+      </div>
+    </div>
+
+    <div class="leaderboard">
+      <h3 class="lb-heading">🏅 LEADERBOARD – TOP 10</h3>
+      <div class="lb-entries" id="lb-entries"></div>
+    </div>
+
+    <div class="end-cta">
+      <button class="btn btn-primary glow-btn" onclick="restartGame()">
+        🔄 NOCHMAL SPIELEN
+      </button>
+      <button class="btn btn-outline" onclick="showShareModal()">
+        📤 SCORE TEILEN
+      </button>
+    </div>
+  </section>
+
+</div><!-- /app -->
+
+<!-- ═══════════════════════════════════════════════
+     SHARE MODAL
+═══════════════════════════════════════════════ -->
+<div id="share-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-icon">📤</div>
+    <h3>Dein Score</h3>
+    <div class="share-text-box" id="share-text-box"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="copyShareText()">📋 Kopieren</button>
+      <button class="btn btn-outline" onclick="closeShareModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     COUNTDOWN OVERLAY
+═══════════════════════════════════════════════ -->
+<div id="countdown-overlay" class="modal-overlay hidden">
+  <div class="countdown-box">
+    <div class="countdown-number" id="countdown-num">3</div>
+    <div class="countdown-text">Bereit?</div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
