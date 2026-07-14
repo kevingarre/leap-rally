@@ -2394,6 +2394,7 @@ function openOptinForInstantWin() {
     if (btn) { btn.disabled = false; btn.textContent = '✅ GEWINN SICHERN'; }
     // Prefill from localStorage for convenience
     prefillGameOptinFromStorage();
+    bindContactVehicleToggle('gfi-contact', 'gfi-vehicle-row');
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
@@ -2599,6 +2600,29 @@ function onLaunchInput(e) {
 // ═══════════════════════════════════════════════════════════
 const PLAYER_STORAGE_KEY = 'leap_player_v1';
 
+// Show/hide vehicle row based on contact intent selection.
+function updateVehicleRowVisibility(contactId, vehicleRowId) {
+  const contact = document.getElementById(contactId);
+  const row     = document.getElementById(vehicleRowId);
+  if (!contact || !row) return;
+  const hide = contact.value === 'nein';
+  row.style.display = hide ? 'none' : '';
+  if (hide) {
+    const sel = document.getElementById(vehicleRowId.replace('-row', ''));
+    if (sel) sel.value = '';
+  }
+}
+
+function bindContactVehicleToggle(contactId, vehicleRowId) {
+  const contact = document.getElementById(contactId);
+  if (!contact) return;
+  contact.addEventListener('change', function() {
+    updateVehicleRowVisibility(contactId, vehicleRowId);
+  });
+  // Apply immediately (e.g. when form is prefilled)
+  updateVehicleRowVisibility(contactId, vehicleRowId);
+}
+
 function savePlayerToStorage(formData) {
   try {
     const toSave = {
@@ -2784,6 +2808,7 @@ function populateEndScreen(energyPct, isInstantWin) {
     if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
     // Prefill from localStorage
     prefillFormFromStorage();
+    bindContactVehicleToggle('fi-contact', 'fi-vehicle-row');
   }
 }
 
