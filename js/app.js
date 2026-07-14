@@ -1051,10 +1051,9 @@ function doBouncePaddle(b) {
   b.y = paddle.y - b.r - 1;
 
   if (b === ball) {
-    state.combo = Math.min(state.combo + 1, 5);
-    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+    // Paddle contact resets the block-streak (STREAK = consecutive block hits).
+    state.combo = 1;
     updateComboUI();
-    if (state.combo >= 4) triggerScreenShake(4, 0.2);
   }
 
   hintAlpha = 0;
@@ -1111,6 +1110,15 @@ function checkBlockCollisions(b) {
 
       blk.alive = false;
       aliveCount--;
+
+      // STREAK: increment combo on every block destroy (cap 8).
+      // Increment BEFORE score/energy calc so this hit already benefits.
+      if (b === ball) {
+        state.combo = Math.min(state.combo + 1, 8);
+        if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+        updateComboUI();
+        if (state.combo >= 4) triggerScreenShake(4, 0.2);
+      }
 
       const overlapX = b.r - Math.abs(dx);
       const overlapY = b.r - Math.abs(dy);
