@@ -2918,9 +2918,9 @@ function handleOptinSubmit(e) {
 
 async function _doOptinSubmit(playerData, submitBtn, errorEl) {
   try {
-    // If LEAP_EVENT was not loaded (e.g. network issue on startup), try once more.
+    // If LEAP_EVENT was not loaded (e.g. startup error), try fetching it now.
     if (!window.LEAP_EVENT) {
-      try { await loadActiveEvent(); } catch(e) {}
+      try { await initLeapEvent(); } catch(e) {}
     }
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
