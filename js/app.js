@@ -37,6 +37,74 @@ const BALL_MAX_SPEED   = 1.40;  // raised from 1.15 — cap fuer Level 4 + Bonus
 const BALL_WAVE_ACCEL  = 1.06;
 const BALL_MIN_VY_FRAC = 0.30;
 
+// ═══════════════════════════════════════════════════════════
+// DIFFICULTY PRESETS + GAME CONFIG RESOLVER
+// ═══════════════════════════════════════════════════════════
+// Three difficulty tiers. Staff can switch live via the DB:
+//   UPDATE events SET difficulty='hard' WHERE is_active=true;
+// Individual cfg_* columns override any preset value when NOT NULL.
+//
+// Preset values summary:
+//   easy  : ballBase=0.40, ballMax=1.15, lives=5, extraBall from L1, instantWin=1000
+//   normal: ballBase=0.50, ballMax=1.40, lives=3, extraBall from L1, instantWin=1500
+//   hard  : ballBase=0.62, ballMax=1.70, lives=2, extraBall from L3, instantWin=2200
+const DIFFICULTY_PRESETS = {
+  easy: {
+    ballBaseSpeed:     0.40,
+    ballMaxSpeed:      1.15,
+    lives:             5,
+    instantWinScore:   1000,
+    extraBallEnabled:  true,
+    extraBallMinLevel: 1,
+  },
+  normal: {
+    ballBaseSpeed:     BALL_BASE_SPEED,  // 0.50
+    ballMaxSpeed:      BALL_MAX_SPEED,   // 1.40
+    lives:             MAX_LIVES,        // 3
+    instantWinScore:   1500,
+    extraBallEnabled:  true,
+    extraBallMinLevel: 1,
+  },
+  hard: {
+    ballBaseSpeed:     0.62,
+    ballMaxSpeed:      1.70,
+    lives:             2,
+    instantWinScore:   2200,
+    extraBallEnabled:  true,
+    extraBallMinLevel: 3,
+  },
+};
+
+// Active resolved config — populated by resolveGameConfig() before each game.
+let GAME_CFG = Object.assign({}, DIFFICULTY_PRESETS.normal);
+
+/**
+ * Resolve GAME_CFG from window.LEAP_EVENT.
+ * — Falls back to 'normal' preset when LEAP_EVENT is null or difficulty unknown.
+ * — Each cfg_* field from the DB overrides the preset when not null/undefined.
+ * — cfg_instant_win_score has priority over legacy instant_win_score.
+ * Call this once before beginGameLoop (inside initCanvas flow).
+ */
+function resolveGameConfig() {
+  const ev      = window.LEAP_EVENT;
+  const tier    = (ev && DIFFICULTY_PRESETS[ev.difficulty]) ? ev.difficulty : 'normal';
+  const preset  = DIFFICULTY_PRESETS[tier];
+
+  GAME_CFG = {
+    ballBaseSpeed:     (ev && ev.cfg_ball_base_speed     != null) ? ev.cfg_ball_base_speed     : preset.ballBaseSpeed,
+    ballMaxSpeed:      (ev && ev.cfg_ball_max_speed      != null) ? ev.cfg_ball_max_speed      : preset.ballMaxSpeed,
+    lives:             (ev && ev.cfg_lives               != null) ? ev.cfg_lives               : preset.lives,
+    // cfg_instant_win_score > legacy instant_win_score > preset
+    instantWinScore:   (ev && ev.cfg_instant_win_score   != null) ? ev.cfg_instant_win_score
+                     : (ev && ev.instant_win_score       != null) ? ev.instant_win_score
+                     : preset.instantWinScore,
+    extraBallEnabled:  (ev && ev.cfg_extra_ball_enabled  != null) ? ev.cfg_extra_ball_enabled  : preset.extraBallEnabled,
+    extraBallMinLevel: (ev && ev.cfg_extra_ball_min_level != null) ? ev.cfg_extra_ball_min_level : preset.extraBallMinLevel,
+  };
+
+  console.info('[LEAP] GAME_CFG resolved (tier=' + tier + '):', JSON.stringify(GAME_CFG));
+}
+
 // Level speed multipliers
 const LEVEL_SPEED_MULT = [1.0, 1.25, 1.56, 1.95];
 
@@ -296,7 +364,7 @@ function resetGameState() {
     rafId:            null,
     lastFrameTime:    0,
     ballSpeedPx:      0,
-    lives:            MAX_LIVES,
+    lives:            GAME_CFG.lives,
     level:            1,
     maxLevelReached:  1,
     bonusMode:        false,
@@ -415,7 +483,10 @@ function initCanvas() {
   canvas.addEventListener('pointerdown', onPointerInput);
   canvas.addEventListener('pointerdown', onLaunchInput);
 
-  state.ballSpeedPx = BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[0];
+  // Resolve difficulty config from current event (or 'normal' preset as fallback)
+  resolveGameConfig();
+
+  state.ballSpeedPx = GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[0];
   initPaddle();
   initBallObj();
   initBlocks();
@@ -483,8 +554,8 @@ function tryLevelUp() {
 
   const lvlIdx = state.level - 1;
   state.ballSpeedPx = Math.min(
-    BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[lvlIdx],
-    BALL_MAX_SPEED * ch
+    GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[lvlIdx],
+    GAME_CFG.ballMaxSpeed * ch
   );
 
   // Update paddle width, keep horizontally centred
@@ -530,15 +601,15 @@ function enterBonusMode() {
       Math.pow(BONUS_LEVEL_SPEED_MULT, state.bonusWave)
     );
     state.ballSpeedPx = Math.min(
-      BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[3] * mult,
-      BALL_MAX_SPEED * ch
+      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[3] * mult,
+      GAME_CFG.ballMaxSpeed * ch
     );
   } else {
     state.bonusMode  = true;
     state.bonusWave  = 1;
     state.ballSpeedPx = Math.min(
-      BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[3] * BONUS_LEVEL_SPEED_MULT,
-      BALL_MAX_SPEED * ch
+      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[3] * BONUS_LEVEL_SPEED_MULT,
+      GAME_CFG.ballMaxSpeed * ch
     );
     spawnFloatText(cw / 2, ch * 0.28, '🏆 BONUS-MODE!', '#67C23A');
     spawnFloatText(cw / 2, ch * 0.38, 'JAGE DEN HIGHSCORE!', '#FFFFFF');
@@ -579,8 +650,10 @@ function updateLevelHUD() {
 function updateLivesHUD() {
   const el = document.getElementById('lives-display');
   if (!el) return;
+  // Use GAME_CFG.lives as the max hearts count (supports easy=5, normal=3, hard=2)
+  const maxHearts = GAME_CFG.lives;
   let html = '';
-  for (let i = 0; i < MAX_LIVES; i++) {
+  for (let i = 0; i < maxHearts; i++) {
     if (i < state.lives) {
       html += '<span class="life-heart life-full">❤️</span>';
     } else {
@@ -642,7 +715,7 @@ function respawnBlocks() {
   // Wave-level speed bump
   state.ballSpeedPx = Math.min(
     state.ballSpeedPx * BALL_WAVE_ACCEL,
-    BALL_MAX_SPEED * ch
+    GAME_CFG.ballMaxSpeed * ch
   );
 
   newWaveFlash = 0.8;
@@ -1568,17 +1641,16 @@ function flashFullCharge() {
 
   // Ball speed boost
   const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
-  const turboSpeed   = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
+  const turboSpeed   = Math.min(currentSpeed * 1.18, GAME_CFG.ballMaxSpeed * ch);
   if (currentSpeed > 0) {
     const k = turboSpeed / currentSpeed;
     ball.vx *= k;
     ball.vy *= k;
   }
-  state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
+  state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, GAME_CFG.ballMaxSpeed * ch);
 
-  // Gameplay bonus: Extra-Ball for ALL levels (4+ already had this)
-  // Extra-Ball lasts MULTIBALL_DURATION seconds then auto-expires
-  if (!ball2.active) {
+  // Gameplay bonus: Extra-Ball (only when enabled and level threshold met)
+  if (GAME_CFG.extraBallEnabled && state.level >= GAME_CFG.extraBallMinLevel && !ball2.active) {
     spawnBall2();
     spawnFloatText(cw / 2, ch * 0.33, '⚡ DOPPELBALL!', '#67C23A');
   }
@@ -1661,7 +1733,7 @@ function triggerGhostOvertake() {
 
   if (state.maxLevelReached < 3) return; // hold popup until level 2 cleared
 
-  const scoreThreshold = ev.instant_win_score || 1500;
+  const scoreThreshold = GAME_CFG.instantWinScore;
   const ghostReq       = ev.instant_win_ghost_req !== false;
   const approxScore    = computeCurrentScore();
 
@@ -2049,9 +2121,9 @@ function endGame() {
   const ev = window.LEAP_EVENT;
   let isInstantWin = (state.instantWinTriggered && session.submitted) ||
                      state.instantWinPending;
-  if (!isInstantWin && ev) {
-    const scoreThreshold = ev.instant_win_score || 1500;
-    const ghostReq       = ev.instant_win_ghost_req !== false;
+  if (!isInstantWin) {
+    const scoreThreshold = GAME_CFG.instantWinScore;
+    const ghostReq       = ev ? ev.instant_win_ghost_req !== false : true;
     isInstantWin = state.score >= scoreThreshold &&
                    (!ghostReq || state.ghostOvertaken);
   }
@@ -2549,22 +2621,28 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     drawCarBlock(bx, by, bw, bh);
     return;
   }
-  // Contain the sprite inside the block bounds with small padding
-  const pad    = 2;
+  // Contain the sprite inside the block bounds with proportional padding.
+  // Canvas is already DPR-scaled (ctx.scale(dpr,dpr) in resizeCanvas),
+  // so bx/by/bw/bh are CSS-pixel coords — no extra DPR correction needed here.
+  const pad    = Math.max(2, Math.round(Math.min(bw, bh) * 0.08)); // 8% of smaller dim
   const maxW   = bw - pad * 2;
   const maxH   = bh - pad * 2;
-  const ratio  = img.naturalWidth / img.naturalHeight;
+  const ratio  = img.naturalWidth / (img.naturalHeight || 1);
   let dw, dh;
   if (maxW / maxH > ratio) {
+    // height-constrained
     dh = maxH;
     dw = dh * ratio;
   } else {
+    // width-constrained
     dw = maxW;
     dh = dw / ratio;
   }
   const dx = bx + pad + (maxW - dw) / 2;
   const dy = by + pad + (maxH - dh) / 2;
   ctx.save();
+  ctx.imageSmoothingEnabled  = true;
+  ctx.imageSmoothingQuality  = 'high';
   ctx.globalAlpha = 0.92;
   ctx.drawImage(img, dx, dy, dw, dh);
   ctx.restore();
