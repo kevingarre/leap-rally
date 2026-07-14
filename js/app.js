@@ -1064,7 +1064,20 @@ function updateBall(dt) {
   }
 
   if (ball.y - ball.r > ch) {
-    onBallMiss();
+    if (ball2.active) {
+      // Second ball still in play — promote it to main ball, no life lost.
+      ball.x  = ball2.x;  ball.y  = ball2.y;
+      ball.vx = ball2.vx; ball.vy = ball2.vy;
+      ball.r  = ball2.r;
+      ballLaunched = true;
+      // Clear power-up effects that were on the lost main ball
+      state.pierceActive    = false;
+      state.speedBoostTimer = 0;
+      deactivateBall2();
+      spawnFloatText(cw / 2, ch * 0.45, '↩ BALL GERETTET!', '#67C23A');
+    } else {
+      onBallMiss();
+    }
     return;
   }
 
