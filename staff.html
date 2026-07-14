@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="robots" content="noindex,nofollow">
+  <title>LEAP CHARGE · Staff Panel</title>
+  <style>
+    /* ── Local Fonts (Montserrat) ─────────────────────────────── */
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Black.ttf') format('truetype');
+      font-weight: 900; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-ExtraBold.ttf') format('truetype');
+      font-weight: 800; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Bold.ttf') format('truetype');
+      font-weight: 700; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Regular.ttf') format('truetype');
+      font-weight: 400; font-style: normal; font-display: block;
+    }
+
+    /* ── Design Tokens ───────────────────────────────────────── */
+    :root {
+      --lm-black:   #000000;
+      --lm-white:   #FFFFFF;
+      --lm-green:   #67C23A;
+      --lm-gd:      #529B2E;  /* green-dark */
+      --lm-gs:      #95D475;  /* green-soft */
+      --lm-grey:    #B3B3B3;
+      --lm-greyd:   #303133;
+      --lm-card:    rgba(255,255,255,0.05);
+      --lm-border:  rgba(255,255,255,0.10);
+      --lm-error:   #FF4D51;
+      --lm-warn:    #FFB800;
+      --font:       'Montserrat', -apple-system, sans-serif;
+      --radius:     16px;
+      --radius-sm:  10px;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+    body {
+      min-height: 100vh;
+      background: var(--lm-black);
+      color: var(--lm-white);
+      font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button { border: none; cursor: pointer; font-family: var(--font); }
+    input, select { font-family: var(--font); }
+    a { color: var(--lm-green); }
+
+    /* ══════════════════════════════════════════════════════════
+       PIN SCREEN
+    ══════════════════════════════════════════════════════════ */
+    #screen-pin {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px 24px;
+      background:
+        radial-gradient(ellipse 90% 60% at 50% -10%, rgba(103,194,58,0.14) 0%, transparent 60%),
+        #000;
+    }
+
+    .pin-logo {
+      height: 56px;
+      width: auto;
+      margin-bottom: 36px;
+      filter: invert(1) brightness(2);
+    }
+
+    .pin-box {
+      width: 100%;
+      max-width: 360px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius);
+      padding: 32px 24px 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .pin-title {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--lm-grey);
+    }
+
+    /* PIN dot indicators */
+    .pin-dots {
+      display: flex;
+      gap: 14px;
+    }
+    .pin-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid var(--lm-greyd);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .pin-dot.filled {
+      background: var(--lm-green);
+      border-color: var(--lm-green);
+      box-shadow: 0 0 8px rgba(103,194,58,0.5);
+    }
+
+    .pin-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--lm-greyd);
+      border-radius: var(--radius-sm);
+      color: var(--lm-white);
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: 10px;
+      text-align: center;
+      padding: 14px 16px;
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 56px;
+    }
+    .pin-input:focus {
+      outline: none;
+      border-color: var(--lm-green);
+      box-shadow: 0 0 0 2px rgba(103,194,58,0.2);
+    }
+
+    .pin-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--lm-green);
+      color: #000;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      min-height: 54px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 20px rgba(103,194,58,0.35);
+    }
+    .pin-btn:active { background: var(--lm-gd); transform: scale(0.97); }
+
+    .pin-error {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,77,81,0.10);
+      border: 1px solid rgba(255,77,81,0.35);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: #FF8080;
+      text-align: center;
+      display: none;
+      line-height: 1.4;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       DASHBOARD
+    ══════════════════════════════════════════════════════════ */
+    #screen-dashboard {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Top Bar ──────────────────────────────────────────────── */
+    .staff-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+      background: rgba(0,0,0,0.92);
+      border-bottom: 1px solid rgba(103,194,58,0.25);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar-logo {
+      height: 26px;
+      width: auto;
+      filter: invert(1) brightness(2);
+    }
+    .topbar-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--lm-green);
+      text-transform: uppercase;
+    }
+    .topbar-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 4px;
+    }
+
+    .btn-logout {
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 20px;
+      color: var(--lm-grey);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      min-height: 44px;
+      transition: background 0.2s;
+    }
+    .btn-logout:active { background: rgba(255,255,255,0.08); color: var(--lm-white); }
+
+    /* ── Dashboard body ───────────────────────────────────────── */
+    .dashboard-body {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-width: 680px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: max(40px, env(safe-area-inset-bottom));
+    }
+
+    /* ── Section cards ───────────────────────────────────────── */
+    .section-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .section-card.accent-border { border-color: rgba(103,194,58,0.32); }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+      gap: 8px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--lm-green);
+    }
+    .section-body {
+      padding: 16px;
+    }
+
+    /* ── Stats row ───────────────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-value {
+      display: block;
+      font-family: var(--font);
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--lm-green);
+      line-height: 1;
+    }
+    .stat-label {
+      display: block;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--lm-grey);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Event meta */
+    .event-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--lm-white);
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+    .event-meta {
+      margin-bottom: 14px;
+    }
+    .event-meta span {
+      display: block;
+      font-size: 13px;
+      color: var(--lm-grey);
+      line-height: 1.7;
+    }
+
+    /* Difficulty row */
+    .difficulty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .difficulty-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--lm-grey);
+      white-space: nowrap;
+    }
+    .diff-select {
+      flex: 1;
+      min-width: 120px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--lm-greyd);
+      border-radius: var(--radius-sm);
+      color: var(--lm-white);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 12px;
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 44px;
+      cursor: pointer;
+    }
+    .diff-select option { background: #111; }
+    .diff-select:focus { outline: none; border-color: var(--lm-green); }
+    .diff-select:disabled { opacity: 0.5; }
+
+    /* Action buttons */
+    .btn-action {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(103,194,58,0.08);
+      border: 1px solid rgba(103,194,58,0.35);
+      border-radius: 12px;
+      color: var(--lm-green);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      min-height: 48px;
+      transition: background 0.2s;
+      text-align: center;
+    }
+    .btn-action:active { background: rgba(103,194,58,0.18); }
+    .btn-action + .btn-action { margin-top: 8px; }
+
+    /* ── New Event Form ───────────────────────────────────────── */
+    .form-sep {
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+      margin: 4px 0 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .form-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--lm-grey);
+    }
+    .form-input, .form-select-new {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--lm-greyd);
+      border-radius: var(--radius-sm);
+      color: var(--lm-white);
+      font-size: 15px;
+      font-weight: 400;
+      padding: 10px 12px;
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 44px;
+    }
+    .form-input:focus, .form-select-new:focus {
+      outline: none;
+      border-color: var(--lm-green);
+      box-shadow: 0 0 0 2px rgba(103,194,58,0.18);
+    }
+    .form-select-new option { background: #111; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 6px 0;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--lm-green);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .checkbox-row label {
+      font-size: 14px;
+      color: var(--lm-white);
+      cursor: pointer;
+      line-height: 1.4;
+    }
+
+    .btn-form-submit {
+      width: 100%;
+      padding: 16px;
+      background: var(--lm-green);
+      color: #000;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      min-height: 54px;
+      margin-top: 12px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 4px 20px rgba(103,194,58,0.3);
+    }
+    .btn-form-submit:active { background: var(--lm-gd); transform: scale(0.97); }
+    .btn-form-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── Refresh button ──────────────────────────────────────── */
+    .btn-refresh {
+      padding: 7px 14px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      color: var(--lm-grey);
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 36px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-refresh:active { background: rgba(255,255,255,0.07); }
+
+    /* ── Tables ──────────────────────────────────────────────── */
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .staff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .staff-table th {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--lm-grey);
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      white-space: nowrap;
+    }
+    .staff-table td {
+      padding: 11px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--lm-white);
+      vertical-align: middle;
+    }
+    .staff-table tr:last-child td { border-bottom: none; }
+
+    .cell-rank {
+      font-weight: 700;
+      color: var(--lm-grey);
+      text-align: center;
+      min-width: 28px;
+    }
+    .cell-rank.gold   { color: #FFD700; }
+    .cell-rank.silver { color: #C0C0C0; }
+    .cell-rank.bronze { color: #CD7F32; }
+    .cell-score {
+      font-family: var(--font);
+      font-weight: 700;
+      color: var(--lm-green);
+      white-space: nowrap;
+    }
+    .cell-code {
+      font-family: var(--font);
+      font-weight: 900;
+      font-size: 20px;
+      letter-spacing: 5px;
+      color: var(--lm-green);
+      white-space: nowrap;
+    }
+    .cell-ghost-yes { color: var(--lm-green); font-weight: 700; }
+    .cell-ghost-no  { color: var(--lm-greyd); }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-open    { background: rgba(255,184,0,0.14); color: var(--lm-warn); }
+    .badge-claimed { background: rgba(103,194,58,0.14); color: var(--lm-green); }
+    .badge-ts {
+      display: block;
+      font-size: 10px;
+      color: var(--lm-grey);
+      margin-top: 2px;
+      font-weight: 400;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    /* Claim button */
+    .btn-claim {
+      padding: 9px 14px;
+      background: var(--lm-green);
+      color: #000;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      min-height: 44px;
+      min-width: 90px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-claim:active { background: var(--lm-gd); }
+    .btn-claim:disabled { opacity: 0.35; cursor: not-allowed; background: var(--lm-green); }
+
+    /* ── State helpers ───────────────────────────────────────── */
+    .msg-loading {
+      padding: 20px;
+      text-align: center;
+      color: var(--lm-grey);
+      font-size: 14px;
+    }
+    .msg-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--lm-grey);
+      font-size: 14px;
+    }
+    .msg-error {
+      padding: 12px 16px;
+      background: rgba(255,77,81,0.08);
+      border: 1px solid rgba(255,77,81,0.25);
+      border-radius: var(--radius-sm);
+      color: #FF8080;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .msg-success {
+      padding: 12px 16px;
+      background: rgba(103,194,58,0.08);
+      border: 1px solid rgba(103,194,58,0.28);
+      border-radius: var(--radius-sm);
+      color: var(--lm-green);
+      font-size: 13px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    #staff-toast {
+      position: fixed;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #111;
+      border: 1px solid rgba(103,194,58,0.4);
+      border-radius: 12px;
+      padding: 12px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--lm-green);
+      z-index: 9999;
+      transition: transform 0.3s ease;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    }
+    #staff-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+    #staff-toast.toast-error {
+      color: #FF8080;
+      border-color: rgba(255,77,81,0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════
+       PIN SCREEN
+  ══════════════════════════════════════════════ -->
+  <div id="screen-pin">
+    <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="pin-logo">
+
+    <div class="pin-box">
+      <div class="pin-title">🔐 Staff-Login</div>
+
+      <div class="pin-dots" id="pin-dots">
+        <div class="pin-dot" id="pd-0"></div>
+        <div class="pin-dot" id="pd-1"></div>
+        <div class="pin-dot" id="pd-2"></div>
+        <div class="pin-dot" id="pd-3"></div>
+      </div>
+
+      <input
+        id="pin-input"
+        type="password"
+        inputmode="numeric"
+        maxlength="6"
+        placeholder="PIN eingeben"
+        class="pin-input"
+        autocomplete="off"
+      >
+
+      <div id="pin-error" class="pin-error"></div>
+
+      <button class="pin-btn" id="pin-btn" onclick="handlePinSubmit()">EINLOGGEN ▶</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       DASHBOARD
+  ══════════════════════════════════════════════ -->
+  <div id="screen-dashboard">
+
+    <!-- Top Navigation Bar -->
+    <div class="staff-topbar">
+      <div class="topbar-brand">
+        <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="topbar-logo">
+        <div class="topbar-divider"></div>
+        <span class="topbar-title">Staff Panel</span>
+      </div>
+      <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+    </div>
+
+    <div class="dashboard-body">
+
+      <!-- ══ A: AKTIVES EVENT ══════════════════════════════ -->
+      <div class="section-card accent-border">
+        <div class="section-head">
+          <span class="section-title">⚡ Aktives Event</span>
+          <button class="btn-refresh" onclick="loadActiveEvent()">↻ Aktualisieren</button>
+        </div>
+        <div class="section-body" id="event-card">
+          <div class="msg-loading">⏳ Lade Event…</div>
+        </div>
+      </div>
+
+      <!-- ══ B: NEUES EVENT ANLEGEN ════════════════════════ -->
+      <div class="section-card" id="new-event-section" style="display:none;">
+        <div class="section-head">
+          <span class="section-title">🆕 Neues Event anlegen</span>
+          <button class="btn-refresh" onclick="closeNewEventForm()">✕ Schließen</button>
+        </div>
+        <div class="section-body">
+          <div id="new-event-msg"></div>
+          <form id="new-event-form" onsubmit="handleNewEvent(event)">
+
+            <div class="form-group">
+              <label class="form-label" for="nef-name">Event-Name *</label>
+              <input type="text" id="nef-name" class="form-input" required
+                     placeholder="Leapmotor Event — Autohaus XY, Berlin">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nef-location">Ort *</label>
+              <input type="text" id="nef-location" class="form-input" required
+                     placeholder="Musterstraße 1, 12345 Musterstadt">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nef-start">Start (Datum/Zeit)</label>
+              <input type="datetime-local" id="nef-start" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nef-end">Ende (Datum/Zeit)</label>
+              <input type="datetime-local" id="nef-end" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="nef-threshold">Score-Schwelle für Sofort-Gewinn</label>
+              <input type="number" id="nef-threshold" class="form-input"
+                     value="1500" min="100" max="99999">
+            </div>
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="nef-ghost" checked>
+              <label for="nef-ghost">Ghost-Car überholen ist Pflicht für Sofort-Gewinn</label>
+            </div>
+
+            <button type="submit" class="btn-form-submit" id="nef-submit-btn">
+              🗄 Altes archivieren &amp; Neues Event starten
+            </button>
+
+          </form>
+        </div>
+      </div>
+
+      <!-- ══ C: TOP-SCORES ══════════════════════════════════ -->
+      <div class="section-card">
+        <div class="section-head">
+          <span class="section-title">🏆 Top-Scores (Live-Leaderboard)</span>
+          <button class="btn-refresh" onclick="loadLeaderboard()">↻ Aktualisieren</button>
+        </div>
+        <div id="leaderboard-content">
+          <div class="msg-loading">⏳ Lade Leaderboard…</div>
+        </div>
+      </div>
+
+      <!-- ══ D: INSTANT WIN CODES ══════════════════════════ -->
+      <div class="section-card">
+        <div class="section-head">
+          <span class="section-title">🎟 Gewinn-Codes</span>
+          <button class="btn-refresh" onclick="loadInstantWins()">↻ Aktualisieren</button>
+        </div>
+        <div id="wins-content">
+          <div class="msg-loading">⏳ Lade Gewinn-Codes…</div>
+        </div>
+      </div>
+
+    </div><!-- /.dashboard-body -->
+  </div><!-- /#screen-dashboard -->
+
+  <!-- Toast -->
+  <div id="staff-toast"></div>
+
+  <script src="js/supabase-config.js"></script>
+  <script src="js/staff.js"></script>
+</body>
+</html>
