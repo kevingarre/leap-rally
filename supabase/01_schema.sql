@@ -15,6 +15,8 @@ create table if not exists events (
   is_active              boolean not null default false,
   instant_win_score      integer not null default 1500,   -- konfigurierbar
   instant_win_ghost_req  boolean not null default true,    -- Ghost überholen Pflicht
+  terms_md               text,        -- Teilnahmebedingungen (Markdown), pro Event editierbar
+  terms_version          integer not null default 1,       -- hochzählen bei Änderung
   created_at             timestamptz not null default now()
 );
 
@@ -40,6 +42,7 @@ create table if not exists players (
   consent_better_offers boolean not null default false,
   consent_partners      boolean not null default false,
   terms_accepted        boolean not null default false,
+  terms_version_at_entry integer,     -- welche TNB-Version akzeptiert wurde (Nachweis)
   privacy_accepted_at   timestamptz,
   -- Entry-Modus
   entry_source          text not null default 'byod',  -- 'byod' | 'staff_manual'

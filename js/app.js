@@ -17,32 +17,54 @@ const CAR_TARGET_BONUS_SCORE  = 140;
 const CAR_TARGET_BONUS_ENERGY = 3;
 
 // Block grid
-const BLOCK_ROWS    = 4;
-const BLOCK_COLS    = 6;
 const BLOCK_GAP     = 5;   // px between blocks
 const BLOCK_TOP_PAD = 18;  // px from top of canvas
 const BLOCK_SIDE_PAD = 8;  // px from sides
 
-// Energy reward per block row (row 0 = top; row 3 = nearest paddle = highest reward)
-const BLOCK_ROW_ENERGY = [2, 3, 4, 5];
+// Energy reward per block row (row 0 = top; row N-1 = nearest paddle = highest reward)
+const BLOCK_ROW_ENERGY_BASE = [2, 3, 4, 5];
 const BLOCK_COLORS = [
   '#39FF14', // green  – row 0 (top)
   '#00C8FF', // cyan   – row 1
   '#FFB800', // amber  – row 2
   '#FF5500', // orange – row 3 (bottom of block zone)
 ];
+const TURBO_BLOCK_COLOR = '#FF5500'; // Leapmotor orange
+const CAR_BLOCK_COLOR   = '#00C8FF'; // cyan highlight
 
 // Ball physics (fractions of canvas height per second)
-const BALL_BASE_SPEED  = 0.54;
-const BALL_MAX_SPEED   = 0.98;
-const BALL_WAVE_ACCEL  = 1.10; // ×speed per wave cleared
-const BALL_MIN_VY_FRAC = 0.30; // minimum vertical component fraction
+const BALL_BASE_SPEED  = 0.38;  // Level 1: noticeably slower than before
+const BALL_MAX_SPEED   = 1.05;  // Level 4: fast but not uncontrollable
+const BALL_WAVE_ACCEL  = 1.06;  // ×speed per wave cleared (smaller, levels handle big jumps)
+const BALL_MIN_VY_FRAC = 0.30;  // minimum vertical component fraction
 
-// Paddle
-const PADDLE_WIDTH_FRAC  = 0.28;  // fraction of canvas width
-const PADDLE_HEIGHT      = 12;    // logical px
-const PADDLE_BOTTOM_PAD  = 18;    // px from canvas bottom
-const PADDLE_LERP_FACTOR = 18;    // lerp speed (multiplied by dt)
+// Level speed multipliers (applied over base speed)
+const LEVEL_SPEED_MULT = [1.0, 1.25, 1.56, 1.95]; // L1=1×, L2=+25%, L3=+56%, L4=+95%
+
+// Paddle widths per level (fraction of canvas width)
+const LEVEL_PADDLE_FRAC = [0.32, 0.27, 0.23, 0.20]; // shrinks each level
+const PADDLE_MIN_PX     = 45;   // absolute minimum paddle width in px
+const PADDLE_HEIGHT      = 12;  // logical px
+const PADDLE_BOTTOM_PAD  = 18;  // px from canvas bottom
+const PADDLE_LERP_FACTOR = 18;  // lerp speed (multiplied by dt)
+
+// Level time backstops (seconds elapsed → force level up if wave not yet cleared)
+const LEVEL_TIME_BACKSTOPS = [0, 8, 16, 24]; // L1 starts at 0, L2 at 8s, L3 at 16s, L4 at 24s
+
+// Level block layout: [rows, cols, turboCount, carBlockRows]
+// turboCount = how many turbo blocks per wave; carBlockRows = which row indices get Car blocks
+const LEVEL_BLOCK_CONFIG = [
+  { rows: 2, cols: 6, turboCount: 0, carRows: [1] },        // L1: 2 rows, no turbo
+  { rows: 3, cols: 6, turboCount: 2, carRows: [1, 2] },     // L2: 3 rows, 2 turbo
+  { rows: 4, cols: 6, turboCount: 3, carRows: [1, 2, 3] },  // L3: 4 rows, 3 turbo, car blocks
+  { rows: 4, cols: 7, turboCount: 4, carRows: [2, 3] },     // L4: 4×7, 4 turbo
+];
+
+// Ghost car speed per level (fraction of track traversal per second)
+const GHOST_SPEED_FRAC = [0.02, 0.035, 0.055, 0.08]; // relative track position per second
+
+// Multi-ball duration (Level 4)
+const MULTIBALL_DURATION = 3.0; // seconds
 
 // FX
 const PARTICLE_COUNT = 8;
@@ -81,6 +103,16 @@ let state = {
   rafId:         null,      // requestAnimationFrame id
   lastFrameTime: 0,
   ballSpeedPx:   0,         // actual pixel speed per second
+  // Level system
+  level:         1,         // 1-4
+  maxLevelReached: 1,
+  levelWaveCleared: false,  // flag: wave was cleared in current level
+  // Ghost car
+  ghostOvertaken: false,    // set to true when ghost is overtaken (permanent for score)
+  ghostTrackPos:  0.65,     // 0..1, ghost position on track
+  // Multi-ball (Level 4)
+  multiBallActive: false,
+  multiBallTimer:  0,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -91,8 +123,9 @@ let cw = 0, ch = 0;        // logical canvas dimensions
 
 const paddle = { x: 0, y: 0, w: 0, h: PADDLE_HEIGHT, targetX: 0 };
 const ball   = { x: 0, y: 0, vx: 0, vy: 0, r: 0 };
+const ball2  = { x: 0, y: 0, vx: 0, vy: 0, r: 0, active: false }; // multi-ball
 
-let blocks      = [];  // { x, y, w, h, row, alive, carTarget }
+let blocks      = [];  // { x, y, w, h, row, alive, carTarget, isTurbo, isCar2Hit, hitsLeft }
 let particles   = [];  // { x, y, vx, vy, life, maxLife, color, size }
 let floatTexts  = [];  // { x, y, vy, text, color, life, maxLife }
 
@@ -100,6 +133,17 @@ let ballLaunched  = false;
 let ballMissFlash = 0;
 let newWaveFlash  = 0;
 let hintAlpha     = 1;   // "move paddle" hint fade
+
+// Level overlay
+let levelOverlay     = { active: false, timer: 0, level: 1 };
+const LEVEL_OVERLAY_DURATION = 1.8; // seconds
+
+// Screen shake
+let screenShakeTimer = 0;
+let screenShakeAmt   = 0;
+
+// WebAudio context (lazy init)
+let audioCtx = null;
 
 // ═══════════════════════════════════════════════════════════
 // SCREEN NAVIGATION
@@ -146,14 +190,25 @@ function resetGameState() {
     rafId:         null,
     lastFrameTime: 0,
     ballSpeedPx:   0,
+    level:         1,
+    maxLevelReached: 1,
+    levelWaveCleared: false,
+    ghostOvertaken: false,
+    ghostTrackPos:  0.65,
+    multiBallActive: false,
+    multiBallTimer:  0,
   });
 
+  ball2.active = false;
   particles   = [];
   floatTexts  = [];
   ballLaunched  = false;
   ballMissFlash = 0;
   newWaveFlash  = 0;
   hintAlpha     = 1;
+  levelOverlay  = { active: false, timer: 0, level: 1 };
+  screenShakeTimer = 0;
+  screenShakeAmt   = 0;
 
   // Reset HUD
   setEl('hit-count',     '0');
@@ -200,6 +255,9 @@ function resetGameState() {
     numEl.style.color  = 'var(--orange)';
     numEl.style.filter = 'drop-shadow(0 0 30px var(--orange))';
   }
+
+  // Update level indicator if present
+  updateLevelHUD();
 }
 
 function runCountdown() {
@@ -252,7 +310,7 @@ function initCanvas() {
   canvas.addEventListener('pointerdown', onPointerInput);
 
   // Init game objects
-  state.ballSpeedPx = BALL_BASE_SPEED * ch;
+  state.ballSpeedPx = BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[0]; // Level 1 speed
   initPaddle();
   initBallObj();
   initBlocks();
@@ -268,7 +326,10 @@ function resizeCanvas() {
 }
 
 function initPaddle() {
-  paddle.w       = Math.round(cw * PADDLE_WIDTH_FRAC);
+  const lvlIdx = Math.max(0, Math.min(3, state.level - 1));
+  const frac   = LEVEL_PADDLE_FRAC[lvlIdx];
+  const rawW   = Math.round(cw * frac);
+  paddle.w       = Math.max(PADDLE_MIN_PX, rawW);
   paddle.h       = PADDLE_HEIGHT;
   paddle.x       = (cw - paddle.w) / 2;
   paddle.y       = ch - PADDLE_BOTTOM_PAD - PADDLE_HEIGHT;
@@ -299,17 +360,103 @@ function launchBall() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// LEVEL SYSTEM
+// ═══════════════════════════════════════════════════════════
+function getLevelConfig() {
+  return LEVEL_BLOCK_CONFIG[Math.min(state.level - 1, 3)];
+}
+
+function tryLevelUp(reason) {
+  if (state.level >= 4) return false;
+  state.level++;
+  if (state.level > state.maxLevelReached) state.maxLevelReached = state.level;
+
+  // Update ball speed for new level
+  const lvlIdx = state.level - 1;
+  state.ballSpeedPx = Math.min(
+    BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[lvlIdx],
+    BALL_MAX_SPEED * ch
+  );
+
+  // Update paddle width (shrink)
+  const frac = LEVEL_PADDLE_FRAC[lvlIdx];
+  paddle.w   = Math.max(PADDLE_MIN_PX, Math.round(cw * frac));
+  // Keep paddle centred after shrink
+  paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x + (paddle.w / 2)));
+  paddle.targetX = paddle.x;
+
+  // Trigger ghost speed update
+  // (ghost speed is read dynamically from state.level in update loop)
+
+  // Show level overlay
+  levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: state.level };
+
+  // Screen shake
+  triggerScreenShake(8, 0.45);
+
+  // WebAudio level-up jingle
+  playLevelUpTone(state.level);
+
+  // Update HUD
+  updateLevelHUD();
+
+  spawnFloatText(cw / 2, ch * 0.35, `⚡ LEVEL ${state.level}!`, state.level >= 4 ? '#FF5500' : '#39FF14');
+
+  // Level 4: enable multi-ball spawning on next full charge
+  if (state.level === 4) {
+    spawnFloatText(cw / 2, ch * 0.45, '🔴 MULTI-BALL BEREIT', '#FF5500');
+  }
+
+  return true;
+}
+
+function updateLevelHUD() {
+  // Inject or update level badge in HUD if element exists
+  let badge = document.getElementById('level-badge');
+  if (!badge) return;
+  badge.textContent = `LVL ${state.level}`;
+  badge.className   = `level-badge level-${state.level}`;
+}
+
+// Check if time backstop triggers a level up
+function checkLevelBackstop() {
+  const elapsed = GAME_DURATION - state.timeLeft;
+  const nextLvl = state.level; // currently at this level, check if next level threshold passed
+  if (nextLvl >= 4) return;
+  const threshold = LEVEL_TIME_BACKSTOPS[nextLvl]; // e.g. level 1 checks [1]=8
+  if (elapsed >= threshold) {
+    tryLevelUp('backstop');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // BLOCKS
 // ═══════════════════════════════════════════════════════════
 function initBlocks() {
   blocks = [];
+  const cfg    = getLevelConfig();
+  const rows   = cfg.rows;
+  const cols   = cfg.cols;
   const usableW = cw - BLOCK_SIDE_PAD * 2;
-  const blockW  = (usableW - BLOCK_GAP * (BLOCK_COLS - 1)) / BLOCK_COLS;
+  const blockW  = (usableW - BLOCK_GAP * (cols - 1)) / cols;
   const blockH  = Math.max(14, Math.round(ch * 0.055));
 
-  for (let row = 0; row < BLOCK_ROWS; row++) {
-    const carCol = (row * 2 + 1) % BLOCK_COLS;
-    for (let col = 0; col < BLOCK_COLS; col++) {
+  // Determine which block indices are turbo (random spread)
+  const totalBlocks  = rows * cols;
+  const turboIndices = new Set();
+  while (turboIndices.size < Math.min(cfg.turboCount, totalBlocks)) {
+    turboIndices.add(Math.floor(Math.random() * totalBlocks));
+  }
+
+  let idx = 0;
+  for (let row = 0; row < rows; row++) {
+    const isCarRow = cfg.carRows.includes(row);
+    const carCol   = (row * 2 + 1) % cols;
+    for (let col = 0; col < cols; col++) {
+      const isTurbo   = turboIndices.has(idx);
+      const isCar     = isCarRow && col === carCol;
+      // Car blocks in Level 3+ need 2 hits; turbo = 1 hit
+      const hitsLeft  = (isCar && state.level >= 3) ? 2 : 1;
       blocks.push({
         x:     BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
         y:     BLOCK_TOP_PAD  + row * (blockH + BLOCK_GAP),
@@ -317,21 +464,143 @@ function initBlocks() {
         h:     blockH,
         row,
         alive: true,
-        carTarget: col === carCol,
+        carTarget: isCar,
+        isTurbo,
+        hitsLeft,
       });
+      idx++;
     }
   }
 }
 
 function respawnBlocks() {
   state.wavesCleared++;
+  state.levelWaveCleared = true;
+
+  // Wave-level speed bump (smaller – levels handle big jumps)
   state.ballSpeedPx = Math.min(
     state.ballSpeedPx * BALL_WAVE_ACCEL,
     BALL_MAX_SPEED * ch
   );
+
   newWaveFlash = 0.8;
   initBlocks();
   spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#39FF14');
+
+  // Wave clear triggers a level up if not at max
+  tryLevelUp('wave');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MULTI-BALL
+// ═══════════════════════════════════════════════════════════
+function spawnBall2() {
+  if (ball2.active || state.level < 4) return;
+  ball2.r      = ball.r;
+  ball2.x      = paddle.x + paddle.w / 2;
+  ball2.y      = paddle.y - ball2.r - 4;
+  ball2.active = true;
+
+  // Launch in roughly mirrored angle
+  const angleDeg = -75 + Math.random() * 15;
+  const angleRad = angleDeg * (Math.PI / 180);
+  const dir      = ball.vx < 0 ? 1 : -1; // opposite horizontal to main ball
+  const spd      = state.ballSpeedPx;
+  ball2.vx = Math.cos(angleRad) * spd * dir;
+  ball2.vy = Math.sin(angleRad) * spd;
+
+  state.multiBallActive = true;
+  state.multiBallTimer  = MULTIBALL_DURATION;
+
+  spawnFloatText(cw / 2, ch * 0.3, '🔴 MULTI-BALL!', '#FF5500');
+  playTone(660, 'square', 0.18, 0.25);
+  triggerScreenShake(5, 0.3);
+}
+
+function deactivateBall2() {
+  ball2.active = false;
+  state.multiBallActive = false;
+  state.multiBallTimer  = 0;
+}
+
+// ═══════════════════════════════════════════════════════════
+// GHOST CAR
+// ═══════════════════════════════════════════════════════════
+function updateGhostCar(dt) {
+  if (state.ghostOvertaken) return; // ghost already behind, stays put
+  const lvlIdx  = state.level - 1;
+  const spd     = GHOST_SPEED_FRAC[Math.min(lvlIdx, 3)];
+  state.ghostTrackPos = Math.min(0.97, state.ghostTrackPos + spd * dt);
+
+  // Update ghost DOM position
+  const ghostEl = document.getElementById('ghost-car');
+  const track   = document.querySelector('.car-track');
+  if (!ghostEl || !track) return;
+  const trackW    = track.offsetWidth;
+  const playerMax = trackW - 50 - 36;
+  const ghostLeft = 8 + state.ghostTrackPos * playerMax;
+  ghostEl.style.left = `${ghostLeft}px`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// WEBAUDIO
+// ═══════════════════════════════════════════════════════════
+function getAudioCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return audioCtx;
+}
+
+function playTone(freq, type, gain, duration) {
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    env.gain.setValueAtTime(gain, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+    osc.connect(env);
+    env.connect(ac.destination);
+    osc.start(ac.currentTime);
+    osc.stop(ac.currentTime + duration + 0.05);
+  } catch(e) {}
+}
+
+function playLevelUpTone(level) {
+  const ac = getAudioCtx();
+  if (!ac) return;
+  // Ascending chord arpeggio based on level
+  const notes = [
+    [440, 554, 659],  // L2: A4-C#5-E5
+    [523, 659, 784],  // L3: C5-E5-G5
+    [659, 880, 1047], // L4: E5-A5-C6 (triumphant)
+  ][Math.min(level - 2, 2)] || [440, 554, 659];
+
+  notes.forEach((freq, i) => {
+    const delay = i * 0.10;
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, ac.currentTime + delay);
+    env.gain.setValueAtTime(0, ac.currentTime + delay);
+    env.gain.linearRampToValueAtTime(0.22, ac.currentTime + delay + 0.03);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + 0.45);
+    osc.connect(env);
+    env.connect(ac.destination);
+    osc.start(ac.currentTime + delay);
+    osc.stop(ac.currentTime + delay + 0.5);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SCREEN SHAKE
+// ═══════════════════════════════════════════════════════════
+function triggerScreenShake(amt, duration) {
+  screenShakeAmt   = amt;
+  screenShakeTimer = duration;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -368,6 +637,9 @@ function gameTick() {
     }
   }
 
+  // Check level backstop
+  checkLevelBackstop();
+
   if (state.timeLeft <= 0) endGame();
 }
 
@@ -398,6 +670,30 @@ function update(dt) {
     ball.y = paddle.y - ball.r - 4;
   } else {
     updateBall(dt);
+  }
+
+  // Multi-ball update
+  if (ball2.active) {
+    updateBall2(dt);
+    state.multiBallTimer -= dt;
+    if (state.multiBallTimer <= 0) {
+      deactivateBall2();
+      spawnFloatText(cw / 2, ch * 0.4, 'MULTI-BALL ENDE', '#FFB800');
+    }
+  }
+
+  // Ghost car movement
+  updateGhostCar(dt);
+
+  // Level overlay countdown
+  if (levelOverlay.active) {
+    levelOverlay.timer -= dt;
+    if (levelOverlay.timer <= 0) levelOverlay.active = false;
+  }
+
+  // Screen shake
+  if (screenShakeTimer > 0) {
+    screenShakeTimer = Math.max(0, screenShakeTimer - dt);
   }
 
   // FX updates
@@ -435,7 +731,7 @@ function updateBall(dt) {
       ball.y + ball.r <= paddle.y + paddle.h + Math.abs(ball.vy * dt * 2) &&
       ball.x > paddle.x - ball.r * 0.4 &&
       ball.x < paddle.x + paddle.w + ball.r * 0.4) {
-    doBouncePaddle();
+    doBouncePaddle(ball);
     return;
   }
 
@@ -446,33 +742,69 @@ function updateBall(dt) {
   }
 
   // Block collisions
-  checkBlockCollisions();
+  checkBlockCollisions(ball);
 }
 
-function doBouncePaddle() {
-  const hitFrac  = (ball.x - paddle.x) / paddle.w; // 0..1
-  const norm     = hitFrac * 2 - 1;                 // -1..1
+function updateBall2(dt) {
+  if (!ball2.active) return;
+
+  ball2.x += ball2.vx * dt;
+  ball2.y += ball2.vy * dt;
+
+  // Walls
+  if (ball2.x - ball2.r < 0)  { ball2.x = ball2.r;       ball2.vx = Math.abs(ball2.vx); }
+  if (ball2.x + ball2.r > cw) { ball2.x = cw - ball2.r;  ball2.vx = -Math.abs(ball2.vx); }
+  if (ball2.y - ball2.r < 0)  { ball2.y = ball2.r;       ball2.vy = Math.abs(ball2.vy); }
+
+  // Paddle
+  if (ball2.vy > 0 &&
+      ball2.y + ball2.r >= paddle.y &&
+      ball2.y + ball2.r <= paddle.y + paddle.h + Math.abs(ball2.vy * dt * 2) &&
+      ball2.x > paddle.x - ball2.r * 0.4 &&
+      ball2.x < paddle.x + paddle.w + ball2.r * 0.4) {
+    doBouncePaddle(ball2);
+    return;
+  }
+
+  // Ball2 missed — just deactivate it (main ball still in play)
+  if (ball2.y - ball2.r > ch) {
+    deactivateBall2();
+    spawnFloatText(cw / 2, ch * 0.5, 'MULTI-BALL VERLOREN', '#FF2020');
+    return;
+  }
+
+  checkBlockCollisions(ball2);
+}
+
+function doBouncePaddle(b) {
+  const hitFrac  = (b.x - paddle.x) / paddle.w; // 0..1
+  const norm     = hitFrac * 2 - 1;              // -1..1
   const maxAngle = 62 * Math.PI / 180;
   const angle    = norm * maxAngle;
-  const spd      = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+  const spd      = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
 
-  ball.vx = Math.sin(angle) * spd;
-  ball.vy = -Math.abs(Math.cos(angle) * spd);
+  b.vx = Math.sin(angle) * spd;
+  b.vy = -Math.abs(Math.cos(angle) * spd);
 
   // Prevent near-horizontal shots
   const minVY = spd * BALL_MIN_VY_FRAC;
-  if (Math.abs(ball.vy) < minVY) {
-    ball.vy = -minVY;
-    ball.vx = Math.sign(ball.vx) * Math.sqrt(Math.max(0, spd * spd - minVY * minVY));
+  if (Math.abs(b.vy) < minVY) {
+    b.vy = -minVY;
+    b.vx = Math.sign(b.vx) * Math.sqrt(Math.max(0, spd * spd - minVY * minVY));
   }
 
   // Push ball above paddle to avoid re-triggering
-  ball.y = paddle.y - ball.r - 1;
+  b.y = paddle.y - b.r - 1;
 
-  // Combo builds on paddle hits
-  state.combo = Math.min(state.combo + 1, 5);
-  if (state.combo > state.maxCombo) state.maxCombo = state.combo;
-  updateComboUI();
+  // Only main ball builds combo
+  if (b === ball) {
+    state.combo = Math.min(state.combo + 1, 5);
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+    updateComboUI();
+
+    // Combo screen shake
+    if (state.combo >= 4) triggerScreenShake(4, 0.2);
+  }
 
   hintAlpha = 0; // hide hint once player has controlled paddle
 }
@@ -490,45 +822,74 @@ function onBallMiss() {
   }, 420);
 }
 
-function checkBlockCollisions() {
+function checkBlockCollisions(b) {
   let aliveCount = 0;
 
   for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i];
-    if (!b.alive) continue;
+    const blk = blocks[i];
+    if (!blk.alive) continue;
     aliveCount++;
 
     // Closest point on AABB to ball center
-    const nearX = Math.max(b.x, Math.min(ball.x, b.x + b.w));
-    const nearY = Math.max(b.y, Math.min(ball.y, b.y + b.h));
-    const dx    = ball.x - nearX;
-    const dy    = ball.y - nearY;
+    const nearX = Math.max(blk.x, Math.min(b.x, blk.x + blk.w));
+    const nearY = Math.max(blk.y, Math.min(b.y, blk.y + blk.h));
+    const dx    = b.x - nearX;
+    const dy    = b.y - nearY;
 
-    if (dx * dx + dy * dy < ball.r * ball.r) {
-      b.alive = false;
+    if (dx * dx + dy * dy < b.r * b.r) {
+      // Car blocks with 2 hits
+      blk.hitsLeft--;
+      if (blk.hitsLeft > 0) {
+        // First hit on 2-hit block: flash but don't destroy
+        const overlapX = b.r - Math.abs(dx);
+        const overlapY = b.r - Math.abs(dy);
+        if (overlapX < overlapY) {
+          b.vx = -b.vx;
+          b.x += Math.sign(dx || 1) * (overlapX + 1);
+        } else {
+          b.vy = -b.vy;
+          b.y += Math.sign(dy || -1) * (overlapY + 1);
+        }
+        spawnParticles(blk.x + blk.w / 2, blk.y + blk.h / 2, '#FFFFFF');
+        spawnFloatText(blk.x + blk.w / 2, blk.y, '💥 -1 HIT', '#FFB800');
+        break;
+      }
+
+      blk.alive = false;
       aliveCount--;
 
       // Reflect on shortest overlap axis
-      const overlapX = ball.r - Math.abs(dx);
-      const overlapY = ball.r - Math.abs(dy);
+      const overlapX = b.r - Math.abs(dx);
+      const overlapY = b.r - Math.abs(dy);
       if (overlapX < overlapY) {
-        ball.vx = -ball.vx;
-        ball.x += Math.sign(dx || 1) * (overlapX + 1);
+        b.vx = -b.vx;
+        b.x += Math.sign(dx || 1) * (overlapX + 1);
       } else {
-        ball.vy = -ball.vy;
-        ball.y += Math.sign(dy || -1) * (overlapY + 1);
+        b.vy = -b.vy;
+        b.y += Math.sign(dy || -1) * (overlapY + 1);
       }
 
-      // Energy & score
-      const carBonusEnergy = b.carTarget ? CAR_TARGET_BONUS_ENERGY : 0;
-      const energyGain = BLOCK_ROW_ENERGY[b.row] * state.combo + carBonusEnergy;
-      const scoreGain  = BLOCK_ROW_ENERGY[b.row] * 10 * state.combo + (b.carTarget ? CAR_TARGET_BONUS_SCORE : 0);
+      // Block type rewards
+      let energyGain, scoreGain;
+      const baseEnergy = (BLOCK_ROW_ENERGY_BASE[Math.min(blk.row, 3)] || 3) * state.combo;
+      if (blk.isTurbo) {
+        // Turbo block: extra energy + score
+        energyGain = baseEnergy * 2 + 4;
+        scoreGain  = baseEnergy * 20 * state.combo + 180;
+      } else if (blk.carTarget) {
+        energyGain = baseEnergy + CAR_TARGET_BONUS_ENERGY;
+        scoreGain  = baseEnergy * 10 * state.combo + CAR_TARGET_BONUS_SCORE;
+      } else {
+        energyGain = baseEnergy;
+        scoreGain  = baseEnergy * 10 * state.combo;
+      }
+
       state.energy  = Math.min(state.energy + energyGain, MAX_ENERGY);
       state.score  += scoreGain;
       state.hits++;
-      if (b.carTarget) {
+
+      if (blk.carTarget) {
         state.carTargetsHit++;
-        // Brief bounce animation on car
         const carProgress = document.getElementById('car-progress');
         if (carProgress) {
           carProgress.classList.add('car-target-hit');
@@ -541,10 +902,13 @@ function checkBlockCollisions() {
       updateCarUI();
 
       // FX
-      spawnParticles(b.x + b.w / 2, b.y + b.h / 2, BLOCK_COLORS[b.row]);
-      const baseLabel = state.combo > 1 ? `+${energyGain}⚡ ×${state.combo}🔥` : `+${energyGain}⚡`;
-      const label = b.carTarget ? `${baseLabel} · 🚗 BONUS` : baseLabel;
-      spawnFloatText(b.x + b.w / 2, b.y + b.h / 2, label, BLOCK_COLORS[b.row]);
+      const blockColor = blk.isTurbo ? TURBO_BLOCK_COLOR : BLOCK_COLORS[Math.min(blk.row, 3)];
+      spawnParticles(blk.x + blk.w / 2, blk.y + blk.h / 2, blockColor);
+
+      let label = state.combo > 1 ? `+${energyGain}⚡ ×${state.combo}🔥` : `+${energyGain}⚡`;
+      if (blk.isTurbo) label = `⚡ TURBO +${energyGain}`;
+      else if (blk.carTarget) label += ' · 🚗 BONUS';
+      spawnFloatText(blk.x + blk.w / 2, blk.y + blk.h / 2, label, blockColor);
 
       if (state.energy >= MAX_ENERGY && !state.fullChargeRewarded) {
         flashFullCharge();
@@ -555,7 +919,8 @@ function checkBlockCollisions() {
     }
   }
 
-  if (aliveCount === 0) respawnBlocks();
+  // Only check wave clear for main ball to avoid double-trigger
+  if (b === ball && aliveCount === 0) respawnBlocks();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -605,7 +970,18 @@ function updateFloatTexts(dt) {
 // RENDER
 // ═══════════════════════════════════════════════════════════
 function render() {
-  ctx.clearRect(0, 0, cw, ch);
+  // Screen shake offset
+  let shakeX = 0, shakeY = 0;
+  if (screenShakeTimer > 0) {
+    const mag = screenShakeAmt * (screenShakeTimer / 0.45);
+    shakeX = (Math.random() * 2 - 1) * mag;
+    shakeY = (Math.random() * 2 - 1) * mag;
+  }
+
+  ctx.save();
+  if (shakeX !== 0 || shakeY !== 0) ctx.translate(shakeX, shakeY);
+
+  ctx.clearRect(-Math.abs(shakeX) - 2, -Math.abs(shakeY) - 2, cw + 20, ch + 20);
 
   // Flash overlays
   if (ballMissFlash > 0) {
@@ -621,32 +997,66 @@ function render() {
   renderParticles();
   renderPaddle();
   renderBall();
+  if (ball2.active) renderBall2();
   renderFloatTexts();
   if (hintAlpha > 0) renderHint();
+  if (levelOverlay.active) renderLevelOverlay();
+
+  ctx.restore();
 }
 
 function renderBlocks() {
   for (const b of blocks) {
     if (!b.alive) continue;
-    const color = BLOCK_COLORS[b.row];
+
+    let color;
+    if (b.isTurbo) {
+      color = TURBO_BLOCK_COLOR;
+    } else {
+      color = BLOCK_COLORS[Math.min(b.row, 3)];
+    }
+
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur  = 7;
+    ctx.shadowBlur  = b.isTurbo ? 14 : 7;
     roundRect(ctx, b.x, b.y, b.w, b.h, 4);
-    ctx.fillStyle = hexToRgba(color, 0.82);
+
+    // 2-hit car blocks: slightly lighter/desaturated on first hit
+    const alphaFill = (b.carTarget && b.hitsLeft <= 1 && b.hitsLeft < 2) ? 0.55 : 0.82;
+    ctx.fillStyle = hexToRgba(color, alphaFill);
     ctx.fill();
-    // highlight stripe
+
+    // Highlight stripe
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, 3, 1.5);
     ctx.fill();
 
+    // Turbo block: extra lightning bolt decoration
+    if (b.isTurbo) {
+      ctx.fillStyle   = 'rgba(255,255,255,0.9)';
+      ctx.font        = `bold ${Math.max(8, b.h * 0.65)}px sans-serif`;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowBlur  = 0;
+      ctx.fillText('⚡', b.x + b.w / 2, b.y + b.h / 2);
+    }
+
     if (b.carTarget) {
-      ctx.lineWidth = 1.8;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth   = b.hitsLeft >= 2 ? 2.5 : 1.8;
+      ctx.strokeStyle = b.hitsLeft >= 2 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
       roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
       ctx.stroke();
-
       drawCarBlock(b.x, b.y, b.w, b.h);
+
+      // Show remaining hits for 2-hit blocks
+      if (b.hitsLeft >= 2) {
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = `bold ${Math.max(7, b.h * 0.55)}px sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.shadowBlur = 0;
+        ctx.fillText('2×', b.x + b.w - 2, b.y + 1);
+      }
     }
     ctx.restore();
   }
@@ -721,6 +1131,37 @@ function renderBall() {
   ctx.restore();
 }
 
+function renderBall2() {
+  if (!ball2.active) return;
+  ctx.save();
+  // Multi-ball: red/orange tint to distinguish from main ball
+  ctx.shadowColor = '#FF5500';
+  ctx.shadowBlur  = 22;
+
+  const g2 = ctx.createRadialGradient(
+    ball2.x - ball2.r * 0.3, ball2.y - ball2.r * 0.35, ball2.r * 0.08,
+    ball2.x, ball2.y, ball2.r
+  );
+  g2.addColorStop(0,   '#FFFFFF');
+  g2.addColorStop(0.4, '#FF9900');
+  g2.addColorStop(1,   '#CC3300');
+
+  ctx.beginPath();
+  ctx.arc(ball2.x, ball2.y, ball2.r, 0, Math.PI * 2);
+  ctx.fillStyle = g2;
+  ctx.fill();
+
+  // Timer ring around ball2
+  const timerFrac = state.multiBallTimer / MULTIBALL_DURATION;
+  ctx.strokeStyle = `rgba(255,85,0,${0.4 + timerFrac * 0.5})`;
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  ctx.arc(ball2.x, ball2.y, ball2.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerFrac);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function renderParticles() {
   for (const p of particles) {
     const a = p.life / p.maxLife;
@@ -763,6 +1204,68 @@ function renderHint() {
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('← Schläger bewegen · 🚗 Ziele treffen →', cw / 2, hintY);
+  ctx.restore();
+}
+
+function renderLevelOverlay() {
+  if (!levelOverlay.active) return;
+
+  const progress = 1 - levelOverlay.timer / LEVEL_OVERLAY_DURATION;
+  // Fade in fast, hold, then fade out
+  let alpha;
+  if (progress < 0.15) {
+    alpha = progress / 0.15;
+  } else if (progress > 0.75) {
+    alpha = (1 - progress) / 0.25;
+  } else {
+    alpha = 1;
+  }
+  alpha = Math.max(0, Math.min(1, alpha));
+
+  const scale = 1 + (1 - progress) * 0.4; // zoom in effect
+  const lvl   = levelOverlay.level;
+  const colors = ['', '#39FF14', '#00C8FF', '#FFB800', '#FF5500'];
+  const color  = colors[Math.min(lvl, 4)] || '#FF5500';
+  const labels = ['', 'WARM-UP', 'CHARGE', 'BOOST', 'OVERTAKE'];
+  const label  = labels[Math.min(lvl, 4)] || '';
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(cw / 2, ch / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(-cw / 2, -ch / 2);
+
+  // Dark semi-transparent background pill
+  const pillW = cw * 0.72;
+  const pillH = ch * 0.22;
+  const pillX = cw / 2 - pillW / 2;
+  const pillY = ch / 2 - pillH / 2;
+  ctx.fillStyle = 'rgba(10,10,26,0.78)';
+  roundRect(ctx, pillX, pillY, pillW, pillH, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 2.5;
+  roundRect(ctx, pillX, pillY, pillW, pillH, 16);
+  ctx.stroke();
+
+  // "LEVEL X"
+  const fs1 = Math.max(18, Math.round(cw * 0.10));
+  ctx.fillStyle    = color;
+  ctx.shadowColor  = color;
+  ctx.shadowBlur   = 28;
+  ctx.font         = `900 ${fs1}px 'Orbitron', monospace`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`LEVEL ${lvl}`, cw / 2, ch / 2 - pillH * 0.12);
+
+  // Sub-label
+  const fs2 = Math.max(10, Math.round(cw * 0.05));
+  ctx.shadowBlur   = 10;
+  ctx.fillStyle    = 'rgba(255,255,255,0.85)';
+  ctx.font         = `700 ${fs2}px 'Orbitron', monospace`;
+  ctx.fillText(label, cw / 2, ch / 2 + pillH * 0.28);
+
   ctx.restore();
 }
 
@@ -821,11 +1324,7 @@ function updateCarUI() {
   const playerMax = trackW - 50 - 36;
   carProgress.style.left = `${8 + pct * playerMax}px`;
 
-  // Position ghost car at ~65% of track (only if not currently overtaken)
-  const ghostEl = document.getElementById('ghost-car');
-  if (ghostEl && !ghostEl.classList.contains('ghost-overtaken')) {
-    ghostEl.style.left = `${8 + 0.65 * playerMax}px`;
-  }
+  // Ghost car DOM position is now handled by updateGhostCar() in the game loop
 
   const carEl = document.getElementById('game-car');
   if (carEl) {
@@ -854,12 +1353,20 @@ function flashFullCharge() {
   }
   state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
 
-  // Car: race car emoji + boost CSS + ghost-car overtake
+  // Level 4: spawn multi-ball on turbo
+  if (state.level >= 4 && !ball2.active) {
+    spawnBall2();
+  }
+
+  // Ghost-car overtake
+  state.ghostOvertaken = true;
+
+  // Car: race car emoji + boost CSS + ghost-car overtake DOM
   const carProg  = document.getElementById('car-progress');
   const ghostEl2 = document.getElementById('ghost-car');
   const carEl = document.getElementById('game-car');
   if (carEl) {
-    carEl.classList.add('boost-mode');     // switch to green race SVG
+    carEl.classList.add('boost-mode');
     carProg?.classList.add('boosting');
 
     if (ghostEl2) {
@@ -867,13 +1374,16 @@ function flashFullCharge() {
       setTimeout(() => {
         ghostEl2.classList.remove('ghost-overtaken');
         ghostEl2.classList.add('ghost-reset');
+        // Reset ghost position after overtake
+        state.ghostTrackPos = 0.20; // reset to back of track
+        state.ghostOvertaken = false; // allow ghost to move again
         setTimeout(() => ghostEl2.classList.remove('ghost-reset'), 500);
       }, 1600);
     }
 
     setTimeout(() => {
       if (!state.gameActive) return;
-      carEl.classList.remove('boost-mode'); // back to orange SUV
+      carEl.classList.remove('boost-mode');
       carProg?.classList.remove('boosting');
     }, 1800);
   }
@@ -886,6 +1396,8 @@ function flashFullCharge() {
   }
 
   document.getElementById('battery-pct').textContent = '100% ⚡';
+  triggerScreenShake(6, 0.4);
+  playTone(880, 'sine', 0.25, 0.6);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -912,6 +1424,7 @@ function endGame() {
   cancelAnimationFrame(state.rafId);
   clearInterval(state.gameInterval);
   state.gameActive = false;
+  if (ball2.active) deactivateBall2();
 
   const energyPct = Math.round(state.energy);
   state.score = Math.round(
@@ -920,7 +1433,9 @@ function endGame() {
     energyPct           * 12 +
     state.wavesCleared  * 250 +
     state.carTargetsHit * CAR_TARGET_BONUS_SCORE +
-    state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE
+    state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE +
+    (state.maxLevelReached - 1) * 300 +  // bonus for reaching higher levels
+    (state.ghostOvertaken ? 500 : 0)     // ghost overtake bonus
   );
 
   setTimeout(() => {
@@ -950,6 +1465,12 @@ function populateEndScreen(energyPct) {
     title = 'WEITER ÜBEN!';
     sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
   }
+
+  // Append level reached info
+  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE 🏆'];
+  sub += ` · Level ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''}) erreicht.`;
+  if (state.ghostOvertaken) sub += ' 🚗 Ghost überholt!';
+
   setEl('end-title', title);
   setEl('end-sub',   sub);
 
@@ -1048,11 +1569,13 @@ function copyShareText() {
   });
 }
 function buildShareText() {
+  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE'];
   return `🏓⚡🚗 LEAP CHARGE – Tischtennis × E-Drive
 
 Score:    ${state.score.toLocaleString('de-DE')} Punkte
 Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
 Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
+Level:    ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''})${state.ghostOvertaken ? ' · 🚗 Ghost überholt!' : ''}
 
 Kannst du meinen Leapmotor-Score schlagen?
 #LeapMotor #LeapCharge #Tischtennis #EMobility`;
@@ -1063,11 +1586,10 @@ Kannst du meinen Leapmotor-Score schlagen?
 // ═══════════════════════════════════════════════════════════
 function drawCarBlock(bx, by, bw, bh) {
   // Draw a simplified top-side car silhouette inside the block cell.
-  // Kept to a few shapes so it reads clearly even at ~14-18 px block height.
   const cx   = bx + bw / 2;
   const cy   = by + bh / 2;
-  const half = Math.min(bw * 0.32, bh * 0.42); // icon half-width
-  const hh   = half * 0.55;                     // icon half-height
+  const half = Math.min(bw * 0.32, bh * 0.42);
+  const hh   = half * 0.55;
 
   ctx.save();
   ctx.fillStyle    = '#FFFFFF';
@@ -1075,13 +1597,11 @@ function drawCarBlock(bx, by, bw, bh) {
   ctx.shadowColor  = 'rgba(255,255,255,0.5)';
   ctx.shadowBlur   = 4;
 
-  // Body rectangle (lower mass)
   const bodyTop = cy - hh * 0.22;
   const bodyH   = hh * 1.1;
   roundRect(ctx, cx - half, bodyTop, half * 2, bodyH, 2);
   ctx.fill();
 
-  // Cabin trapezoid (upper cabin)
   ctx.beginPath();
   ctx.moveTo(cx - half * 0.64, bodyTop);
   ctx.lineTo(cx - half * 0.38, cy - hh);
@@ -1090,7 +1610,6 @@ function drawCarBlock(bx, by, bw, bh) {
   ctx.closePath();
   ctx.fill();
 
-  // Wheels (dark overlapping circles)
   const wr = hh * 0.36;
   ctx.globalAlpha = 0.65;
   ctx.fillStyle   = 'rgba(10,10,28,0.85)';
