@@ -4,100 +4,226 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0A0A1A">
-  <title>Teilnahmebedingungen – LEAP CHARGE</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <title>Teilnahmebedingungen – LEAPMOTOR TT CHALLENGE</title>
   <style>
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Black.ttf') format('truetype');
+      font-weight: 900; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Bold.ttf') format('truetype');
+      font-weight: 700; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Regular.ttf') format('truetype');
+      font-weight: 400; font-style: normal; font-display: block;
+    }
     :root {
-      --orange: #FF5500;
-      --dark:   #0A0A1A;
-      --muted:  rgba(255,255,255,0.55);
+      --green:  #67C23A;
+      --greens: #95D475;
+      --dark:   #000000;
+      --card:   rgba(255,255,255,0.06);
+      --muted:  rgba(255,255,255,0.50);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 16px; }
+    html { font-size: 16px; scroll-behavior: smooth; }
     body {
       background: var(--dark);
       color: #fff;
-      font-family: 'Inter', -apple-system, sans-serif;
-      line-height: 1.6;
-      padding: 24px 20px 48px;
-      max-width: 680px;
+      font-family: 'Montserrat', -apple-system, sans-serif;
+      line-height: 1.7;
+      padding: 24px 20px 64px;
+      max-width: 720px;
       margin: 0 auto;
     }
-    .brand {
-      font-family: 'Orbitron', monospace;
-      font-size: 13px;
-      letter-spacing: 3px;
-      color: var(--orange);
-      margin-bottom: 24px;
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
     }
-    h1 {
-      font-family: 'Orbitron', monospace;
-      font-size: 20px;
+    .page-header img { height: 28px; }
+    .page-header-label {
+      font-size: 11px;
       font-weight: 700;
-      margin-bottom: 20px;
+      letter-spacing: 3px;
+      color: var(--green);
+      text-transform: uppercase;
+    }
+    a.back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 24px;
+      color: var(--green);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    a.back-link:hover { text-decoration: underline; }
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      margin-bottom: 6px;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+    .doc-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 28px;
     }
     h2 {
-      font-size: 15px;
-      font-weight: 600;
-      margin: 24px 0 8px;
-      color: var(--orange);
-    }
-    p, li { font-size: 14px; color: rgba(255,255,255,0.85); margin-bottom: 8px; }
-    li { margin-left: 20px; }
-    .back-link {
-      display: inline-block;
-      margin-bottom: 28px;
-      color: var(--orange);
-      text-decoration: none;
       font-size: 14px;
+      font-weight: 700;
+      margin: 28px 0 8px;
+      color: var(--green);
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
-    .terms-md {
-      white-space: pre-wrap;
-      font-size: 14px;
-      color: rgba(255,255,255,0.85);
-      line-height: 1.7;
+    p { font-size: 14px; color: rgba(255,255,255,0.82); margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    li { font-size: 14px; color: rgba(255,255,255,0.82); margin-bottom: 6px; }
+    .placeholder {
+      background: rgba(255, 184, 0, 0.12);
+      border: 1px solid rgba(255, 184, 0, 0.40);
+      color: #FFB800;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
     }
+    .legal-section {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+    .legal-section h2 { margin-top: 0; }
+    .footer-note {
+      margin-top: 40px;
+      padding: 16px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    a { color: var(--green); }
   </style>
 </head>
 <body>
-  <div class="brand">LEAP CHARGE · LEAPMOTOR</div>
+
+  <div class="page-header">
+    <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+    <span class="page-header-label">LEAPMOTOR TT CHALLENGE</span>
+  </div>
+
   <a class="back-link" href="index.html">← Zurück zum Spiel</a>
 
   <h1>Teilnahmebedingungen</h1>
+  <div class="doc-meta">Stand: Juli 2026 &nbsp;·&nbsp; Gültig für alle LEAPMOTOR TT CHALLENGE Events</div>
 
-  <!-- If an active event with terms_md is loaded, we render it here. -->
-  <div id="terms-content">
-    <p id="terms-loading" style="color:var(--muted)">Lade Teilnahmebedingungen…</p>
+  <!-- § 1 -->
+  <div class="legal-section">
+    <h2>§ 1 &nbsp;Veranstalter</h2>
+    <p>
+      Veranstalter des Gewinnspiels ist:<br>
+      <strong class="placeholder">[PLATZHALTER: Firmenname]</strong>, vertreten durch
+      <strong class="placeholder">[PLATZHALTER: Geschäftsführer]</strong>,
+      <strong class="placeholder">[PLATZHALTER: Straße, Hausnummer]</strong>,
+      <strong class="placeholder">[PLATZHALTER: PLZ, Ort]</strong>
+      (nachfolgend „Veranstalter“).
+    </p>
+    <p>Das Gewinnspiel wird in Zusammenarbeit mit <strong class="placeholder">[PLATZHALTER: Garre Consulting GmbH, Musterstraße 1, 12345 Musterstadt]</strong> durchgeführt.</p>
   </div>
 
-  <script src="js/supabase-config.js?v=20260714c"></script>
-  <script src="js/api.js?v=20260714c"></script>
-  <script>
-    (async function() {
-      const el = document.getElementById('terms-content');
-      // initLeapEvent() was already called by api.js; wait a tick then read
-      await new Promise(function(r) { setTimeout(r, 800); });
-      const ev = window.LEAP_EVENT;
-      if (ev && ev.terms_md) {
-        el.innerHTML = '<pre class="terms-md">' + ev.terms_md.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
-      } else {
-        el.innerHTML =
-          '<h2>\u00a7\u00a0 1 Veranstalter</h2>' +
-          '<p>Das Gewinnspiel wird veranstaltet von Leapmotor Germany / Event-Partner.</p>' +
-          '<h2>\u00a7\u00a0 2 Teilnahmeberechtigung</h2>' +
-          '<p>Teilnehmen d\u00fcrf en nat\u00fcrliche Personen ab 18 Jahren mit Wohnsitz in Deutschland.</p>' +
-          '<h2>\u00a7\u00a0 3 Durchf\u00fchrung</h2>' +
-          '<p>Das Spiel l\u00e4uft w\u00e4hrend der Veranstaltung. Jeder Teilnehmer darf einmal am Gewinnspiel teilnehmen.</p>' +
-          '<h2>\u00a7\u00a0 4 Sofort-Gewinn</h2>' +
-          '<p>Wer den Schwellenwert \u00fcberschreitet und den Gegner \u00fcberholt, erh\u00e4lt einen vierstelligen Code. ' +
-          'Der Code ist am Stand-Personal einzul\u00f6sen. Je Event gibt es genau einen Sofort-Gewinner.</p>' +
-          '<h2>\u00a7\u00a0 5 Datenschutz</h2>' +
-          '<p>Deine Daten werden ausschlie\u00dflich im Rahmen dieses Events verwendet und nicht ohne deine Zustimmung weitergegeben.</p>' +
-          '<p style="color:var(--muted);font-size:12px;margin-top:24px">Stand: Juli 2026 \u00b7 Vollst\u00e4ndige Bedingungen beim Veranstalter erh\u00e4ltlich.</p>';
-      }
-    })();
-  </script>
+  <!-- § 2 -->
+  <div class="legal-section">
+    <h2>§ 2 &nbsp;Teilnahmevoraussetzungen</h2>
+    <p>Zur Teilnahme am Gewinnspiel sind berechtigt:</p>
+    <ul>
+      <li>Natürliche Personen, die das <strong>18. Lebensjahr vollendet</strong> haben</li>
+      <li>Personen mit Wohnsitz in der <strong>Bundesrepublik Deutschland</strong></li>
+      <li>Personen, die <strong>vor Ort auf der Veranstaltung</strong> anwesend sind</li>
+    </ul>
+    <p>Von der Teilnahme ausgeschlossen sind Mitarbeiter des Veranstalters sowie deren Angehörige. Je Person ist nur eine Teilnahme pro Event zulässig. Eine automatisierte Mehrfachteilnahme ist untersagt und führt zum Ausschluss.</p>
+  </div>
+
+  <!-- § 3 -->
+  <div class="legal-section">
+    <h2>§ 3 &nbsp;Ablauf und Teilnahme</h2>
+    <p>Die Teilnahme erfolgt in zwei Schritten:</p>
+    <ul>
+      <li><strong>Schritt 1 – Spiel:</strong> Der Teilnehmer spielt das „Leapmotor TT Challenge“-Spiel auf dem bereitgestellten Endgerät am Event-Stand.</li>
+      <li><strong>Schritt 2 – Formular:</strong> Im Anschluss oder während des Spiels gibt der Teilnehmer seine Kontaktdaten über das digitale Formular ein und akzeptiert diese Teilnahmebedingungen.</li>
+    </ul>
+    <p>Erst mit dem vollständigen Ausfüllen des Formulars (inkl. Akzeptanz der Teilnahmebedingungen) gilt die Teilnahme am Gewinnspiel als wirksam abgeschlossen. Das erzielte Spielergebnis wird automatisch mit der Anmeldung verknüpft und im Event-Leaderboard erfasst.</p>
+    <p>Die Teilnahmeaktion ist zeitlich auf die Dauer der Veranstaltung begrenzt.</p>
+  </div>
+
+  <!-- § 4 -->
+  <div class="legal-section">
+    <h2>§ 4 &nbsp;Sofort-Gewinn</h2>
+    <p><strong>Definition:</strong> Ein Sofort-Gewinn liegt vor, wenn ein Teilnehmer im Spiel das „Ghost-Car“ überholt und einen vorab definierten Mindest-Score erreicht hat. Diese Bedingungen werden serverseitig geprüft.</p>
+    <p><strong>Einlösung:</strong> Bei einem qualifizierten Sofort-Gewinn erhält der Teilnehmer am Bildschirm einen <strong>4-stelligen alphanumerischen Code</strong>. Dieser Code ist noch am selben Event-Tag dem Stand-Personal vorzuzeigen. Das Personal überprüft den Code und händigt den Gewinn aus.</p>
+    <ul>
+      <li>Je Event gibt es genau <strong>einen (1) Sofort-Gewinner</strong> (first come, first served).</li>
+      <li>Der Code ist nicht übertragbar und nur einmalig einlösbar.</li>
+      <li>Der Code muss noch während der Veranstaltung eingelöst werden. Eine nachträgliche Einlösung ist ausgeschlossen.</li>
+      <li>Ein Anspruch auf Barauszahlung des Gewinns besteht nicht.</li>
+    </ul>
+    <p>Der Sofortgewinn wird durch den Veranstalter oder seinen Erfüllungsgehilfen bereitgestellt und ausgehändigt. Art und Wert des Sofortgewinns werden am jeweiligen Event-Stand bekannt gegeben. <strong class="placeholder">[PLATZHALTER: Gewinn konkret beschreiben, z.&nbsp;B. „Ladekabel-Set im Wert von 49 €“]</strong>.</p>
+  </div>
+
+  <!-- § 5 -->
+  <div class="legal-section">
+    <h2>§ 5 &nbsp;Leaderboard &amp; Highscore-Preis</h2>
+    <p>Alle gültigen Spielrunden werden in einem Event-übergreifenden Leaderboard erfasst. Am Ende des Events erhalten die Platzierten 1–3 eine gesonderte Benachrichtigung durch den Veranstalter. Der Hauptpreis des Leaderboards wird separat kommuniziert. <strong class="placeholder">[PLATZHALTER: Hauptpreis beschreiben]</strong>.</p>
+    <p>Ein Rechtsanspruch auf den Leaderboard-Preis besteht nicht; der Veranstalter kann das Leaderboard jederzeit aus technischen oder organisatorischen Gründen anpassen.</p>
+  </div>
+
+  <!-- § 6 -->
+  <div class="legal-section">
+    <h2>§ 6 &nbsp;Datenschutz</h2>
+    <p>Die im Rahmen des Gewinnspiels erhobenen personenbezogenen Daten (Name, E-Mail-Adresse, PLZ, Ort, Telefon, Fahrzeuginteresse sowie die erteilten Einwilligungen) werden ausschließlich zum Zweck der Gewinnspiel-Abwicklung und – bei entsprechender Einwilligung – zur werblichen Kontaktaufnahme durch Leapmotor / den Veranstalter verarbeitet.</p>
+    <p>Weitere Informationen zur Datenverarbeitung, zu Ihren Rechten als betroffene Person sowie zu Speicherfristen finden Sie in unserer <a href="datenschutz.html" target="_blank">Datenschutzerklärung</a>.</p>
+    <p>Verantwortlicher im Sinne der DSGVO: <strong class="placeholder">[PLATZHALTER: Firmenname, Adresse]</strong>.<br>
+    Datenschutzbeauftragte(r): <strong class="placeholder">[PLATZHALTER: Name, E-Mail]</strong>.</p>
+  </div>
+
+  <!-- § 7 -->
+  <div class="legal-section">
+    <h2>§ 7 &nbsp;Haftungsausschluss</h2>
+    <p>Der Veranstalter übernimmt keine Haftung für technische Probleme, Unterbrechungen oder Fehler im Spielbetrieb, die außerhalb seines Einflussbereichs liegen. Im Falle von technischen Fehlfunktionen behält sich der Veranstalter das Recht vor, das Gewinnspiel zu unterbrechen oder zu beenden.</p>
+    <p>Die Teilnahme erfolgt auf eigenes Risiko. Der Veranstalter haftet nicht für Schäden, die im Zusammenhang mit der Teilnahme am Gewinnspiel entstehen, es sei denn, diese beruhen auf grober Fahrlässigkeit oder Vorsatz des Veranstalters.</p>
+    <p>Der Veranstalter behält sich vor, das Gewinnspiel jederzeit ohne Vorankündigung und ohne Angabe von Gründen zu ändern, auszusetzen oder zu beenden, sofern dies aus organisatorischen oder rechtlichen Gründen erforderlich ist. In diesem Fall besteht kein Anspruch der Teilnehmer auf Gewährung des Gewinns.</p>
+  </div>
+
+  <!-- § 8 -->
+  <div class="legal-section">
+    <h2>§ 8 &nbsp;Rechtswahl und Gerichtsstand</h2>
+    <p>Für dieses Gewinnspiel gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.</p>
+    <p>Gerichtsstand ist, soweit gesetzlich zulässig, <strong class="placeholder">[PLATZHALTER: Ort, z.&nbsp;B. München]</strong>.</p>
+  </div>
+
+  <!-- § 9 -->
+  <div class="legal-section">
+    <h2>§ 9 &nbsp;Salvatorische Klausel</h2>
+    <p>Sollten einzelne Bestimmungen dieser Teilnahmebedingungen unwirksam oder undurchführbar sein oder werden, bleibt die Gültigkeit der übrigen Bestimmungen davon unberührt. An die Stelle der unwirksamen Bestimmung tritt eine wirksame Regelung, die dem wirtschaftlichen Zweck der unwirksamen Bestimmung am nächsten kommt.</p>
+  </div>
+
+  <div class="footer-note">
+    &copy; <strong class="placeholder">[PLATZHALTER: Jahr, Firmenname]</strong> &nbsp;·&nbsp; LEAPMOTOR TT CHALLENGE &nbsp;·&nbsp;
+    <a href="datenschutz.html">Datenschutzerklärung</a> &nbsp;·&nbsp;
+    <a href="index.html">← Zurück zum Spiel</a>
+  </div>
+
 </body>
 </html>
