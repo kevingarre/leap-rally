@@ -1193,7 +1193,9 @@ function checkBlockCollisions(b) {
 // PARTICLES & FLOAT TEXTS
 // ═══════════════════════════════════════════════════════════
 function spawnParticles(x, y, color) {
+  const MAX_PARTICLES = 80;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
+    if (particles.length >= MAX_PARTICLES) particles.shift(); // evict oldest
     const angle = (Math.PI * 2 * i / PARTICLE_COUNT) + Math.random() * 0.6;
     const spd   = 60 + Math.random() * 140;
     particles.push({
@@ -1209,6 +1211,9 @@ function spawnParticles(x, y, color) {
 }
 
 function spawnFloatText(x, y, text, color) {
+  // Cap at 8 simultaneous float texts to prevent render-load spikes.
+  // Evict the oldest entry when at capacity.
+  if (floatTexts.length >= 8) floatTexts.shift();
   floatTexts.push({ x, y, text, color, life: 1.1, maxLife: 1.1 });
 }
 
@@ -1852,8 +1857,10 @@ function startOvertakeDrama() {
 
 function spawnOvertakeBurst(x, y) {
   // Big burst: more particles, outward at high speed
+  const MAX_PARTICLES = 80;
   const colors = ['#67C23A', '#95D475', '#FFFFFF', '#FFB800', '#67C23A'];
   for (let i = 0; i < 40; i++) {
+    if (particles.length >= MAX_PARTICLES) particles.shift(); // evict oldest
     const angle = (Math.PI * 2 * i / 40) + Math.random() * 0.5;
     const spd   = 90 + Math.random() * 280;
     const color = colors[i % colors.length];
