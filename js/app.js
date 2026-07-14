@@ -1082,76 +1082,70 @@ function renderBlocks() {
 // Rundes/ovales Blatt + kurzer Griff, weiß mit grünem Rand
 // ─────────────────────────────────────────────────────────
 function renderPaddle() {
-  const cx      = paddle.x + paddle.w / 2;
-  const cy      = paddle.y + paddle.h / 2;
-
-  // Proportions: blade is oval, handle below
-  const bladeRX = paddle.w * 0.50;   // half-width of blade
-  const bladeRY = paddle.h * 1.1;    // half-height of blade (slightly taller than logical height)
-  const bladeCY = cy - paddle.h * 0.15;
-
-  const handleW  = Math.max(7, paddle.w * 0.14);
-  const handleH  = Math.max(12, paddle.h * 1.35);
-  const handleX  = cx - handleW / 2;
-  const handleY  = bladeCY + bladeRY * 0.55;
+  // Clean horizontal table-tennis bat: rounded-rect blade (hit surface =
+  // full paddle width) + a short handle nub on the right. Subtle glow.
+  const x = paddle.x;
+  const y = paddle.y;
+  const w = paddle.w;
+  const h = Math.max(12, paddle.h);
+  const r = h / 2;
 
   ctx.save();
 
-  // Green glow
-  ctx.shadowColor = 'rgba(103,194,58,0.75)';
-  ctx.shadowBlur  = 18;
+  // Subtle green ground-glow (no giant halo)
+  ctx.shadowColor   = 'rgba(103,194,58,0.5)';
+  ctx.shadowBlur    = 9;
+  ctx.shadowOffsetY = 1;
 
-  // Handle: dark rounded rect
-  const hg = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
-  hg.addColorStop(0, '#2A2A2A');
-  hg.addColorStop(1, '#111111');
-  roundRect(ctx, handleX, handleY, handleW, handleH, handleW / 2.2);
-  ctx.fillStyle = hg;
-  ctx.fill();
-
-  // Green grip wrap on handle
-  ctx.strokeStyle = 'rgba(103,194,58,0.6)';
-  ctx.lineWidth   = 1.5;
-  for (let gy = handleY + 3; gy < handleY + handleH - 3; gy += 5) {
-    ctx.beginPath();
-    ctx.moveTo(handleX + 1, gy);
-    ctx.lineTo(handleX + handleW - 1, gy + 2);
-    ctx.stroke();
-  }
-
-  // Blade: white oval with green border
-  ctx.shadowBlur = 20;
-  ctx.beginPath();
-  ctx.ellipse(cx, bladeCY, bladeRX, bladeRY, 0, 0, Math.PI * 2);
-
-  const bg = ctx.createLinearGradient(cx, bladeCY - bladeRY, cx, bladeCY + bladeRY);
-  bg.addColorStop(0,   '#FFFFFF');
-  bg.addColorStop(0.5, '#F0F0F0');
-  bg.addColorStop(1,   '#D8D8D8');
+  // Blade body: white with slight vertical shade, rounded ends
+  roundRect(ctx, x, y, w, h, r);
+  const bg = ctx.createLinearGradient(x, y, x, y + h);
+  bg.addColorStop(0,    '#FFFFFF');
+  bg.addColorStop(0.55, '#F2F2F2');
+  bg.addColorStop(1,    '#DDDDDD');
   ctx.fillStyle = bg;
   ctx.fill();
 
-  // Green border
+  ctx.shadowBlur    = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Green "rubber" hitting surface along the top edge
+  const edgeH = Math.max(3, h * 0.34);
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  const eg = ctx.createLinearGradient(x, y, x, y + edgeH);
+  eg.addColorStop(0, '#7BD34A');
+  eg.addColorStop(1, '#529B2E');
+  ctx.fillStyle = eg;
+  ctx.fillRect(x, y, w, edgeH);
+  ctx.restore();
+
+  // Crisp green outline
+  roundRect(ctx, x, y, w, h, r);
   ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = Math.max(2, paddle.w * 0.025);
-  ctx.shadowColor = 'rgba(103,194,58,0.9)';
-  ctx.shadowBlur  = 8;
+  ctx.lineWidth   = 2;
   ctx.stroke();
 
-  // Center line (horizontal seam on blade)
-  ctx.shadowBlur   = 0;
-  ctx.strokeStyle  = 'rgba(103,194,58,0.35)';
-  ctx.lineWidth    = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(cx - bladeRX * 0.85, bladeCY);
-  ctx.lineTo(cx + bladeRX * 0.85, bladeCY);
-  ctx.stroke();
-
-  // Highlight glare
-  ctx.beginPath();
-  ctx.ellipse(cx - bladeRX * 0.25, bladeCY - bladeRY * 0.3, bladeRX * 0.28, bladeRY * 0.18, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  // Handle nub on the right so it reads as a bat, not a pill
+  const handleW = Math.max(8, w * 0.10);
+  const handleH = Math.max(6, h * 0.7);
+  const handleX = x + w - handleW * 0.35;
+  const handleY = y + (h - handleH) / 2;
+  roundRect(ctx, handleX, handleY, handleW, handleH, handleH / 2);
+  ctx.fillStyle = '#1A1A1A';
   ctx.fill();
+  ctx.strokeStyle = 'rgba(103,194,58,0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Thin white sheen line
+  ctx.beginPath();
+  ctx.moveTo(x + r, y + h * 0.64);
+  ctx.lineTo(x + w - r, y + h * 0.64);
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
   ctx.restore();
 }
