@@ -231,6 +231,7 @@ let newWaveFlash  = 0;
 let hintAlpha     = 1;
 
 let levelOverlay     = { active: false, timer: 0, level: 1, label: '' };
+let vehiclePreview   = { active: false, key: null, label: '', timer: 0, maxTimer: 2.2 };
 let screenShakeTimer = 0;
 let screenShakeAmt   = 0;
 
@@ -407,6 +408,7 @@ function resetGameState() {
   particles    = [];
   floatTexts   = [];
   ballLaunched  = false;
+  vehiclePreview = { active: false, key: null, label: '', timer: 0, maxTimer: 2.2 };
   ballMissFlash = 0;
   newWaveFlash  = 0;
   hintAlpha     = 1;
@@ -996,6 +998,10 @@ function update(dt) {
   updateFloatTexts(dt);
 
   if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
+  if (vehiclePreview.active) {
+    vehiclePreview.timer -= dt;
+    if (vehiclePreview.timer <= 0) vehiclePreview.active = false;
+  }
   if (newWaveFlash   > 0) newWaveFlash   = Math.max(0, newWaveFlash   - dt * 1.0); // slower fade for overtake flash
   // Keep the hint fully visible while the ball waits on the paddle (tap-to-launch);
   // only fade it out once the ball is in play.
@@ -1117,10 +1123,25 @@ function updateBall2(dt) {
 
 function doBouncePaddle(b) {
   const hitFrac  = (b.x - paddle.x) / paddle.w;
-  const norm     = hitFrac * 2 - 1;
+  const norm     = hitFrac * 2 - 1;  // -1 = far left, 0 = center, +1 = far right
   const maxAngle = 62 * Math.PI / 180;
   const angle    = norm * maxAngle;
-  const spd      = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+  let   spd      = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+
+  // SLICE MECHANIC: outer 30% of paddle slows the ball (like a slice shot).
+  // edgeFrac: 0 = center, 1 = extreme edge
+  const edgeFrac = Math.abs(norm);
+  let sliced = false;
+  if (edgeFrac > 0.70) {
+    // Slice zone: reduce speed up to 30% at the very edge
+    const sliceMult = 1 - ((edgeFrac - 0.70) / 0.30) * 0.30;
+    const minSpd    = GAME_CFG.ballBaseSpeed * ch * 0.65;  // never too slow
+    spd = Math.max(spd * sliceMult, minSpd);
+    sliced = true;
+    if (b === ball) {
+      spawnFloatText(b.x, paddle.y - 20, '✂ SLICE', '#95D475');
+    }
+  }
 
   b.vx = Math.sin(angle) * spd;
   b.vy = -Math.abs(Math.cos(angle) * spd);
@@ -1387,6 +1408,7 @@ function render() {
   if (ball2.active) renderBall2();
   renderFloatTexts();
   if (hintAlpha > 0) renderHint();
+  if (vehiclePreview.active) renderVehiclePreview();
   if (levelOverlay.active) renderLevelOverlay();
   if (overtakeFlash > 0) renderOvertakeBanner();
 
@@ -1638,6 +1660,62 @@ function renderHint() {
     ? '← Schläger bewegen · 🚗 Ziele treffen →'
     : '👆 TIPPEN ZUM STARTEN';
   ctx.fillText(hintMsg, cw / 2, hintY);
+  ctx.restore();
+}
+
+function renderVehiclePreview() {
+  if (!vehiclePreview.active) return;
+  const progress  = vehiclePreview.timer / vehiclePreview.maxTimer;
+  // Fade in first 15%, hold, fade out last 25%
+  let alpha;
+  if (progress > 0.85)      alpha = (1 - progress) / 0.15;
+  else if (progress < 0.25) alpha = progress / 0.25;
+  else                      alpha = 1.0;
+  alpha = Math.max(0, Math.min(1, alpha));
+
+  const img = vehicleSprites[vehiclePreview.key];
+  const cx  = cw / 2;
+  const cy  = ch * 0.38;
+
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.88;
+
+  // Dark backdrop
+  const bw = Math.round(cw * 0.72);
+  const bh = Math.round(bw * 0.46);
+  const bx = cx - bw / 2;
+  const by = cy - bh / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  roundRect(ctx, bx - 8, by - 8, bw + 16, bh + 48, 14);
+  ctx.fill();
+
+  // Green border
+  ctx.strokeStyle = '#67C23A';
+  ctx.lineWidth   = 2.5;
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = 12;
+  roundRect(ctx, bx - 8, by - 8, bw + 16, bh + 48, 14);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Vehicle image
+  if (img && img.loaded) {
+    const imgAspect = 1536 / 1024;
+    let rw = bw, rh = bw / imgAspect;
+    const ix = cx - rw / 2;
+    const iy = by;
+    ctx.drawImage(img, ix, iy, rw, rh);
+  }
+
+  // Effect label
+  ctx.globalAlpha  = alpha;
+  ctx.fillStyle    = '#FFFFFF';
+  ctx.font         = `900 ${Math.round(cw * 0.055)}px 'Montserrat', sans-serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor  = '#67C23A';
+  ctx.shadowBlur   = 8;
+  ctx.fillText(vehiclePreview.label, cx, by + bh + 22);
   ctx.restore();
 }
 
@@ -2267,6 +2345,21 @@ function playPaddleBoostTone() {
  * @param {number} blkY  Block centre y
  */
 function activateVehiclePowerUp(key, blkX, blkY) {
+  // Show vehicle preview overlay so player knows which model + effect activated
+  const PREVIEW_LABELS = {
+    t03: 'T03  ⚡ ELEKTRO-BALL',
+    b05: 'B05  🔥 SPEED BOOST',
+    b10: 'B10  ↔ PADDLE BOOST',
+    c10: 'C10  🎉 JACKPOT MULTIBALL',
+  };
+  vehiclePreview = {
+    active:   true,
+    key:      key,
+    label:    PREVIEW_LABELS[key] || key.toUpperCase(),
+    timer:    2.2,
+    maxTimer: 2.2,
+  };
+
   switch (key) {
     case 't03': {
       // ELEKTRO-BALL: next block hit pierces without deflecting
