@@ -545,7 +545,7 @@ function initCanvas() {
 
   resizeCanvas();
 
-  canvas.addEventListener('touchstart',  onTouchInput,   { passive: false });
+  canvas.addEventListener('touchstart',  onTouchStart,   { passive: false });
   canvas.addEventListener('touchmove',   onTouchInput,   { passive: false });
   canvas.addEventListener('pointermove', onPointerInput);
   canvas.addEventListener('pointerdown', onPointerInput);
@@ -1073,6 +1073,9 @@ function updateBall(dt) {
       // Clear power-up effects that were on the lost main ball
       state.pierceActive    = false;
       state.speedBoostTimer = 0;
+      // Streak resets when main ball is lost (even if ball2 rescues)
+      state.combo = 1;
+      updateComboUI();
       deactivateBall2();
       spawnFloatText(cw / 2, ch * 0.45, '↩ BALL GERETTET!', '#67C23A');
     } else {
@@ -2560,12 +2563,22 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
 // INPUT HANDLERS
 // ═══════════════════════════════════════════════════════════
 function onTouchInput(e) {
+  // touchmove: only move paddle, never auto-launch (finger still on screen
+  // after level transition would trigger unintended launch).
   e.preventDefault();
   if (!state.gameActive || state.gamepaused || !e.touches.length) return;
   const touch    = e.touches[0];
   const rect     = canvas.getBoundingClientRect();
   paddle.targetX = (touch.clientX - rect.left) - paddle.w / 2;
-  // Allow manual launch on tap if the ball is waiting on the paddle.
+}
+
+function onTouchStart(e) {
+  // touchstart: move paddle AND launch if waiting.
+  e.preventDefault();
+  if (!state.gameActive || state.gamepaused || !e.touches.length) return;
+  const touch    = e.touches[0];
+  const rect     = canvas.getBoundingClientRect();
+  paddle.targetX = (touch.clientX - rect.left) - paddle.w / 2;
   if (!ballLaunched) launchBall();
 }
 
