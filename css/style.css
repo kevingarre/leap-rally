@@ -1882,39 +1882,43 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
 .vehicle-preview-bar {
   position: absolute;
   top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
-  background: rgba(0,0,0,0.88);
-  border-bottom: 2px solid #67C23A;
-  box-shadow: 0 2px 12px rgba(103,194,58,0.3);
-  animation: vpb-slide 0.25s ease-out;
+  gap: 6px;
+  padding: 10px 16px 12px;
+  width: 72%;
+  max-width: 320px;
+  background: rgba(0,0,0,0.92);
+  border: 2px solid #67C23A;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 6px 24px rgba(103,194,58,0.4);
+  animation: vpb-drop 0.25s ease-out;
 }
 .vehicle-preview-bar.hidden { display: none; }
-@keyframes vpb-slide {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+@keyframes vpb-drop {
+  from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
 }
 .vpb-img {
-  height: 36px;
-  width:  54px;
+  width: 100%;
+  height: 80px;
   object-fit: cover;
   object-position: center;
-  border-radius: 4px;
-  flex-shrink: 0;
+  border-radius: 6px;
 }
 .vpb-label {
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   color: #FFFFFF;
   text-transform: uppercase;
-  flex: 1;
+  text-align: center;
 }
 
 /* Top bar with centered Leapmotor logo */
