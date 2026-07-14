@@ -664,7 +664,7 @@ function respawnBlocks() {
 // MULTI-BALL
 // ═══════════════════════════════════════════════════════════
 function spawnBall2() {
-  if (ball2.active || state.level < 4) return;
+  if (ball2.active) return;
   ball2.r      = ball.r;
   ball2.x      = paddle.x + paddle.w / 2;
   ball2.y      = paddle.y - ball2.r - 4;
@@ -680,7 +680,10 @@ function spawnBall2() {
   state.multiBallActive = true;
   state.multiBallTimer  = MULTIBALL_DURATION;
 
-  spawnFloatText(cw / 2, ch * 0.3, '🔴 MULTI-BALL!', '#FF4D51');
+  // Float text only for Level 4+ (flashFullCharge already shows its own cue)
+  if (state.level >= 4) {
+    spawnFloatText(cw / 2, ch * 0.3, '🔴 MULTI-BALL!', '#FF4D51');
+  }
   playTone(660, 'square', 0.18, 0.25);
   triggerScreenShake(5, 0.3);
 }
@@ -1059,7 +1062,8 @@ function checkBlockCollisions(b) {
 
       if (state.energy >= MAX_ENERGY && !state.fullChargeRewarded) {
         flashFullCharge();
-        state.fullChargeRewarded = true;
+        // Reset battery for next cycle (rechargeable)
+        state.fullChargeRewarded = true;  // guard flag: cleared inside flashFullCharge after reset
       }
 
       break;
@@ -1561,8 +1565,8 @@ function flashFullCharge() {
   state.score += FULL_CHARGE_BONUS_SCORE;
   state.fullChargeBonuses++;
   newWaveFlash = Math.max(newWaveFlash, 0.6);
-  spawnFloatText(cw / 2, ch * 0.40, `⚡ TURBO-BOOST +${FULL_CHARGE_BONUS_SCORE}`, '#67C23A');
 
+  // Ball speed boost
   const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
   const turboSpeed   = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
   if (currentSpeed > 0) {
@@ -1572,11 +1576,15 @@ function flashFullCharge() {
   }
   state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
 
-  if (state.level >= 4 && !ball2.active) {
+  // Gameplay bonus: Extra-Ball for ALL levels (4+ already had this)
+  // Extra-Ball lasts MULTIBALL_DURATION seconds then auto-expires
+  if (!ball2.active) {
     spawnBall2();
+    spawnFloatText(cw / 2, ch * 0.33, '⚡ DOPPELBALL!', '#67C23A');
   }
+  spawnFloatText(cw / 2, ch * 0.44, `AUFGELADEN! +${FULL_CHARGE_BONUS_SCORE}`, '#95D475');
 
-  // Ghost-car overtake: trigger instant-win check
+  // Ghost-car overtake: trigger instant-win check (gate still enforced inside)
   triggerGhostOvertake();
 
   const carProg  = document.getElementById('car-progress');
@@ -1610,9 +1618,17 @@ function flashFullCharge() {
     setTimeout(() => boostOverlay.classList.remove('show'), 2200);
   }
 
-  document.getElementById('battery-pct').textContent = '100% ⚡';
   triggerScreenShake(6, 0.4);
   playTone(880, 'sine', 0.25, 0.6);
+
+  // Reset battery for next cycle — short cooldown via setTimeout
+  // prevents immediate re-trigger on the same frame
+  setTimeout(() => {
+    if (!state.gameActive) return;
+    state.energy           = 0;
+    state.fullChargeRewarded = false;
+    updateEnergyUI();
+  }, 80);
 }
 
 // ═══════════════════════════════════════════════════════════
