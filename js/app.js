@@ -502,7 +502,7 @@ function resizeCanvas() {
 }
 
 function initPaddle() {
-  const lvlIdx = state.bonusMode ? 3 : Math.max(0, Math.min(3, state.level - 1));
+  const lvlIdx = Math.max(0, Math.min(3, state.level - 1));
   const frac   = LEVEL_PADDLE_FRAC[lvlIdx];
   const rawW   = Math.round(cw * frac);
   paddle.w       = Math.max(PADDLE_MIN_PX, rawW);
@@ -544,21 +544,29 @@ function getLevelConfig() {
 }
 
 function tryLevelUp() {
-  if (state.level >= 4) {
-    // Enter bonus mode
-    enterBonusMode();
-    return true;
-  }
+  // Levels count up indefinitely (5, 6, 7, ...). No more "bonus wave" mode.
   state.level++;
   if (state.level > state.maxLevelReached) state.maxLevelReached = state.level;
 
-  const lvlIdx = state.level - 1;
-  state.ballSpeedPx = Math.min(
-    GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[lvlIdx],
-    GAME_CFG.ballMaxSpeed * ch
-  );
+  // Layout/paddle index clamps at 3 (Level 4 = hardest layout); Level 5+ reuse it.
+  const lvlIdx = Math.min(state.level - 1, 3);
 
-  // Update paddle width, keep horizontally centred
+  if (state.level <= 4) {
+    // Standard per-level speed table.
+    state.ballSpeedPx = Math.min(
+      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[lvlIdx],
+      GAME_CFG.ballMaxSpeed * ch
+    );
+  } else {
+    // Level 5+: keep accelerating beyond the table, clamped to the cap.
+    const extra = Math.pow(BONUS_LEVEL_SPEED_MULT, state.level - 4);
+    state.ballSpeedPx = Math.min(
+      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[3] * extra,
+      GAME_CFG.ballMaxSpeed * ch
+    );
+  }
+
+  // Update paddle width, keep horizontally centred (index clamped for L5+)
   const frac = LEVEL_PADDLE_FRAC[lvlIdx];
   const newW = Math.max(PADDLE_MIN_PX, Math.round(cw * frac));
   paddle.x   = paddle.x + paddle.w / 2 - newW / 2;
@@ -592,59 +600,23 @@ function tryLevelUp() {
   return true;
 }
 
+// Deprecated: bonus-wave mode replaced by continuous level counting.
+// Kept as a safe no-op wrapper in case any legacy path still calls it.
 function enterBonusMode() {
-  if (state.bonusMode) {
-    // Already in bonus: just increment wave, speed up
-    state.bonusWave++;
-    const mult = Math.min(
-      BONUS_LEVEL_MAX_SPEED_MULT,
-      Math.pow(BONUS_LEVEL_SPEED_MULT, state.bonusWave)
-    );
-    state.ballSpeedPx = Math.min(
-      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[3] * mult,
-      GAME_CFG.ballMaxSpeed * ch
-    );
-  } else {
-    state.bonusMode  = true;
-    state.bonusWave  = 1;
-    state.ballSpeedPx = Math.min(
-      GAME_CFG.ballBaseSpeed * ch * LEVEL_SPEED_MULT[3] * BONUS_LEVEL_SPEED_MULT,
-      GAME_CFG.ballMaxSpeed * ch
-    );
-    spawnFloatText(cw / 2, ch * 0.28, '🏆 BONUS-MODE!', '#67C23A');
-    spawnFloatText(cw / 2, ch * 0.38, 'JAGE DEN HIGHSCORE!', '#FFFFFF');
-  }
-
-  // Reset ball cleanly
-  resetBallToPaddle();
-  deactivateBall2();
-
-  // BUGFIX: auto-launch after overlay so bonus waves are not stuck.
-  setTimeout(() => {
-    if (!state.gameActive || state.gamepaused) return;
-    if (!ballLaunched) launchBall();
-  }, Math.round(LEVEL_OVERLAY_DURATION * 1000) + 100);
-
-  levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: 4, label: `BONUS WELLE ${state.bonusWave}` };
-  triggerScreenShake(6, 0.35);
-  updateLevelHUD();
+  tryLevelUp();
 }
 
 function getLevelLabel(lvl) {
   const labels = ['', 'WARM-UP', 'CHARGE', 'BOOST', 'OVERTAKE'];
+  if (lvl >= 5) return 'OVERTAKE';  // Level 5+ stay at the top tier label
   return labels[Math.min(lvl, 4)] || '';
 }
 
 function updateLevelHUD() {
   const badge = document.getElementById('level-badge');
   if (!badge) return;
-  if (state.bonusMode) {
-    badge.textContent = `BONUS W${state.bonusWave}`;
-    badge.className   = 'level-badge level-4 bonus';
-  } else {
-    badge.textContent = `LVL ${state.level}`;
-    badge.className   = `level-badge level-${state.level}`;
-  }
+  badge.textContent = `LVL ${state.level}`;
+  badge.className   = `level-badge level-${Math.min(state.level, 4)}`;
 }
 
 function updateLivesHUD() {
@@ -720,17 +692,11 @@ function respawnBlocks() {
 
   newWaveFlash = 0.8;
 
-  if (state.bonusMode) {
-    enterBonusMode();
-  } else {
-    // Build blocks for next level (or current level's new wave)
-    tryLevelUp();
-  }
+  // Always advance the level counter (Levels count up 1,2,3,4,5,...).
+  tryLevelUp();
 
   initBlocks();
-  if (!state.bonusMode) {
-    spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#67C23A');
-  }
+  spawnFloatText(cw / 2, ch / 2, `⚡ LEVEL ${state.level}!`, '#67C23A');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -772,7 +738,7 @@ function deactivateBall2() {
 // ═══════════════════════════════════════════════════════════
 function updateGhostCar(dt) {
   if (state.ghostOvertaken) return;
-  const lvlIdx = state.bonusMode ? 3 : Math.min(state.level - 1, 3);
+  const lvlIdx = Math.min(state.level - 1, 3);
   const spd    = GHOST_SPEED_FRAC[lvlIdx];
   state.ghostTrackPos = Math.min(0.97, state.ghostTrackPos + spd * dt);
 
@@ -1096,7 +1062,7 @@ function checkBlockCollisions(b) {
 
       let energyGain, scoreGain;
       const baseEnergy = (BLOCK_ROW_ENERGY_BASE[Math.min(blk.row, 3)] || 3) * state.combo;
-      const bonusMult  = state.bonusMode ? 1 + state.bonusWave * 0.15 : 1;
+      const bonusMult  = state.level > 4 ? 1 + (state.level - 4) * 0.15 : 1;
       if (blk.isTurbo) {
         energyGain = baseEnergy * 2 + 4;
         scoreGain  = Math.round((baseEnergy * 20 * state.combo + 180) * bonusMult);
@@ -1499,7 +1465,7 @@ function renderLevelOverlay() {
   ctx.font         = `900 ${fs1}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  const titleText  = state.bonusMode ? `BONUS W${state.bonusWave}` : `LEVEL ${lvl}`;
+  const titleText  = `LEVEL ${lvl}`;
   ctx.fillText(titleText, cw / 2, ch / 2 - pillH * 0.12);
 
   const fs2 = Math.max(10, Math.round(cw * 0.05));
@@ -2113,7 +2079,7 @@ function endGame() {
     state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE +
     (state.maxLevelReached - 1) * 300 +
     (state.ghostOvertaken ? 500 : 0) +
-    (state.bonusMode ? state.bonusWave * 200 : 0)
+    (state.level > 4 ? (state.level - 4) * 200 : 0)
   );
 
   // Instant-win check for end-screen
@@ -2179,7 +2145,7 @@ function populateEndScreen(energyPct, isInstantWin) {
     sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
   }
   const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE 🏆'];
-  const lvlLabel   = state.bonusMode ? `BONUS W${state.bonusWave}` : (levelNames[state.maxLevelReached] || '');
+  const lvlLabel   = state.maxLevelReached >= 5 ? 'OVERTAKE 🏆' : (levelNames[state.maxLevelReached] || '');
   sub += ` · Level ${state.maxLevelReached} (${lvlLabel}) erreicht.`;
   if (state.ghostOvertaken) sub += ' 🚗 Ghost überholt!';
 
@@ -2499,7 +2465,7 @@ function copyShareText() {
 }
 function buildShareText() {
   const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE'];
-  const lvlLabel   = state.bonusMode ? `BONUS W${state.bonusWave}` : (levelNames[state.maxLevelReached] || '');
+  const lvlLabel   = state.maxLevelReached >= 5 ? 'OVERTAKE' : (levelNames[state.maxLevelReached] || '');
   return `🏓⚡🚗 LEAPMOTOR TT CHALLENGE
 
 Score:    ${state.score.toLocaleString('de-DE')} Punkte
