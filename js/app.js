@@ -177,6 +177,41 @@ function resetSession() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ATTRACT MODE
+// ═══════════════════════════════════════════════════════════
+var attractTimerId = null;
+var ATTRACT_DELAY  = 30000; // 30 Sekunden Inaktivitaet
+
+function initAttractMode() {
+  stopAttractTimer();
+  attractTimerId = setTimeout(showAttractMode, ATTRACT_DELAY);
+}
+
+function resetAttractTimer() {
+  if (state.currentScreen !== 'screen-start') return;
+  stopAttractTimer();
+  attractTimerId = setTimeout(showAttractMode, ATTRACT_DELAY);
+}
+
+function stopAttractTimer() {
+  if (attractTimerId !== null) {
+    clearTimeout(attractTimerId);
+    attractTimerId = null;
+  }
+}
+
+function showAttractMode() {
+  var el = document.getElementById('attract-overlay');
+  if (el) el.style.display = 'flex';
+}
+
+function hideAttractMode() {
+  var el = document.getElementById('attract-overlay');
+  if (el) el.style.display = 'none';
+  resetAttractTimer();
+}
+
+// ═══════════════════════════════════════════════════════════
 // GAME STATE
 // ═══════════════════════════════════════════════════════════
 let state = {
@@ -361,6 +396,11 @@ function showScreen(id) {
   }
   requestAnimationFrame(() => next.classList.add('active'));
   state.currentScreen = id;
+  // Attract-Mode: nur auf Start-Screen aktiv
+  stopAttractTimer();
+  var attractEl = document.getElementById('attract-overlay');
+  if (attractEl) attractEl.style.display = 'none';
+  if (id === 'screen-start') initAttractMode();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3936,4 +3976,31 @@ document.addEventListener('DOMContentLoaded', function() {
     img.src = 'assets/vehicles/' + key + '.png';
     vehicleSprites[key] = img;
   });
+
+  // Attract-Mode: idle detection auf Start-Screen
+  (function() {
+    var startScreen = document.getElementById('screen-start');
+    if (startScreen) {
+      ['pointerdown', 'touchstart', 'mousemove'].forEach(function(evType) {
+        startScreen.addEventListener(evType, function() {
+          if (state.currentScreen !== 'screen-start') return;
+          var overlay = document.getElementById('attract-overlay');
+          if (overlay && overlay.style.display !== 'none') {
+            // Overlay sichtbar: verstecken und Timer neu starten
+            hideAttractMode();
+          } else {
+            resetAttractTimer();
+          }
+        }, { passive: true });
+      });
+    }
+    // Klick/Touch auf Attract-Overlay beendet ihn
+    var attractEl = document.getElementById('attract-overlay');
+    if (attractEl) {
+      attractEl.addEventListener('click', function() { hideAttractMode(); });
+      attractEl.addEventListener('touchstart', function() { hideAttractMode(); }, { passive: true });
+    }
+    // Initialer Timer fuer den Start-Screen
+    if (state.currentScreen === 'screen-start') initAttractMode();
+  })();
 });

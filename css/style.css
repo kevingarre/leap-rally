@@ -1947,3 +1947,154 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   filter: invert(1) brightness(2);
   opacity: 0.9;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ATTRACT MODE (Screensaver)
+═══════════════════════════════════════════════════════════ */
+.attract-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.90);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.attract-inner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 44px 24px;
+  text-align: center;
+}
+.attract-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 80% 50% at 50% 55%, rgba(103, 194, 58, 0.12) 0%, transparent 70%);
+  animation: attract-glow-pulse 3s ease-in-out infinite;
+}
+@keyframes attract-glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+.attract-logo {
+  height: 64px;
+  width: auto;
+  filter: invert(1) brightness(2);
+  animation: attract-logo-pulse 2.2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+@keyframes attract-logo-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.07);
+              filter: invert(1) brightness(2.5) drop-shadow(0 0 18px rgba(103, 194, 58, 0.8)); }
+}
+.attract-cars {
+  width: 100%;
+  height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+.attract-car {
+  position: absolute;
+  height: 58px;
+  top: 50%;
+  transform: translateY(-50%);
+  object-fit: contain;
+  animation: attract-drive linear infinite;
+  filter: drop-shadow(0 2px 10px rgba(103, 194, 58, 0.35));
+}
+.attract-car-1 { animation-duration: 6s;    animation-delay:  0s;   }
+.attract-car-2 { animation-duration: 8.5s;  animation-delay: -2.5s; }
+.attract-car-3 { animation-duration: 7.2s;  animation-delay: -4.8s; }
+.attract-car-4 { animation-duration: 10s;   animation-delay: -1.3s; }
+@keyframes attract-drive {
+  from { left: 110%; }
+  to   { left: -28%; }
+}
+.attract-headline {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #67C23A;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+  animation: attract-headline-glow 1.8s ease-in-out infinite;
+}
+@keyframes attract-headline-glow {
+  0%, 100% { text-shadow: 0 0 20px rgba(103, 194, 58, 0.7); }
+  50%       { text-shadow: 0 0 40px rgba(103, 194, 58, 1), 0 0 80px rgba(103, 194, 58, 0.4); }
+}
+.attract-sub {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  animation: attract-sub-blink 1.2s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+@keyframes attract-sub-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHARE ACTIONS (End-Screen)
+═══════════════════════════════════════════════════════════ */
+.share-actions-wrap {
+  padding: 4px 0 16px;
+}
+.share-actions-wrap.hidden { display: none; }
+.share-actions-btns {
+  display: flex;
+  gap: 10px;
+}
+.share-btn-wa {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  background: #25D366;
+  color: #000;
+  border-radius: 14px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  text-transform: uppercase;
+  min-height: 50px;
+  transition: background 0.2s;
+}
+.share-btn-wa:active { background: #1ebe5b; }
+.share-btn-native {
+  flex: 1;
+  padding: 14px 10px;
+  background: rgba(103, 194, 58, 0.10);
+  border: 1px solid rgba(103, 194, 58, 0.40);
+  border-radius: 14px;
+  color: #67C23A;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-height: 50px;
+  transition: background 0.2s;
+}
+.share-btn-native:active { background: rgba(103, 194, 58, 0.20); }
