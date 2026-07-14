@@ -1297,7 +1297,9 @@ function checkBlockCollisions(b) {
     }
   }
 
-  if (b === ball && aliveCount === 0) respawnBlocks();
+  // Level advance only when ALL blocks are truly gone (both balls can trigger this).
+  // Using blocks.some() avoids false positives from stale local aliveCount.
+  if (!blocks.some(function(blk) { return blk.alive; })) respawnBlocks();
 }
 
 // ═══════════════════════════════════════════════════════════
