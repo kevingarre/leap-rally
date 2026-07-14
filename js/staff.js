@@ -322,6 +322,12 @@ function renderEventCard(ev) {
     '<button class="btn-action" onclick="exportEventCSV(currentEventId, currentEventName, this)">' +
       '📥 Teilnehmerliste exportieren (CSV)' +
     '</button>' +
+    '<button class="btn-action" onclick="window.open(\'leaderboard.html\', \'_blank\')">' +
+      '📺 TV-Leaderboard öffnen' +
+    '</button>' +
+    '<button class="btn-action" onclick="copyDemoLink(this)">' +
+      '🎮 Demo-Link kopieren' +
+    '</button>' +
     '<button class="btn-action" onclick="openNewEventForm()">' +
       '🗄 Event archivieren &amp; Neues anlegen' +
     '</button>';
@@ -695,6 +701,25 @@ function showToast(msg, isError) {
   toastTimer = setTimeout(function () {
     t.className = t.className.replace('show', '').trim();
   }, 3800);
+}
+
+// ══════════════════════════════════════════════════════════════
+// DEMO-LINK
+// ══════════════════════════════════════════════════════════════
+function copyDemoLink(btn) {
+  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/index.html');
+  var demoUrl = base + '?demo=1';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(demoUrl).then(function() {
+      showToast('🎮 Demo-Link kopiert: ' + demoUrl);
+      if (btn) { var orig = btn.textContent; btn.textContent = '✅ Kopiert!'; setTimeout(function() { btn.textContent = orig; }, 2000); }
+    }).catch(function(err) {
+      showToast('⚠️ Kopieren fehlgeschlagen: ' + err.message, true);
+    });
+  } else {
+    // Fallback: prompt
+    window.prompt('Demo-Link (manuell kopieren):', demoUrl);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
