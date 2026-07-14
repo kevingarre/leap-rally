@@ -1003,10 +1003,10 @@ function update(dt) {
     spawnLightningArcs(ball.x, ball.y, 2, false);
   }
   // Fire trail behind ball while Speed Boost is active
-  if (state.speedBoostTimer > 0 && ballLaunched && Math.random() < 0.6) {
+  if (state.speedBoostTimer > 0 && ballLaunched && Math.random() < 0.80) {
     spawnFireTrail(ball.x, ball.y);
   }
-  if (state.speedBoostTimer > 0 && ball2.active && Math.random() < 0.6) {
+  if (state.speedBoostTimer > 0 && ball2.active && Math.random() < 0.80) {
     spawnFireTrail(ball2.x, ball2.y);
   }
   updateFloatTexts(dt);
@@ -1375,7 +1375,8 @@ function updateParticles(dt) {
     const p = particles[i];
     p.x    += p.vx * dt;
     p.y    += p.vy * dt;
-    p.vy   += 260 * dt;
+    // Fire particles float; normal particles fall with gravity
+    p.vy   += (p.noGravity ? 40 : 260) * dt;
     p.life -= dt;
     if (p.life <= 0) particles.splice(i, 1);
   }
@@ -1679,19 +1680,23 @@ function renderLightningArcs() {
 
 // ── FIRE PARTICLE SYSTEM (B05 Speed Boost) ─────────────────
 function spawnFireTrail(x, y) {
-  if (particles.length > 75) return; // respect particle cap
-  const colors = ['#FF6B00','#FF9E3D','#FFD700','#FF4500'];
-  const p = {
-    x: x + (Math.random()-0.5)*8,
-    y: y + (Math.random()-0.5)*8,
-    vx: (Math.random()-0.5)*40,
-    vy: -30 - Math.random()*60,   // upward — like flames rising
-    life: 0.18 + Math.random()*0.18,
-    maxLife: 0.36,
-    color: colors[Math.floor(Math.random()*colors.length)],
-    size: 2 + Math.random()*4,
-  };
-  particles.push(p);
+  if (particles.length > 75) return;
+  const colors = ['#FF6B00','#FF9E3D','#FFD700','#FF4500','#FFFFFF'];
+  // Spawn 2-3 particles per call for denser trail
+  const count = 2 + (Math.random() < 0.4 ? 1 : 0);
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: x + (Math.random()-0.5)*10,
+      y: y + (Math.random()-0.5)*10,
+      vx: (Math.random()-0.5)*35,
+      vy: -50 - Math.random()*80,   // faster upward
+      life: 0.35 + Math.random()*0.3,  // longer life (0.35-0.65s)
+      maxLife: 0.65,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      size: 2.5 + Math.random()*4.5,
+      noGravity: true,  // flag to reduce gravity for fire
+    });
+  }
 }
 
 function spawnFireBurst(x, y) {
