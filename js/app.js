@@ -277,9 +277,10 @@ function startBgMusic() {
   if (bgMusicActive || !soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
+  // Do not call ac.resume() here — caller (runCountdown) already awaited it.
+  // Read currentTime after resume so notes are not scheduled in the past.
+  bgMusicActive = true;
   try {
-    ac.resume();
-    bgMusicActive = true;
     scheduleBgMusicLoop(ac, ac.currentTime);
   } catch(e) {}
 }
@@ -294,6 +295,9 @@ function stopBgMusic() {
 
 function scheduleBgMusicLoop(ac, startAt) {
   if (!bgMusicActive || !soundEnabled) return;
+  // Clamp startAt so we never schedule notes in the past (e.g. immediately
+  // after a just-resumed AudioContext whose currentTime just jumped forward).
+  startAt = Math.max(startAt, ac.currentTime + 0.05);
   const seq = BG_NOTE_SEQ;
   const loopDur = seq.length * BG_BEAT_S;
 
@@ -474,16 +478,18 @@ function runCountdown() {
   updateLights(0);
 
   // Ensure AudioContext is running (user gesture = "Spielen"-button click)
+  // ac.resume() is async — await it before scheduling any tones so they are
+  // not lost while the context is still 'suspended'.
   const ac0 = getAudioCtx();
+  const doStartAudio = function() {
+    startBgMusic();
+    playCountdownBlip(0);
+  };
   if (ac0 && ac0.state === 'suspended') {
-    try { ac0.resume(); } catch(e) {}
+    ac0.resume().then(doStartAudio).catch(doStartAudio);
+  } else {
+    doStartAudio();
   }
-
-  // Start background music immediately at countdown begin
-  startBgMusic();
-
-  // Play first countdown blip for '3'
-  playCountdownBlip(0);
 
   const tick = setInterval(function() {
     i++;
@@ -1680,8 +1686,21 @@ function playFullChargeTone() {
   if (!soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
+  // Play as a short arpeggio (staggered 80 ms apart) instead of a simultaneous chord.
   [523, 659, 784].forEach(function(freq, i) {
-    playTone(freq, 'triangle', 0.16, 0.22);
+    const t = ac.currentTime + i * 0.08;
+    try {
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      env.gain.setValueAtTime(0.16, t);
+      env.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.start(t);
+      osc.stop(t + 0.27);
+    } catch(e) {}
   });
 }
 
