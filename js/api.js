@@ -125,6 +125,48 @@ async function getLeaderboard(eventId, limit) {
   return Array.isArray(rows) ? rows : [];
 }
 
+/**
+ * ROBUSTER WEG: Player + Score (+ Instant-Win) in EINEM atomaren RPC-Call.
+ * Sofort-Gewinn wird SERVERSEITIG bestimmt (nicht client-manipulierbar).
+ * Nutzt Supabase-RPC submit_entry (SECURITY DEFINER).
+ *
+ * @param {object} f – Formular + Spiel-Daten:
+ *   { event_id, score, ghost_overtaken, level_reached, play_duration_s,
+ *     contact_intent, vehicle_interest, zip, city, first_name, last_name,
+ *     email, phone, consent_stay, consent_offers, consent_partners,
+ *     terms_accepted, terms_version, entry_source }
+ * @returns {Promise<{player_id, score_id, is_instant_win, claim_code}>}
+ */
+async function submitEntry(f) {
+  const body = {
+    p_event_id:         f.event_id,
+    p_score:            f.score,
+    p_ghost_overtaken:  !!f.ghost_overtaken,
+    p_level_reached:    f.level_reached || 1,
+    p_play_duration_s:  f.play_duration_s || null,
+    p_contact_intent:   f.contact_intent || null,
+    p_vehicle_interest: f.vehicle_interest || null,
+    p_zip:              f.zip || null,
+    p_city:             f.city || null,
+    p_first_name:       f.first_name || null,
+    p_last_name:        f.last_name || null,
+    p_email:            f.email || null,
+    p_phone:            f.phone || null,
+    p_consent_stay:     !!f.consent_stay,
+    p_consent_offers:   !!f.consent_offers,
+    p_consent_partners: !!f.consent_partners,
+    p_terms_accepted:   !!f.terms_accepted,
+    p_terms_version:    f.terms_version || 1,
+    p_entry_source:     f.entry_source || 'byod',
+  };
+  const res = await _supaFetch('/rest/v1/rpc/submit_entry', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  // RPC returns a JSON object (PostgREST wraps scalar json directly)
+  return res;
+}
+
 // ── App-start initialiser ───────────────────────────────
 
 /**

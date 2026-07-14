@@ -1675,23 +1675,39 @@ function handleOptinSubmit(e) {
 
 async function _doOptinSubmit(playerData, submitBtn, errorEl) {
   try {
-    // 1. Create player record
-    const playerId = await createPlayer(playerData);
-    session.playerId = playerId;
+    // Atomarer RPC-Call: Player + Score (+ Instant-Win) in EINER Transaktion.
+    // Sofort-Gewinn wird SERVERSEITIG bestimmt (nicht client-manipulierbar).
+    const ps = session.pendingScore || {};
+    const ev3 = window.LEAP_EVENT;
+    const result = await submitEntry({
+      event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
+      score:            ps.score,
+      ghost_overtaken:  ps.ghost_overtaken,
+      level_reached:    ps.level_reached,
+      play_duration_s:  ps.play_duration_s,
+      contact_intent:   playerData.contact_intent,
+      vehicle_interest: playerData.vehicle_interest,
+      zip:              playerData.zip,
+      city:             playerData.city,
+      first_name:       playerData.first_name,
+      last_name:        playerData.last_name,
+      email:            playerData.email,
+      phone:            playerData.phone,
+      consent_stay:     playerData.consent_stay_in_touch,
+      consent_offers:   playerData.consent_better_offers,
+      consent_partners: playerData.consent_partners,
+      terms_accepted:   playerData.terms_accepted,
+      terms_version:    playerData.terms_version_at_entry,
+      entry_source:     playerData.entry_source || 'byod',
+    });
 
-    // 2. Write score with player_id
-    const scorePayload = Object.assign({}, session.pendingScore, { player_id: playerId });
-    const scoreId = await submitScore(scorePayload);
-    session.scoreId = scoreId;
-
-    // 3. If instant win: persist claim record
-    if (session.instantWinCode && scoreId) {
-      const ev3 = window.LEAP_EVENT;
-      await createInstantWin({
-        event_id:   ev3 ? ev3.id : undefined,
-        score_id:   scoreId,
-        claim_code: session.instantWinCode,
-      });
+    session.playerId = result && result.player_id;
+    session.scoreId  = result && result.score_id;
+    // Server ist die Wahrheit über Sofort-Gewinn + Code:
+    if (result && result.is_instant_win && result.claim_code) {
+      session.instantWinCode = result.claim_code;
+    } else {
+      session.instantWinCode = null;
     }
 
     session.submitted = true;
