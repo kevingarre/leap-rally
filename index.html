@@ -9,7 +9,7 @@
   <meta name="description" content="LEAPMOTOR TT CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Ghost-Car überholen. Event Activation Mini-Game.">
   <title>LEAPMOTOR TT CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260714z18">
+  <link rel="stylesheet" href="css/style.css?v=20260714z19">
 </head>
 <body>
 <div id="app">
@@ -324,33 +324,7 @@
 
         <form id="game-optin-form" class="optin-form" onsubmit="handleGameOptinSubmit(event)" novalidate>
 
-          <div class="form-row form-row-half">
-            <div class="form-col">
-              <label class="form-label" for="gfi-first">Vorname *</label>
-              <input id="gfi-first" name="first_name" type="text" required placeholder="Max" class="form-input">
-            </div>
-            <div class="form-col">
-              <label class="form-label" for="gfi-last">Nachname *</label>
-              <input id="gfi-last" name="last_name" type="text" required placeholder="Mustermann" class="form-input">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <label class="form-label" for="gfi-email">E-Mail *</label>
-            <input id="gfi-email" name="email" type="email" required placeholder="max@beispiel.de" class="form-input">
-          </div>
-
-          <div class="form-row form-row-half">
-            <div class="form-col">
-              <label class="form-label" for="gfi-zip">PLZ *</label>
-              <input id="gfi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
-            </div>
-            <div class="form-col">
-              <label class="form-label" for="gfi-city">Ort *</label>
-              <input id="gfi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
-            </div>
-          </div>
-
+          <!-- EXAKT gleiche Feldreihenfolge wie End-Screen-Formular (fi-*) -->
           <div class="form-row">
             <label class="form-label" for="gfi-contact">Kontakt-Wunsch *</label>
             <select id="gfi-contact" name="contact_intent" required class="form-select">
@@ -372,12 +346,44 @@
             </select>
           </div>
 
-          <!-- Consent radios -->
+          <div class="form-row form-row-half">
+            <div class="form-col">
+              <label class="form-label" for="gfi-zip">PLZ *</label>
+              <input id="gfi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
+            </div>
+            <div class="form-col">
+              <label class="form-label" for="gfi-city">Ort *</label>
+              <input id="gfi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row form-row-half">
+            <div class="form-col">
+              <label class="form-label" for="gfi-first">Vorname *</label>
+              <input id="gfi-first" name="first_name" type="text" required placeholder="Max" class="form-input">
+            </div>
+            <div class="form-col">
+              <label class="form-label" for="gfi-last">Nachname *</label>
+              <input id="gfi-last" name="last_name" type="text" required placeholder="Mustermann" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="gfi-email">E-Mail *</label>
+            <input id="gfi-email" name="email" type="email" required placeholder="max@beispiel.de" class="form-input">
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="gfi-phone">Telefon (optional)</label>
+            <input id="gfi-phone" name="phone" type="tel" placeholder="+49 30 …" class="form-input">
+          </div>
+
+          <!-- Consent radios — gleiche Labels wie End-Screen -->
           <div class="consent-block">
             <p class="consent-title">Einwilligungen (alle Pflicht – Nein ist gültig)</p>
 
             <div class="consent-row">
-              <span class="consent-label">📧 Newsletter &amp; Updates</span>
+              <span class="consent-label">📧 Newsletter &amp; Updates erhalten</span>
               <div class="radio-group">
                 <label class="radio-opt"><input type="radio" name="g_consent_stay_in_touch" value="yes" required> Ja</label>
                 <label class="radio-opt"><input type="radio" name="g_consent_stay_in_touch" value="no"> Nein</label>
@@ -385,7 +391,7 @@
             </div>
 
             <div class="consent-row">
-              <span class="consent-label">🚗 Individuelle Angebote</span>
+              <span class="consent-label">🚗 Individuelle Angebote erhalten</span>
               <div class="radio-group">
                 <label class="radio-opt"><input type="radio" name="g_consent_better_offers" value="yes" required> Ja</label>
                 <label class="radio-opt"><input type="radio" name="g_consent_better_offers" value="no"> Nein</label>
@@ -644,8 +650,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714z18"></script>
-<script src="js/api.js?v=20260714z18"></script>
-<script src="js/app.js?v=20260714z18"></script>
+<script src="js/supabase-config.js?v=20260714z19"></script>
+<script src="js/api.js?v=20260714z19"></script>
+<script src="js/app.js?v=20260714z19"></script>
 </body>
 </html>
