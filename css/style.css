@@ -560,7 +560,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   position: relative;
   z-index: 11;
   align-self: center;
-  margin: 6px auto 0;
+  margin: 28px auto 0;  /* leave room for the centered Leapmotor top-bar logo */
   padding: 3px 14px;
   border-radius: 999px;
   font-family: var(--font-display);
@@ -1702,8 +1702,31 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   box-shadow: none;
   opacity: 0.7;
 }
-/* In-game position: right of the level-badge row, clear of HUD */
+/* In-game position: top-LEFT, clear of the right-side COMBO HUD block */
 .sound-toggle-ingame {
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  left: 10px;
+  right: auto;
+  width: 38px;
+  height: 38px;
+  font-size: 17px;
+}
+
+/* Top bar with centered Leapmotor logo */
+.game-topbar {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 12;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+.game-topbar-logo {
+  height: 16px;
+  width: auto;
+  filter: invert(1) brightness(2);
+  opacity: 0.75;
 }

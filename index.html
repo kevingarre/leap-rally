@@ -9,7 +9,7 @@
   <meta name="description" content="LEAPMOTOR TT CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Ghost-Car überholen. Event Activation Mini-Game.">
   <title>LEAPMOTOR TT CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260714m">
+  <link rel="stylesheet" href="css/style.css?v=20260714n">
 </head>
 <body>
 <div id="app">
@@ -138,10 +138,15 @@
   <section id="screen-game" class="screen">
     <div class="screen-bg bg-game"></div>
 
+    <!-- Top bar: Leapmotor logo (centered) -->
+    <div class="game-topbar">
+      <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="game-topbar-logo">
+    </div>
+
     <!-- Level badge -->
     <div class="level-badge level-1" id="level-badge">LVL 1</div>
 
-    <!-- Sound toggle (top right) -->
+    <!-- Sound toggle (top LEFT, clear of the combo HUD block) -->
     <button class="sound-toggle-btn sound-toggle-ingame" onclick="toggleSound()" aria-label="Sound an" title="Sound ein/aus">🔊</button>
 
     <!-- HUD: Blöcke | Leben | Combo (Timer-Ring ENTFERNT) -->
@@ -624,8 +629,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714m"></script>
-<script src="js/api.js?v=20260714m"></script>
-<script src="js/app.js?v=20260714m"></script>
+<script src="js/supabase-config.js?v=20260714n"></script>
+<script src="js/api.js?v=20260714n"></script>
+<script src="js/app.js?v=20260714n"></script>
 </body>
 </html>
