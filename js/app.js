@@ -148,6 +148,7 @@ const BONUS_LEVEL_MAX_SPEED_MULT = 3.0;
 
 // Multi-ball duration (Level 4)
 const MULTIBALL_DURATION = 3.0;
+const MAX_EXTRA_BALLS    = 2;    // max extra balls beyond the main ball (total: 1 + 2 = 3)
 
 // FX
 const PARTICLE_COUNT = 8;
@@ -261,7 +262,7 @@ let cw = 0, ch = 0;
 
 const paddle = { x: 0, y: 0, w: 0, h: PADDLE_HEIGHT, targetX: 0 };
 const ball   = { x: 0, y: 0, vx: 0, vy: 0, r: 0 };
-const ball2  = { x: 0, y: 0, vx: 0, vy: 0, r: 0, active: false };
+let extraBalls = [];  // array of extra balls: { x, y, vx, vy, r, active: true }
 
 let blocks      = [];
 let particles   = [];
@@ -452,7 +453,7 @@ function resetGameState() {
     paddleBaseW:      0,
   });
 
-  ball2.active = false;
+  extraBalls   = [];
   particles    = [];
   floatTexts   = [];
   lightningArcs = [];
@@ -829,21 +830,24 @@ function respawnBlocks() {
 // ═══════════════════════════════════════════════════════════
 // MULTI-BALL
 // ═══════════════════════════════════════════════════════════
-function spawnBall2() {
-  if (ball2.active) return;
-  ball2.r      = ball.r;
-  ball2.x      = paddle.x + paddle.w / 2;
-  ball2.y      = paddle.y - ball2.r - 4;
-  ball2.active = true;
+function spawnExtraBall() {
+  if (extraBalls.length >= MAX_EXTRA_BALLS) return;
+  const r   = ball.r;
+  const x   = paddle.x + paddle.w / 2;
+  const y   = paddle.y - r - 4;
 
   const angleDeg = -75 + Math.random() * 15;
   const angleRad = angleDeg * (Math.PI / 180);
   const dir      = ball.vx < 0 ? 1 : -1;
   const spd      = state.ballSpeedPx;
-  ball2.vx = Math.cos(angleRad) * spd * dir;
-  ball2.vy = Math.sin(angleRad) * spd;
+  extraBalls.push({
+    x, y, r,
+    vx: Math.cos(angleRad) * spd * dir,
+    vy: Math.sin(angleRad) * spd,
+    active: true,
+  });
 
-  state.multiBallActive = true;
+  state.multiBallActive = extraBalls.length > 0;
   state.multiBallTimer  = MULTIBALL_DURATION;
 
   // Float text only for Level 4+ (flashFullCharge already shows its own cue)
@@ -854,11 +858,17 @@ function spawnBall2() {
   triggerScreenShake(5, 0.3);
 }
 
-function deactivateBall2() {
-  ball2.active = false;
+// Legacy alias kept for any direct call-sites that weren't updated
+function spawnBall2() { spawnExtraBall(); }
+
+function deactivateAllExtraBalls() {
+  extraBalls = [];
   state.multiBallActive = false;
   state.multiBallTimer  = 0;
 }
+
+// Legacy alias
+function deactivateBall2() { deactivateAllExtraBalls(); }
 
 // ═══════════════════════════════════════════════════════════
 // GHOST CAR
@@ -1026,10 +1036,9 @@ function update(dt) {
     updateBall(dt);
   }
 
-  if (ball2.active) {
-    // Multi-ball stays active until the second ball is actually lost
-    // (no timer). deactivateBall2() is called in updateBall2 when it drops out.
-    updateBall2(dt);
+  // Extra balls: iterate backwards so splice(idx,1) is safe
+  for (let _i = extraBalls.length - 1; _i >= 0; _i--) {
+    updateExtraBall(extraBalls[_i], _i, dt);
   }
 
   updateGhostCar(dt);
@@ -1053,8 +1062,8 @@ function update(dt) {
   if (state.speedBoostTimer > 0 && ballLaunched && Math.random() < 0.80) {
     spawnFireTrail(ball.x, ball.y);
   }
-  if (state.speedBoostTimer > 0 && ball2.active && Math.random() < 0.80) {
-    spawnFireTrail(ball2.x, ball2.y);
+  if (state.speedBoostTimer > 0 && extraBalls.length > 0 && Math.random() < 0.80) {
+    extraBalls.forEach(eb => spawnFireTrail(eb.x, eb.y));
   }
   updateFloatTexts(dt);
 
@@ -1135,19 +1144,22 @@ function updateBall(dt) {
   }
 
   if (ball.y - ball.r > ch) {
-    if (ball2.active) {
-      // Second ball still in play — promote it to main ball, no life lost.
-      ball.x  = ball2.x;  ball.y  = ball2.y;
-      ball.vx = ball2.vx; ball.vy = ball2.vy;
-      ball.r  = ball2.r;
+    if (extraBalls.length > 0) {
+      // Promote the first extra ball to main ball, no life lost.
+      const promoted = extraBalls[0];
+      ball.x  = promoted.x;  ball.y  = promoted.y;
+      ball.vx = promoted.vx; ball.vy = promoted.vy;
+      ball.r  = promoted.r;
       ballLaunched = true;
+      // Remove promoted ball from extra array
+      extraBalls.splice(0, 1);
+      state.multiBallActive = extraBalls.length > 0;
       // Clear power-up effects that were on the lost main ball
       state.pierceActive    = false;
       state.speedBoostTimer = 0;
-      // Streak resets when main ball is lost (even if ball2 rescues)
+      // Streak resets when main ball is lost (even if extra ball rescues)
       state.combo = 1;
       updateComboUI();
-      deactivateBall2();
       spawnFloatText(cw / 2, ch * 0.45, '↩ BALL GERETTET!', '#67C23A');
     } else {
       onBallMiss();
@@ -1158,32 +1170,34 @@ function updateBall(dt) {
   checkBlockCollisions(ball);
 }
 
-function updateBall2(dt) {
-  if (!ball2.active) return;
+function updateExtraBall(b, idx, dt) {
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
 
-  ball2.x += ball2.vx * dt;
-  ball2.y += ball2.vy * dt;
+  if (b.x - b.r < 0)  { b.x = b.r;      b.vx = Math.abs(b.vx); }
+  if (b.x + b.r > cw) { b.x = cw - b.r; b.vx = -Math.abs(b.vx); }
+  if (b.y - b.r < 0)  { b.y = b.r;      b.vy = Math.abs(b.vy); }
 
-  if (ball2.x - ball2.r < 0)  { ball2.x = ball2.r;      ball2.vx = Math.abs(ball2.vx); }
-  if (ball2.x + ball2.r > cw) { ball2.x = cw - ball2.r; ball2.vx = -Math.abs(ball2.vx); }
-  if (ball2.y - ball2.r < 0)  { ball2.y = ball2.r;      ball2.vy = Math.abs(ball2.vy); }
-
-  if (ball2.vy > 0 &&
-      ball2.y + ball2.r >= paddle.y &&
-      ball2.y + ball2.r <= paddle.y + paddle.h + Math.abs(ball2.vy * dt * 2) &&
-      ball2.x > paddle.x - ball2.r * 0.4 &&
-      ball2.x < paddle.x + paddle.w + ball2.r * 0.4) {
-    doBouncePaddle(ball2);
+  if (b.vy > 0 &&
+      b.y + b.r >= paddle.y &&
+      b.y + b.r <= paddle.y + paddle.h + Math.abs(b.vy * dt * 2) &&
+      b.x > paddle.x - b.r * 0.4 &&
+      b.x < paddle.x + paddle.w + b.r * 0.4) {
+    doBouncePaddle(b);
     return;
   }
 
-  if (ball2.y - ball2.r > ch) {
-    deactivateBall2();
-    spawnFloatText(cw / 2, ch * 0.5, 'MULTI-BALL VERLOREN', '#FF2020');
+  if (b.y - b.r > ch) {
+    // Remove this extra ball — no life lost
+    extraBalls.splice(idx, 1);
+    state.multiBallActive = extraBalls.length > 0;
+    if (extraBalls.length === 0) {
+      spawnFloatText(cw / 2, ch * 0.5, 'MULTI-BALL VERLOREN', '#FF2020');
+    }
     return;
   }
 
-  checkBlockCollisions(ball2);
+  checkBlockCollisions(b);
 }
 
 function doBouncePaddle(b) {
@@ -1195,7 +1209,7 @@ function doBouncePaddle(b) {
 
   // SLICE MECHANIC: outer 30% of paddle slows the ball (like a slice shot).
   // Floor = base speed: if already at/below base speed, no slice at all.
-  // Applies per-ball (b = ball or ball2).
+  // Applies per-ball (b = ball or any extraBall).
   const edgeFrac = Math.abs(norm);
   const baseSpd  = GAME_CFG.ballBaseSpeed * ch;
   if (edgeFrac > 0.70 && spd > baseSpd) {
@@ -1470,7 +1484,7 @@ function render() {
   renderLightningArcs();
   renderPaddle();
   renderBall();
-  if (ball2.active) renderBall2();
+  extraBalls.forEach(eb => renderExtraBall(eb));
   renderFloatTexts();
   if (hintAlpha > 0) renderHint();
   if (levelOverlay.active) renderLevelOverlay();
@@ -1649,34 +1663,36 @@ function renderBall() {
   ctx.restore();
 }
 
-function renderBall2() {
-  if (!ball2.active) return;
+function renderExtraBall(b) {
   ctx.save();
   ctx.shadowColor = '#67C23A';
   ctx.shadowBlur  = 22;
 
   const g2 = ctx.createRadialGradient(
-    ball2.x - ball2.r * 0.3, ball2.y - ball2.r * 0.35, ball2.r * 0.08,
-    ball2.x, ball2.y, ball2.r
+    b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.08,
+    b.x, b.y, b.r
   );
   g2.addColorStop(0,   '#FFFFFF');
   g2.addColorStop(0.4, '#95D475');
   g2.addColorStop(1,   '#529B2E');
 
   ctx.beginPath();
-  ctx.arc(ball2.x, ball2.y, ball2.r, 0, Math.PI * 2);
+  ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
   ctx.fillStyle = g2;
   ctx.fill();
 
-  // Constant accent ring (no timer — multi-ball lasts until the ball is lost)
+  // Accent ring with green glow
   ctx.strokeStyle = 'rgba(103,194,58,0.6)';
   ctx.lineWidth   = 2;
   ctx.beginPath();
-  ctx.arc(ball2.x, ball2.y, ball2.r + 4, 0, Math.PI * 2);
+  ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.restore();
 }
+
+// Legacy wrapper (safe to call but does nothing)
+function renderBall2() { if (extraBalls.length > 0) renderExtraBall(extraBalls[0]); }
 
 // ── LIGHTNING ARC SYSTEM (T03 Elektro-Ball) ────────────────
 function spawnLightningArcs(x, y, count, big) {
@@ -2033,8 +2049,8 @@ function flashFullCharge() {
   state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, GAME_CFG.ballMaxSpeed * ch);
 
   // Gameplay bonus: Extra-Ball (only when enabled and level threshold met)
-  if (GAME_CFG.extraBallEnabled && state.level >= GAME_CFG.extraBallMinLevel && !ball2.active) {
-    spawnBall2();
+  if (GAME_CFG.extraBallEnabled && state.level >= GAME_CFG.extraBallMinLevel && extraBalls.length < MAX_EXTRA_BALLS) {
+    spawnExtraBall();
     spawnFloatText(cw / 2, ch * 0.33, '⚡ DOPPELBALL!', '#67C23A');
   }
   spawnFloatText(cw / 2, ch * 0.44, `AUFGELADEN! +${FULL_CHARGE_BONUS_SCORE}`, '#95D475');
@@ -2512,8 +2528,10 @@ function activateVehiclePowerUp(key, blkX, blkY) {
       break;
     }
     case 'c10': {
-      // JACKPOT MULTIBALL: spawn extra ball (jackpot text+sound already in checkBlockCollisions)
-      if (!ball2.active) spawnBall2();
+      // JACKPOT MULTIBALL: spawn up to 2 extra balls for triple-ball effect
+      spawnExtraBall();
+      spawnExtraBall();
+      spawnFloatText(cw / 2, ch * 0.38, '🎉 C10 TRIPLE BALL!', '#FF9500');
       break;
     }
   }
@@ -2927,7 +2945,7 @@ function endGame() {
   state.gameActive  = false;
   state.gamepaused  = false;
   stopBgMusic();
-  if (ball2.active) deactivateBall2();
+  deactivateAllExtraBalls();
 
   const energyPct = Math.round(state.energy);
   state.score = Math.round(
