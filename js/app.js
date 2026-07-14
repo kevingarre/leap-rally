@@ -126,10 +126,10 @@ const PADDLE_LERP_FACTOR = 18;
 
 // Level block layout: [rows, cols, turboCount, carBlockRows]
 const LEVEL_BLOCK_CONFIG = [
-  { rows: 3, cols: 4, turboCount: 1, carRows: [1, 2] },       // L1: compact, 2 full car rows
-  { rows: 4, cols: 5, turboCount: 2, carRows: [1, 2, 3] },    // L2: 3 car rows
-  { rows: 4, cols: 5, turboCount: 3, carRows: [0, 2, 3] },    // L3: top + bottom car rows
-  { rows: 5, cols: 5, turboCount: 4, carRows: [1, 2, 3, 4] }, // L4+: max vehicles
+  { rows: 3, cols: 5, turboCount: 1, carRows: [1] },          // L1: 1 car row (3 vehicles)
+  { rows: 4, cols: 6, turboCount: 2, carRows: [1, 2] },       // L2: 2 car rows (6 vehicles)
+  { rows: 4, cols: 6, turboCount: 3, carRows: [0, 2, 3] },    // L3: 3 car rows (9 vehicles)
+  { rows: 5, cols: 6, turboCount: 4, carRows: [1, 2, 3] },    // L4+: 3 car rows (9 vehicles)
 ];
 
 // Ghost car speed per level
@@ -734,8 +734,9 @@ function initBlocks() {
     const isCarRow = cfg.carRows.includes(row);
     for (let col = 0; col < cols; col++) {
       const isTurbo    = turboIndices.has(idx);
-      // All blocks in a carRow are vehicle blocks for more Leapmotor presence
-      const isCar      = isCarRow;
+      // Alternate columns in car rows = vehicle; odd cols = normal blocks
+      // Gives strong Leapmotor presence without overcrowding
+      const isCar      = isCarRow && (col % 2 === 0);
       const hitsLeft   = (isCar && state.level >= 3) ? 2 : 1;
       const vehicleKey = isCar ? VEHICLE_KEYS[carCount % VEHICLE_KEYS.length] : null;
       if (isCar) carCount++;
