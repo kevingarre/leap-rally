@@ -2297,14 +2297,14 @@ function pauseForInstantWin() {
   const ev        = window.LEAP_EVENT;
 
   session.pendingScore = {
-    event_id:        ev ? ev.id : null,
+    event_id:        (ev && ev.id) ? ev.id : (window.LEAP_EVENT && window.LEAP_EVENT.id) ? window.LEAP_EVENT.id : null,
     score:           liveScore,
     level_reached:   state.maxLevelReached,
     ghost_overtaken: true,
     play_duration_s: durationS,
     is_instant_win:  true,
   };
-  if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+  // event_id must always be present for RPC signature match
 
   // Show overlay
   const overlay = document.getElementById('instant-win-overlay');
@@ -2383,7 +2383,8 @@ function handleGameOptinSubmit(e) {
   };
 
   if (!v('gfi-contact')) { errors.push('Kontakt-Wunsch auswählen.'); document.getElementById('gfi-contact').classList.add('error'); }
-  if (!v('gfi-vehicle')) { errors.push('Wunschmodell auswählen.');   document.getElementById('gfi-vehicle').classList.add('error'); }
+  // Vehicle only required when contact is desired (not 'nein')
+  if (v('gfi-contact') !== 'nein' && !v('gfi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('gfi-vehicle').classList.add('error'); }
   if (!v('gfi-zip') || v('gfi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('gfi-zip').classList.add('error'); }
   if (!v('gfi-city'))  { errors.push('Ort eingeben.');     document.getElementById('gfi-city').classList.add('error'); }
   if (!v('gfi-first')) { errors.push('Vorname eingeben.'); document.getElementById('gfi-first').classList.add('error'); }
@@ -2434,7 +2435,7 @@ function handleGameOptinSubmit(e) {
     privacy_accepted_at:   new Date().toISOString(),
     entry_source:          'byod',
   };
-  if (!playerData.event_id) delete playerData.event_id;
+  // event_id must always be present for RPC signature match
 
   _doGameOptinSubmit(playerData, submitBtn, errorEl);
 }
@@ -2444,7 +2445,7 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
     const result = await submitEntry({
-      event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
+      event_id:         ev3 ? ev3.id : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null),
       score:            ps.score,
       ghost_overtaken:  ps.ghost_overtaken,
       level_reached:    ps.level_reached,
@@ -2645,14 +2646,14 @@ function endGame() {
 
   if (!session.pendingScore || !session.submitted) {
     session.pendingScore = {
-      event_id:        ev ? ev.id : null,
+      event_id:        (ev && ev.id) ? ev.id : (window.LEAP_EVENT && window.LEAP_EVENT.id) ? window.LEAP_EVENT.id : null,
       score:           state.score,
       level_reached:   state.maxLevelReached,
       ghost_overtaken: state.ghostOvertaken,
       play_duration_s: durationS,
       is_instant_win:  isInstantWin,
     };
-    if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+    // event_id must always be present for RPC signature match
   } else {
     // Update score to final value
     session.pendingScore.score = state.score;
@@ -2770,7 +2771,8 @@ function handleOptinSubmit(e) {
   };
 
   if (!v('fi-contact')) { errors.push('Kontakt-Wunsch auswählen.');         document.getElementById('fi-contact').classList.add('error'); }
-  if (!v('fi-vehicle')) { errors.push('Wunschmodell auswählen.');            document.getElementById('fi-vehicle').classList.add('error'); }
+  // Vehicle only required when contact is desired (not 'nein')
+  if (v('fi-contact') !== 'nein' && !v('fi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('fi-vehicle').classList.add('error'); }
   if (!v('fi-zip') || v('fi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('fi-zip').classList.add('error'); }
   if (!v('fi-city'))    { errors.push('Ort eingeben.');                      document.getElementById('fi-city').classList.add('error'); }
   if (!v('fi-first'))   { errors.push('Vorname eingeben.');                  document.getElementById('fi-first').classList.add('error'); }
@@ -2821,7 +2823,7 @@ function handleOptinSubmit(e) {
     privacy_accepted_at:   new Date().toISOString(),
     entry_source:          'byod',
   };
-  if (!playerData.event_id) delete playerData.event_id;
+  // event_id must always be present for RPC signature match
 
   _doOptinSubmit(playerData, submitBtn, errorEl);
 }
@@ -2833,7 +2835,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     // Forward is_instant_win when player had pending win from "Weiterspielen"
     const forceInstantWin = ps.is_instant_win || state.instantWinPending;
     const result = await submitEntry({
-      event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
+      event_id:         ev3 ? ev3.id : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null),
       score:            ps.score,
       ghost_overtaken:  ps.ghost_overtaken,
       level_reached:    ps.level_reached,
