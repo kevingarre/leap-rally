@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LEAP CHARGE – Breakout Edition  v20260714f
+   LEAP CHARGE – Breakout Edition  v20260714i
    Leapmotor × Tischtennis × E-Mobility
    Mobile-first · No build step · No backend
 ═══════════════════════════════════════════════════════════ */
@@ -152,6 +152,104 @@ let screenShakeTimer = 0;
 let screenShakeAmt   = 0;
 
 let audioCtx = null;
+
+// ═══════════════════════════════════════════════════════════
+// SOUND STATE
+// ═══════════════════════════════════════════════════════════
+let soundEnabled = (function() {
+  const stored = localStorage.getItem('leap_sound_on');
+  return stored === null ? true : stored === 'true';
+})();
+
+function setSoundEnabled(val) {
+  soundEnabled = val;
+  localStorage.setItem('leap_sound_on', String(val));
+  syncSoundButtons();
+  if (!val) {
+    stopBgMusic();
+  } else if (state.gameActive && !state.gamepaused) {
+    startBgMusic();
+  }
+}
+
+function toggleSound() {
+  setSoundEnabled(!soundEnabled);
+}
+
+function syncSoundButtons() {
+  const icon = soundEnabled ? '🔊' : '🔇';
+  document.querySelectorAll('.sound-toggle-btn').forEach(function(btn) {
+    btn.textContent = icon;
+    btn.setAttribute('aria-label', soundEnabled ? 'Sound aus' : 'Sound an');
+    btn.classList.toggle('sound-off', !soundEnabled);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// BACKGROUND MUSIC (WebAudio synth loop)
+// ═══════════════════════════════════════════════════════════
+let bgMusicNodes = null;   // { osc, gain, lfo } when active
+let bgMusicActive = false;
+
+const BG_NOTE_SEQ = [55, 55, 82.41, 55, 73.42, 55, 65.41, 55]; // A1 arpeggio
+const BG_BEAT_S  = 0.22;  // seconds per step
+const BG_GAIN    = 0.07;  // master gain (very quiet)
+
+function startBgMusic() {
+  if (bgMusicActive || !soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    ac.resume();
+    bgMusicActive = true;
+    scheduleBgMusicLoop(ac, ac.currentTime);
+  } catch(e) {}
+}
+
+function stopBgMusic() {
+  bgMusicActive = false;
+  if (bgMusicNodes) {
+    try { bgMusicNodes.gain.gain.setTargetAtTime(0, bgMusicNodes.ac.currentTime, 0.1); } catch(e) {}
+    bgMusicNodes = null;
+  }
+}
+
+function scheduleBgMusicLoop(ac, startAt) {
+  if (!bgMusicActive || !soundEnabled) return;
+  const seq = BG_NOTE_SEQ;
+  const loopDur = seq.length * BG_BEAT_S;
+
+  for (let i = 0; i < seq.length; i++) {
+    const t    = startAt + i * BG_BEAT_S;
+    const freq = seq[i];
+
+    try {
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      const master = ac.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(BG_GAIN, t + 0.02);
+      env.gain.setValueAtTime(BG_GAIN, t + BG_BEAT_S * 0.55);
+      env.gain.linearRampToValueAtTime(0, t + BG_BEAT_S * 0.9);
+
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.start(t);
+      osc.stop(t + BG_BEAT_S);
+    } catch(e) {}
+  }
+
+  // Schedule next loop
+  const nextStart = startAt + loopDur;
+  const delayMs   = Math.max(0, (nextStart - ac.currentTime - 0.2) * 1000);
+  setTimeout(function() {
+    if (bgMusicActive && soundEnabled) scheduleBgMusicLoop(ac, nextStart);
+  }, delayMs);
+}
 
 // ═══════════════════════════════════════════════════════════
 // SCREEN NAVIGATION
@@ -312,6 +410,7 @@ function initCanvas() {
   canvas.addEventListener('touchmove',   onTouchInput,   { passive: false });
   canvas.addEventListener('pointermove', onPointerInput);
   canvas.addEventListener('pointerdown', onPointerInput);
+  canvas.addEventListener('pointerdown', onLaunchInput);
 
   state.ballSpeedPx = BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[0];
   initPaddle();
@@ -397,6 +496,14 @@ function tryLevelUp() {
   resetBallToPaddle();
   deactivateBall2();
 
+  // BUGFIX: auto-launch ball after the level overlay clears so the player
+  // is not stuck with a ball glued to the paddle on Level 2+ (input handlers
+  // only move the paddle, they never launch).
+  setTimeout(() => {
+    if (!state.gameActive || state.gamepaused) return;
+    if (!ballLaunched) launchBall();
+  }, Math.round(LEVEL_OVERLAY_DURATION * 1000) + 100);
+
   levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: state.level, label: getLevelLabel(state.level) };
 
   triggerScreenShake(8, 0.45);
@@ -437,6 +544,12 @@ function enterBonusMode() {
   // Reset ball cleanly
   resetBallToPaddle();
   deactivateBall2();
+
+  // BUGFIX: auto-launch after overlay so bonus waves are not stuck.
+  setTimeout(() => {
+    if (!state.gameActive || state.gamepaused) return;
+    if (!ballLaunched) launchBall();
+  }, Math.round(LEVEL_OVERLAY_DURATION * 1000) + 100);
 
   levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: 4, label: `BONUS WELLE ${state.bonusWave}` };
   triggerScreenShake(6, 0.35);
@@ -1857,12 +1970,20 @@ function onTouchInput(e) {
   const touch    = e.touches[0];
   const rect     = canvas.getBoundingClientRect();
   paddle.targetX = (touch.clientX - rect.left) - paddle.w / 2;
+  // Allow manual launch on tap if the ball is waiting on the paddle.
+  if (!ballLaunched) launchBall();
 }
 
 function onPointerInput(e) {
   if (!state.gameActive || state.gamepaused) return;
   const rect     = canvas.getBoundingClientRect();
   paddle.targetX = (e.clientX - rect.left) - paddle.w / 2;
+}
+
+// Manual ball launch on click/tap-start (pointerdown) when ball is waiting.
+function onLaunchInput(e) {
+  if (!state.gameActive || state.gamepaused) return;
+  if (!ballLaunched) launchBall();
 }
 
 // ═══════════════════════════════════════════════════════════
