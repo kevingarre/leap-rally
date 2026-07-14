@@ -13,10 +13,18 @@ create table if not exists events (
   starts_at              timestamptz,
   ends_at                timestamptz,
   is_active              boolean not null default false,
-  instant_win_score      integer not null default 1500,   -- konfigurierbar
+  instant_win_score      integer not null default 1500,   -- konfigurierbar (legacy; cfg_instant_win_score hat Vorrang wenn gesetzt)
   instant_win_ghost_req  boolean not null default true,    -- Ghost überholen Pflicht
   terms_md               text,        -- Teilnahmebedingungen (Markdown), pro Event editierbar
   terms_version          integer not null default 1,       -- hochzählen bei Änderung
+  -- Difficulty Presets (seit 2026-07-14)
+  difficulty             text not null default 'normal',   -- 'easy' | 'normal' | 'hard'
+  cfg_ball_base_speed    real,        -- Override; NULL = Preset-Wert
+  cfg_ball_max_speed     real,        -- Override; NULL = Preset-Wert
+  cfg_lives              integer,     -- Override; NULL = Preset-Wert
+  cfg_instant_win_score  integer,     -- Override; NULL = instant_win_score (legacy) nutzen
+  cfg_extra_ball_enabled boolean,     -- Doppelball an/aus; NULL = Preset-Wert
+  cfg_extra_ball_min_level integer,   -- ab welchem Level Doppelball erlaubt; NULL = Preset
   created_at             timestamptz not null default now()
 );
 
