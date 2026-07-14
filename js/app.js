@@ -1139,7 +1139,7 @@ function doBouncePaddle(b) {
     spd = Math.max(spd * sliceMult, minSpd);
     sliced = true;
     if (b === ball) {
-      spawnFloatText(b.x, paddle.y - 20, '✂ SLICE', '#95D475');
+      spawnFloatText(b.x, paddle.y - 20, 'SLICE', '#95D475');
     }
   }
 
