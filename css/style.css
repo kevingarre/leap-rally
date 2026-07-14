@@ -560,7 +560,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   position: relative;
   z-index: 11;
   align-self: center;
-  margin: 28px auto 0;  /* leave room for the centered Leapmotor top-bar logo */
+  margin: 40px auto 0;  /* leave room for the larger centered Leapmotor top-bar logo */
   padding: 3px 14px;
   border-radius: 999px;
   font-family: var(--font-display);
@@ -1082,11 +1082,11 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 }
 /* End screen logo */
 .end-logo {
-  height: 22px;
+  height: 52px;
   width: auto;
   filter: invert(1) brightness(2);
-  opacity: 0.7;
-  margin-bottom: 4px;
+  opacity: 0.95;
+  margin-bottom: 8px;
 }
 
 .end-trophy-wrap {
@@ -1725,8 +1725,8 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   pointer-events: none;
 }
 .game-topbar-logo {
-  height: 16px;
+  height: 28px;
   width: auto;
   filter: invert(1) brightness(2);
-  opacity: 0.75;
+  opacity: 0.9;
 }
