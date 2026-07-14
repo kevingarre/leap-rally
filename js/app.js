@@ -1673,49 +1673,47 @@ function renderVehiclePreview() {
   else                      alpha = 1.0;
   alpha = Math.max(0, Math.min(1, alpha));
 
-  const img = vehicleSprites[vehiclePreview.key];
-  const cx  = cw / 2;
-  const cy  = ch * 0.38;
+  // Compact top-right card — game stays fully visible
+  const img   = vehicleSprites[vehiclePreview.key];
+  const cardW = Math.round(cw * 0.46);   // ~46% width, not too big
+  const imgH  = Math.round(cardW / 1.5); // 1536:1024 aspect
+  const lblH  = Math.round(cw * 0.045);  // label font size
+  const pad   = 8;
+  const cardH = imgH + lblH + pad * 3;
+  const cardX = cw - cardW - 10;         // top-right, small margin
+  const cardY = 52;                       // below the top-bar logo
 
   ctx.save();
-  ctx.globalAlpha = alpha * 0.88;
+  ctx.globalAlpha = alpha * 0.92;
 
-  // Dark backdrop
-  const bw = Math.round(cw * 0.72);
-  const bh = Math.round(bw * 0.46);
-  const bx = cx - bw / 2;
-  const by = cy - bh / 2;
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  roundRect(ctx, bx - 8, by - 8, bw + 16, bh + 48, 14);
+  // Semi-transparent card background
+  ctx.fillStyle = 'rgba(0,0,0,0.78)';
+  roundRect(ctx, cardX, cardY, cardW, cardH, 10);
   ctx.fill();
 
   // Green border
   ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = 2.5;
+  ctx.lineWidth   = 2;
   ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = 12;
-  roundRect(ctx, bx - 8, by - 8, bw + 16, bh + 48, 14);
+  ctx.shadowBlur  = 8;
+  roundRect(ctx, cardX, cardY, cardW, cardH, 10);
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Vehicle image
+  // Vehicle image inside card
   if (img && img.loaded) {
-    const imgAspect = 1536 / 1024;
-    let rw = bw, rh = bw / imgAspect;
-    const ix = cx - rw / 2;
-    const iy = by;
-    ctx.drawImage(img, ix, iy, rw, rh);
+    ctx.drawImage(img, cardX + pad, cardY + pad, cardW - pad * 2, imgH);
   }
 
-  // Effect label
+  // Effect label below image
   ctx.globalAlpha  = alpha;
   ctx.fillStyle    = '#FFFFFF';
-  ctx.font         = `900 ${Math.round(cw * 0.055)}px 'Montserrat', sans-serif`;
+  ctx.font         = `800 ${lblH}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.shadowColor  = '#67C23A';
-  ctx.shadowBlur   = 8;
-  ctx.fillText(vehiclePreview.label, cx, by + bh + 22);
+  ctx.shadowBlur   = 6;
+  ctx.fillText(vehiclePreview.label, cardX + cardW / 2, cardY + pad + imgH + lblH / 2 + 4);
   ctx.restore();
 }
 
