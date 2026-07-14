@@ -9,7 +9,9 @@
 
 // ── Global event state ──────────────────────────────────
 // Populated by initLeapEvent() on app start.
-// Shape: { id, name, instant_win_score, instant_win_ghost_req, terms_md, terms_version }
+// Shape: { id, name, instant_win_score, instant_win_ghost_req, terms_md, terms_version,
+//           difficulty, cfg_ball_base_speed, cfg_ball_max_speed, cfg_lives,
+//           cfg_instant_win_score, cfg_extra_ball_enabled, cfg_extra_ball_min_level }
 window.LEAP_EVENT = null;
 
 // ── Base fetch helper ───────────────────────────────────
@@ -52,7 +54,11 @@ async function _supaFetch(path, opts = {}) {
  */
 async function getActiveEvent() {
   const rows = await _supaFetch(
-    '/rest/v1/events?is_active=eq.true&select=id,name,instant_win_score,instant_win_ghost_req,terms_md,terms_version&limit=1'
+    '/rest/v1/events?is_active=eq.true' +
+    '&select=id,name,instant_win_score,instant_win_ghost_req,terms_md,terms_version,' +
+    'difficulty,cfg_ball_base_speed,cfg_ball_max_speed,cfg_lives,' +
+    'cfg_instant_win_score,cfg_extra_ball_enabled,cfg_extra_ball_min_level' +
+    '&limit=1'
   );
   return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 }
