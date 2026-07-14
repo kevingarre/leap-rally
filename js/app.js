@@ -3046,7 +3046,13 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
     if (result && result.is_instant_win && result.claim_code) {
+      // Server confirmed instant win with a code
       session.instantWinCode = result.claim_code;
+    } else if (state.instantWinTriggered || state.instantWinPending) {
+      // Frontend had triggered instant-win but server didn't confirm
+      // (e.g. score calculated slightly differently). Keep existing code
+      // or generate one as fallback so the player always gets their prize.
+      if (!session.instantWinCode) session.instantWinCode = generateClaimCode();
     } else {
       session.instantWinCode = null;
     }
@@ -3079,14 +3085,17 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     // Show instant win banner + code if applicable
     const isWinner = (state.instantWinTriggered && session.submitted) ||
-                     state.instantWinPending || !!(result && result.is_instant_win);
+                     state.instantWinPending || !!(result && result.is_instant_win)
+                     || !!session.instantWinCode;
     _showInstantWinIfNeeded(isWinner);
+    // Always show code if we have one (code set above from RPC or fallback)
     if (session.instantWinCode) {
-      const iwCodeWrap = document.getElementById('iw-code-wrap');
-      if (iwCodeWrap) {
-        iwCodeWrap.classList.remove('hidden');
-        setEl('iw-code', session.instantWinCode);
-      }
+      ['iw-code-wrap', 'game-iw-code-wrap'].forEach(function(id) {
+        const wrap = document.getElementById(id);
+        if (wrap) wrap.classList.remove('hidden');
+      });
+      setEl('iw-code',      session.instantWinCode);
+      setEl('game-iw-code', session.instantWinCode);
     }
 
     buildLeaderboard();
