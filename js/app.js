@@ -1675,6 +1675,16 @@ function updateCarUI() {
   }
 }
 
+// Cheerful rising chime when the battery hits full charge (bonus cue).
+function playFullChargeTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  [523, 659, 784].forEach(function(freq, i) {
+    playTone(freq, 'triangle', 0.16, 0.22);
+  });
+}
+
 function flashFullCharge() {
   state.score += FULL_CHARGE_BONUS_SCORE;
   state.fullChargeBonuses++;
@@ -1696,9 +1706,15 @@ function flashFullCharge() {
     spawnFloatText(cw / 2, ch * 0.33, '⚡ DOPPELBALL!', '#67C23A');
   }
   spawnFloatText(cw / 2, ch * 0.44, `AUFGELADEN! +${FULL_CHARGE_BONUS_SCORE}`, '#95D475');
+  playFullChargeTone();
 
-  // Ghost-car overtake: trigger instant-win check (gate still enforced inside)
-  triggerGhostOvertake();
+  // Ghost-car overtake happens ONLY ONCE — the single dramatic moment that
+  // secures the instant win. Only trigger it when the instant-win conditions
+  // are actually met (not on every battery charge). Otherwise a full battery
+  // just gives its bonuses (points + turbo + extra ball) with no overtake drama.
+  if (!state.instantWinTriggered && isInstantWinReady()) {
+    triggerGhostOvertake();
+  }
 
   const carProg  = document.getElementById('car-progress');
   const ghostEl2 = document.getElementById('ghost-car');
@@ -1758,35 +1774,29 @@ const SLOWMO_SPEED    = 0.18; // dt multiplier during slomo (5× slower)
 // Big OVERTAKE text flash
 let overtakeFlash = 0; // countdown in seconds
 
-function triggerGhostOvertake() {
-  state.ghostOvertaken = true;
+// True when all instant-win conditions are met (level 2 cleared + score threshold).
+function isInstantWinReady() {
+  const ev = window.LEAP_EVENT;
+  if (!ev) return false;
+  if (state.maxLevelReached < 3) return false; // level 2 must be cleared first
+  return computeCurrentScore() >= GAME_CFG.instantWinScore;
+}
 
-  // Only full drama + instant-win check once per game
+function triggerGhostOvertake() {
+  // Fires only once per game — the single overtake moment for the instant win.
   if (state.instantWinTriggered) return;
+  state.ghostOvertaken = true;
 
   // --- DRAMA: Gänsehaut-Moment ---
   startOvertakeDrama();
 
-  // Check instant-win threshold AFTER drama
-  // Require level 2 completed (maxLevelReached >= 3 means player entered level 3)
-  const ev = window.LEAP_EVENT;
-  if (!ev) return;
-
-  if (state.maxLevelReached < 3) return; // hold popup until level 2 cleared
-
-  const scoreThreshold = GAME_CFG.instantWinScore;
-  const ghostReq       = ev.instant_win_ghost_req !== false;
-  const approxScore    = computeCurrentScore();
-
-  if (approxScore >= scoreThreshold && (!ghostReq || state.ghostOvertaken)) {
-    state.instantWinTriggered = true;
-    // Wait for drama to finish, THEN pause for instant-win form
-    const dramaMs = SLOWMO_DURATION * 1000 + 600; // slomo + brief hold
-    setTimeout(() => {
-      if (!state.gameActive) return;
-      pauseForInstantWin();
-    }, dramaMs);
-  }
+  state.instantWinTriggered = true;
+  // Wait for drama to finish, THEN pause for instant-win form
+  const dramaMs = SLOWMO_DURATION * 1000 + 600; // slomo + brief hold
+  setTimeout(() => {
+    if (!state.gameActive) return;
+    pauseForInstantWin();
+  }, dramaMs);
 }
 
 function startOvertakeDrama() {
