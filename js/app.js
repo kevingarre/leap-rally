@@ -2493,12 +2493,17 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
   try {
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
+    // Resolve event_id with multiple fallbacks — never send null.
+    const resolvedEventId = (ev3 && ev3.id)
+      ? ev3.id
+      : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null);
+
     const result = await submitEntry({
-      event_id:         ev3 ? ev3.id : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null),
-      score:            ps.score,
-      ghost_overtaken:  ps.ghost_overtaken,
-      level_reached:    ps.level_reached,
-      play_duration_s:  ps.play_duration_s,
+      event_id:         resolvedEventId,
+      score:            ps.score || state.score || 0,
+      ghost_overtaken:  ps.ghost_overtaken || state.ghostOvertaken || false,
+      level_reached:    ps.level_reached || state.maxLevelReached || 1,
+      play_duration_s:  ps.play_duration_s || 0,
       contact_intent:   playerData.contact_intent,
       vehicle_interest: playerData.vehicle_interest,
       zip:              playerData.zip,
@@ -2913,12 +2918,19 @@ function handleOptinSubmit(e) {
 
 async function _doOptinSubmit(playerData, submitBtn, errorEl) {
   try {
+    // If LEAP_EVENT was not loaded (e.g. network issue on startup), try once more.
+    if (!window.LEAP_EVENT) {
+      try { await loadActiveEvent(); } catch(e) {}
+    }
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
     // Forward is_instant_win when player had pending win from "Weiterspielen"
     const forceInstantWin = ps.is_instant_win || state.instantWinPending;
+    const resolvedEventId2 = (ev3 && ev3.id)
+      ? ev3.id
+      : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null);
     const result = await submitEntry({
-      event_id:         ev3 ? ev3.id : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null),
+      event_id:         resolvedEventId2,
       score:            ps.score,
       ghost_overtaken:  ps.ghost_overtaken,
       level_reached:    ps.level_reached,
