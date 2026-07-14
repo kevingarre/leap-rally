@@ -6,88 +6,60 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="LEAP CHARGE – Tischtennis Breakout, Leapmotor aufladen, Turbo-Boost freischalten. Event Activation Mini-Game.">
-  <title>LEAP CHARGE – Tischtennis × E-Drive</title>
+  <meta name="description" content="LEAPMOTOR TT CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Turbo-Boost freischalten. Event Activation Mini-Game.">
+  <title>LEAPMOTOR TT CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260714e">
+  <link rel="stylesheet" href="css/style.css?v=20260714f">
 </head>
 <body>
 <div id="app">
 
   <!-- ═══════════════════════════════════════════════
-       SCREEN 1 · START
+       SCREEN 1 · START (Umbau 3)
   ═══════════════════════════════════════════════ -->
   <section id="screen-start" class="screen active">
     <div class="screen-bg bg-start"></div>
 
-    <div class="brand-bar">
-      <div class="brand-logo-wrap">
-        <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="brand-logo-img">
-        <span class="brand-line">|</span>
-        <span class="brand-tag">EVENT ACTIVATION</span>
-      </div>
+    <!-- Logo groß + zentriert oben -->
+    <div class="start-logo-wrap">
+      <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="start-logo-img">
     </div>
 
     <div class="start-hero">
       <h1 class="game-title">
-        <span class="title-leap">LEAP</span>
-        <span class="title-charge">CHARGE</span>
+        <span class="title-leap">LEAPMOTOR</span>
+        <span class="title-charge">TT CHALLENGE</span>
       </h1>
-      <p class="game-tagline">Schläger · Ball · Aufladen · Sieg</p>
 
-      <div class="hero-scene">
-        <div class="hero-ball" id="hero-ball">🏓</div>
-        <div class="hero-flow">
-          <div class="flow-bolt">⚡</div>
-          <div class="flow-bolt delay1">⚡</div>
-          <div class="flow-bolt delay2">⚡</div>
-        </div>
-        <div class="hero-car" id="hero-car">
-          <div class="car-body">
-            <!-- Leapmotor-inspired SUV/Crossover silhouette (hero) -->
-            <svg viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="64" height="36" aria-hidden="true">
-              <!-- Body -->
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FFFFFF"/>
-              <!-- Wheels -->
-              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="14" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
-              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
-              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="50" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
-              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
-              <!-- Glass/cabin -->
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.22)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.14)"/>
-              <!-- Door line -->
-              <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
-              <!-- Front LED bar (Leapmotor signature – green) -->
-              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#67C23A"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(103,194,58,0.85)"/>
-              <!-- Rear tail light -->
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF4D51"/>
-              <!-- Body highlight -->
-              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.25)" stroke-width="1.3" fill="none"/>
-              <!-- Roof rail -->
-              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(0,0,0,0.35)"/>
-            </svg>
+      <!-- Spielziel als eine klare Zeile -->
+      <p class="game-goal-line">Schlag den Ball, lade deinen Leapmotor auf und überhol das Ghost-Car.</p>
+
+      <!-- 2 Gewinn-Wege prominent -->
+      <div class="win-cards">
+        <div class="win-card win-card-instant">
+          <div class="win-card-icon">⚡</div>
+          <div class="win-card-body">
+            <strong class="win-card-title">SOFORT-GEWINN</strong>
+            <p class="win-card-desc">Überhol das Ghost-Car und gewinne direkt am Stand</p>
           </div>
-          <div class="car-charge-ring"></div>
+        </div>
+        <div class="win-card win-card-highscore">
+          <div class="win-card-icon">🏆</div>
+          <div class="win-card-body">
+            <strong class="win-card-title">WOCHENEND-HIGHSCORE</strong>
+            <p class="win-card-desc">Kämpf dich aufs Leaderboard, hol dir den Hauptpreis</p>
+          </div>
         </div>
       </div>
 
-      <div class="start-pills">
-        <span class="pill">🏓 Tischtennis</span>
-        <span class="pill">⚡ E-Drive</span>
-        <span class="pill">🚗 Leapmotor</span>
-      </div>
+      <!-- Dezenter Hinweis -->
+      <p class="start-data-hint">Nur mit deinen Daten zählt dein Gewinn.</p>
     </div>
 
     <div class="start-cta">
       <button class="btn btn-primary glow-btn" id="btn-start" onclick="showScreen('screen-rules')">
         START GAME <span class="btn-icon">→</span>
       </button>
-      <p class="start-hint">Schläger steuern · 🚗 Auto-Ziele treffen · Leapmotor vollaufladen</p>
     </div>
 
     <div class="scan-line"></div>
@@ -107,7 +79,7 @@
 
     <div class="rules-body">
       <div class="rules-trophy">🏆</div>
-      <h2 class="rules-headline">Tischtennis<br><span class="text-orange">× LEAP CHARGE</span></h2>
+      <h2 class="rules-headline">Tischtennis<br><span class="text-orange">× TT CHALLENGE</span></h2>
       <p class="rules-intro">
         Jeder zerstörte Block erzeugt Strom.<br>
         Lade deinen Leapmotor auf – und schreib einen neuen Highscore!
@@ -124,15 +96,15 @@
         <div class="rule-step">
           <div class="step-icon">🏓</div>
           <div class="step-content">
-            <strong>BALL IM SPIEL HALTEN</strong>
-            <p>Schlag den Ball zurück – verpass ihn nicht, sonst startet er neu</p>
+            <strong>3 LEBEN</strong>
+            <p>Du hast 3 Leben – verpass den Ball, verlierst du ein Herz. Null Leben = Spielende</p>
           </div>
         </div>
         <div class="rule-step">
           <div class="step-icon">💥</div>
           <div class="step-content">
-            <strong>BLÖCKE + 🚗 ZIELE TREFFEN</strong>
-            <p>Markierte 🚗-Ziele geben Extra-Punkte und laden die Batterie schneller auf</p>
+            <strong>LEVEL AUFSTEIGEN</strong>
+            <p>Räum alle Blöcke ab → nächstes Level! 4 Level + Endlos-Bonus für Highscore-Jäger</p>
           </div>
         </div>
         <div class="rule-step">
@@ -143,10 +115,10 @@
           </div>
         </div>
         <div class="rule-step">
-          <div class="step-icon">⏱️</div>
+          <div class="step-icon">⚡</div>
           <div class="step-content">
-            <strong>30 SEKUNDEN</strong>
-            <p>100% Ladung = Turbo-Boost + Punkte-Bonus. Dein Leapmotor überholt den Gegner!</p>
+            <strong>GHOST-CAR ÜBERHOLEN</strong>
+            <p>100% Batterie = Turbo-Boost. Überhol das Ghost-Car für den Sofort-Gewinn!</p>
           </div>
         </div>
       </div>
@@ -165,21 +137,22 @@
   <section id="screen-game" class="screen">
     <div class="screen-bg bg-game"></div>
 
-    <!-- HUD -->
+    <!-- Level badge -->
     <div class="level-badge level-1" id="level-badge">LVL 1</div>
 
+    <!-- HUD: Blöcke | Leben | Combo (Timer-Ring ENTFERNT) -->
     <div class="game-hud" id="game-hud">
       <div class="hud-block">
         <div class="hud-value" id="hit-count">0</div>
         <div class="hud-label">BLÖCKE</div>
       </div>
-      <div class="hud-timer-wrap">
-        <svg class="timer-ring" viewBox="0 0 60 60">
-          <circle class="timer-ring-bg" cx="30" cy="30" r="26"/>
-          <circle class="timer-ring-fill" id="timer-ring-fill" cx="30" cy="30" r="26"
-                  stroke-dasharray="163.4" stroke-dashoffset="0"/>
-        </svg>
-        <div class="hud-timer" id="timer-display">30</div>
+      <div class="hud-lives-wrap">
+        <div class="lives-display" id="lives-display">
+          <span class="life-heart life-full">❤️</span>
+          <span class="life-heart life-full">❤️</span>
+          <span class="life-heart life-full">❤️</span>
+        </div>
+        <div class="hud-label">LEBEN</div>
       </div>
       <div class="hud-block right">
         <div class="hud-value combo-val" id="combo-value">×1</div>
@@ -187,7 +160,7 @@
       </div>
     </div>
 
-    <!-- Canvas arena: Breakout game renders here -->
+    <!-- Canvas arena -->
     <div class="game-arena">
       <canvas id="game-canvas"></canvas>
     </div>
@@ -197,7 +170,7 @@
       <div class="car-track">
         <div class="car-progress" id="car-progress">
           <div class="car-emoji" id="game-car">
-            <!-- Normal: Leapmotor SUV/Crossover silhouette -->
+            <!-- Normal: Leapmotor SVG -->
             <svg class="car-svg car-svg-normal" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
               <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FFFFFF"/>
               <circle cx="14" cy="27" r="6.5" fill="#000000"/>
@@ -216,10 +189,9 @@
               <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.20)" stroke-width="1.3" fill="none"/>
               <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(0,0,0,0.30)"/>
             </svg>
-            <!-- Boost mode: green race variant -->
+            <!-- Boost mode -->
             <svg class="car-svg car-svg-boost" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
               <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#67C23A"/>
-              <!-- Racing centre stripe -->
               <path d="M 22 6 L 42 6 L 42 23 L 22 23 Z" fill="rgba(255,255,255,0.08)"/>
               <circle cx="14" cy="27" r="6.5" fill="#000000"/>
               <circle cx="14" cy="27" r="3.5" fill="#0F200F" stroke="#67C23A" stroke-width="1.2"/>
@@ -235,7 +207,6 @@
               <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="#67C23A"/>
               <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#67C23A"/>
               <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.32)" stroke-width="1.5" fill="none"/>
-              <!-- Roof fin (race detail) -->
               <rect x="29" y="4.5" width="7" height="1.5" rx="0.75" fill="rgba(255,255,255,0.5)"/>
             </svg>
           </div>
@@ -244,26 +215,19 @@
           </div>
         </div>
         <div class="ghost-car" id="ghost-car">
-          <!-- Compact rival silhouette -->
           <svg viewBox="0 0 52 30" xmlns="http://www.w3.org/2000/svg" width="34" height="20" aria-hidden="true">
-            <!-- Body (compact hatchback proportions) -->
             <path d="M 4 20 L 4 14 Q 5 7 9 7 L 14 5 L 38 5 Q 41 5 43 8 L 47 14 L 48 17 L 48 20 Z" fill="#4B5E7A"/>
-            <!-- Wheels -->
             <circle cx="11" cy="23" r="5.5" fill="#0F0F1E"/>
             <circle cx="11" cy="23" r="2.8" fill="#1E2035" stroke="#2E3050" stroke-width="0.7"/>
             <circle cx="11" cy="23" r="1" fill="#0F0F1E"/>
             <circle cx="41" cy="23" r="5.5" fill="#0F0F1E"/>
             <circle cx="41" cy="23" r="2.8" fill="#1E2035" stroke="#2E3050" stroke-width="0.7"/>
             <circle cx="41" cy="23" r="1" fill="#0F0F1E"/>
-            <!-- Glass -->
             <path d="M 15 18 L 17 7 L 37 7 L 41 18 Z" fill="#0A1525" opacity="0.9"/>
             <path d="M 37 7 L 41 18 L 39 18 L 36 8 Z" fill="rgba(100,180,255,0.2)"/>
             <path d="M 17 7 L 15 18 L 17 18 L 19 8 Z" fill="rgba(100,180,255,0.15)"/>
-            <!-- Front light -->
             <rect x="45" y="11" width="3.5" height="2" rx="1" fill="rgba(180,210,255,0.55)"/>
-            <!-- Rear light -->
             <rect x="3.5" y="11" width="2.5" height="5" rx="1" fill="rgba(160,50,50,0.55)"/>
-            <!-- Side highlight -->
             <path d="M 9 14 Q 26 12 46 15" stroke="rgba(255,255,255,0.1)" stroke-width="1" fill="none"/>
           </svg>
         </div>
@@ -282,11 +246,148 @@
       </div>
     </div>
 
-    <!-- Boost overlay: shows on full charge -->
+    <!-- Boost overlay -->
     <div class="boost-overlay" id="boost-overlay">
       <span class="boost-title">⚡ TURBO-BOOST AKTIVIERT!</span>
       <span class="boost-sub">LEAPMOTOR VOLLGELADEN · +400 PTS</span>
     </div>
+
+    <!-- ═══ SOFORT-GEWINN OVERLAY (Umbau 2) ═══ -->
+    <div id="instant-win-overlay" class="iwo-backdrop hidden">
+      <div class="iwo-box">
+        <div class="iwo-glow"></div>
+        <div class="iwo-icon">⚡</div>
+        <h2 class="iwo-headline">SOFORT-GEWINN!</h2>
+        <p class="iwo-sub">Du hast das Ghost-Car überholt! Dein Score: <strong id="iwo-score">0</strong> Punkte</p>
+        <p class="iwo-warning">Um deinen Gewinn abzuholen, gib jetzt deine Daten ein.<br><strong>Ohne Daten kein Gewinn.</strong></p>
+        <div class="iwo-actions">
+          <button class="btn btn-primary glow-btn" id="iwo-enter-data-btn">
+            📋 Daten eingeben &amp; Gewinn sichern
+          </button>
+          <button class="btn btn-outline iwo-skip" id="iwo-skip-btn">
+            Überspringen (kein Gewinn)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ IN-GAME OPT-IN FORM (für Sofort-Gewinn) ═══ -->
+    <div id="game-optin-section" class="game-optin-section hidden">
+      <div class="game-optin-inner">
+        <div class="game-optin-header">
+          <span class="game-optin-icon">⚡</span>
+          <h3 class="game-optin-title">SOFORT-GEWINN SICHERN</h3>
+          <p class="game-optin-sub">Füll das Formular aus, um deinen 4-stelligen Gewinn-Code zu erhalten.</p>
+        </div>
+
+        <form id="game-optin-form" class="optin-form" onsubmit="handleGameOptinSubmit(event)" novalidate>
+
+          <div class="form-row form-row-half">
+            <div class="form-col">
+              <label class="form-label" for="gfi-first">Vorname *</label>
+              <input id="gfi-first" name="first_name" type="text" required placeholder="Max" class="form-input">
+            </div>
+            <div class="form-col">
+              <label class="form-label" for="gfi-last">Nachname *</label>
+              <input id="gfi-last" name="last_name" type="text" required placeholder="Mustermann" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="gfi-email">E-Mail *</label>
+            <input id="gfi-email" name="email" type="email" required placeholder="max@beispiel.de" class="form-input">
+          </div>
+
+          <div class="form-row form-row-half">
+            <div class="form-col">
+              <label class="form-label" for="gfi-zip">PLZ *</label>
+              <input id="gfi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
+            </div>
+            <div class="form-col">
+              <label class="form-label" for="gfi-city">Ort *</label>
+              <input id="gfi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="gfi-contact">Kontakt-Wunsch *</label>
+            <select id="gfi-contact" name="contact_intent" required class="form-select">
+              <option value="">– bitte wählen –</option>
+              <option value="probefahrt">Probefahrt vereinbaren</option>
+              <option value="angebot">Angebot anfordern</option>
+              <option value="nein">Kein Kontakt gewünscht</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="gfi-vehicle">Wunschmodell *</label>
+            <select id="gfi-vehicle" name="vehicle_interest" required class="form-select">
+              <option value="">– bitte wählen –</option>
+              <option value="t03">Leapmotor T03</option>
+              <option value="b05">Leapmotor B05</option>
+              <option value="b10">Leapmotor B10</option>
+              <option value="c10">Leapmotor C10</option>
+            </select>
+          </div>
+
+          <!-- Consent radios -->
+          <div class="consent-block">
+            <p class="consent-title">Einwilligungen (alle Pflicht – Nein ist gültig)</p>
+
+            <div class="consent-row">
+              <span class="consent-label">📧 Newsletter &amp; Updates</span>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="g_consent_stay_in_touch" value="yes" required> Ja</label>
+                <label class="radio-opt"><input type="radio" name="g_consent_stay_in_touch" value="no"> Nein</label>
+              </div>
+            </div>
+
+            <div class="consent-row">
+              <span class="consent-label">🚗 Individuelle Angebote</span>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="g_consent_better_offers" value="yes" required> Ja</label>
+                <label class="radio-opt"><input type="radio" name="g_consent_better_offers" value="no"> Nein</label>
+              </div>
+            </div>
+
+            <div class="consent-row">
+              <span class="consent-label">🤝 Weitergabe an Partner</span>
+              <div class="radio-group">
+                <label class="radio-opt"><input type="radio" name="g_consent_partners" value="yes" required> Ja</label>
+                <label class="radio-opt"><input type="radio" name="g_consent_partners" value="no"> Nein</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row form-row-check">
+            <label class="check-label">
+              <input type="checkbox" id="gfi-terms" name="terms_accepted" required>
+              <span>Ich habe die <a href="teilnahmebedingungen.html" target="_blank" class="form-link">Teilnahmebedingungen</a> gelesen und akzeptiere sie. *</span>
+            </label>
+          </div>
+
+          <div id="game-optin-error" class="optin-error hidden"></div>
+
+          <button type="submit" class="btn btn-primary glow-btn optin-submit" id="game-optin-submit-btn">
+            ✅ GEWINN SICHERN
+          </button>
+
+        </form>
+
+        <!-- Code reveal after submit -->
+        <div id="game-iw-code-wrap" class="game-iw-code-wrap hidden">
+          <span class="iw-code-label">🎉 DEIN GEWINN-CODE</span>
+          <span class="iw-code" id="game-iw-code">----</span>
+          <p class="iw-hint">Zeig diesen Code dem Leapmotor-Stand-Personal.</p>
+        </div>
+
+        <button id="game-iw-continue-btn" class="btn btn-primary glow-btn game-iw-continue hidden">
+          ▶ Weiterspielen für den Highscore
+        </button>
+
+      </div>
+    </div>
+
   </section>
 
   <!-- ═══════════════════════════════════════════════
@@ -329,9 +430,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════
-         INSTANT WIN SCREEN (hidden until triggered)
-    ═══════════════════════════════════════════════ -->
+    <!-- INSTANT WIN BANNER -->
     <div id="instant-win-banner" class="instant-win-banner hidden">
       <div class="iw-glow-ring"></div>
       <div class="iw-icon">🏆⚡</div>
@@ -344,9 +443,7 @@
       </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════
-         OPT-IN FORM
-    ═══════════════════════════════════════════════ -->
+    <!-- OPT-IN FORM (End-Screen) -->
     <div id="optin-section" class="optin-section hidden">
       <h3 class="optin-heading">🏅 Eintragen &amp; Leaderboard-Platz sichern</h3>
       <p class="optin-sub" id="optin-sub">Hinterlasse deine Daten für das Leaderboard und deine Gewinnchance!</p>
@@ -471,9 +568,7 @@
 
 </div><!-- /app -->
 
-<!-- ═══════════════════════════════════════════════
-     SHARE MODAL
-═══════════════════════════════════════════════ -->
+<!-- SHARE MODAL -->
 <div id="share-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-icon">📤</div>
@@ -486,9 +581,7 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     COUNTDOWN OVERLAY
-═══════════════════════════════════════════════ -->
+<!-- COUNTDOWN OVERLAY -->
 <div id="countdown-overlay" class="modal-overlay hidden">
   <div class="countdown-box">
     <div class="countdown-number" id="countdown-num">3</div>
@@ -496,8 +589,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714e"></script>
-<script src="js/api.js?v=20260714e"></script>
-<script src="js/app.js?v=20260714e"></script>
+<script src="js/supabase-config.js?v=20260714f"></script>
+<script src="js/api.js?v=20260714f"></script>
+<script src="js/app.js?v=20260714f"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LEAP CHARGE – Breakout Edition
+   LEAP CHARGE – Breakout Edition  v20260714f
    Leapmotor × Tischtennis × E-Mobility
    Mobile-first · No build step · No backend
 ═══════════════════════════════════════════════════════════ */
@@ -9,17 +9,16 @@
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════
-const GAME_DURATION       = 30;
-const MAX_ENERGY          = 100;
-const TIMER_CIRCUMFERENCE = 163.4; // 2π × 26 (SVG ring)
+const MAX_LIVES          = 3;
+const MAX_ENERGY         = 100;
 const FULL_CHARGE_BONUS_SCORE = 400;
 const CAR_TARGET_BONUS_SCORE  = 140;
 const CAR_TARGET_BONUS_ENERGY = 3;
 
 // Block grid
-const BLOCK_GAP     = 5;   // px between blocks
-const BLOCK_TOP_PAD = 18;  // px from top of canvas
-const BLOCK_SIDE_PAD = 8;  // px from sides
+const BLOCK_GAP      = 5;   // px between blocks
+const BLOCK_TOP_PAD  = 18;  // px from top of canvas
+const BLOCK_SIDE_PAD = 8;   // px from sides
 
 // Energy reward per block row (row 0 = top; row N-1 = nearest paddle = highest reward)
 const BLOCK_ROW_ENERGY_BASE = [2, 3, 4, 5];
@@ -29,98 +28,101 @@ const BLOCK_COLORS = [
   '#FFB800', // amber  – row 2
   '#FFFFFF', // white – row 3 (bottom of block zone)
 ];
-const TURBO_BLOCK_COLOR = '#67C23A'; // Leapmotor green
-const CAR_BLOCK_COLOR   = '#95D475'; // leap-green-soft highlight
+const TURBO_BLOCK_COLOR = '#67C23A';
+const CAR_BLOCK_COLOR   = '#95D475';
 
 // Ball physics (fractions of canvas height per second)
-const BALL_BASE_SPEED  = 0.38;  // Level 1: noticeably slower than before
-const BALL_MAX_SPEED   = 1.05;  // Level 4: fast but not uncontrollable
-const BALL_WAVE_ACCEL  = 1.06;  // ×speed per wave cleared (smaller, levels handle big jumps)
-const BALL_MIN_VY_FRAC = 0.30;  // minimum vertical component fraction
+const BALL_BASE_SPEED  = 0.38;
+const BALL_MAX_SPEED   = 1.15;  // Bonus level can go faster
+const BALL_WAVE_ACCEL  = 1.06;
+const BALL_MIN_VY_FRAC = 0.30;
 
-// Level speed multipliers (applied over base speed)
-const LEVEL_SPEED_MULT = [1.0, 1.25, 1.56, 1.95]; // L1=1×, L2=+25%, L3=+56%, L4=+95%
+// Level speed multipliers
+const LEVEL_SPEED_MULT = [1.0, 1.25, 1.56, 1.95];
 
 // Paddle widths per level (fraction of canvas width)
-const LEVEL_PADDLE_FRAC = [0.32, 0.27, 0.23, 0.20]; // shrinks each level
-const PADDLE_MIN_PX     = 45;   // absolute minimum paddle width in px
-const PADDLE_HEIGHT      = 12;  // logical px
-const PADDLE_BOTTOM_PAD  = 18;  // px from canvas bottom
-const PADDLE_LERP_FACTOR = 18;  // lerp speed (multiplied by dt)
-
-// Level time backstops (seconds elapsed → force level up if wave not yet cleared)
-const LEVEL_TIME_BACKSTOPS = [0, 8, 16, 24]; // L1 starts at 0, L2 at 8s, L3 at 16s, L4 at 24s
+const LEVEL_PADDLE_FRAC = [0.32, 0.27, 0.23, 0.20];
+const PADDLE_MIN_PX     = 45;
+const PADDLE_HEIGHT     = 12;
+const PADDLE_BOTTOM_PAD = 18;
+const PADDLE_LERP_FACTOR = 18;
 
 // Level block layout: [rows, cols, turboCount, carBlockRows]
-// turboCount = how many turbo blocks per wave; carBlockRows = which row indices get Car blocks
 const LEVEL_BLOCK_CONFIG = [
-  { rows: 2, cols: 6, turboCount: 0, carRows: [1] },        // L1: 2 rows, no turbo
-  { rows: 3, cols: 6, turboCount: 2, carRows: [1, 2] },     // L2: 3 rows, 2 turbo
-  { rows: 4, cols: 6, turboCount: 3, carRows: [1, 2, 3] },  // L3: 4 rows, 3 turbo, car blocks
-  { rows: 4, cols: 7, turboCount: 4, carRows: [2, 3] },     // L4: 4×7, 4 turbo
+  { rows: 2, cols: 6, turboCount: 0, carRows: [1] },
+  { rows: 3, cols: 6, turboCount: 2, carRows: [1, 2] },
+  { rows: 4, cols: 6, turboCount: 3, carRows: [1, 2, 3] },
+  { rows: 4, cols: 7, turboCount: 4, carRows: [2, 3] },
 ];
 
-// Ghost car speed per level (fraction of track traversal per second)
-const GHOST_SPEED_FRAC = [0.02, 0.035, 0.055, 0.08]; // relative track position per second
+// Ghost car speed per level
+const GHOST_SPEED_FRAC = [0.02, 0.035, 0.055, 0.08];
+
+// Bonus level (after Level 4 cleared): escalating difficulty
+const BONUS_LEVEL_SPEED_MULT = 1.08; // per bonus wave
+const BONUS_LEVEL_MAX_SPEED_MULT = 3.0;
 
 // Multi-ball duration (Level 4)
-const MULTIBALL_DURATION = 3.0; // seconds
+const MULTIBALL_DURATION = 3.0;
 
 // FX
 const PARTICLE_COUNT = 8;
 
-// FAKE_LEADERBOARD removed – replaced with real Supabase leaderboard (see buildLeaderboard)
+// Level overlay
+const LEVEL_OVERLAY_DURATION = 1.8;
 
 // ═══════════════════════════════════════════════════════════
 // BACKEND / SESSION STATE
 // ═══════════════════════════════════════════════════════════
-
-// Holds data for the current game run (cleared on resetGameState)
 let session = {
-  gameStartTs:   null,  // Date.now() when game started
-  pendingScore:  null,  // { score, level_reached, ghost_overtaken, play_duration_s, is_instant_win }
-  scoreId:       null,  // UUID after DB write
-  playerId:      null,  // UUID after player form submit
-  instantWinCode: null, // 4-digit string if instant win triggered
-  submitted:     false, // form was successfully submitted
+  gameStartTs:    null,
+  pendingScore:   null,
+  scoreId:        null,
+  playerId:       null,
+  instantWinCode: null,
+  submitted:      false,
 };
 
 function resetSession() {
-  session.gameStartTs   = null;
-  session.pendingScore  = null;
-  session.scoreId       = null;
-  session.playerId      = null;
+  session.gameStartTs    = null;
+  session.pendingScore   = null;
+  session.scoreId        = null;
+  session.playerId       = null;
   session.instantWinCode = null;
-  session.submitted     = false;
+  session.submitted      = false;
 }
 
 // ═══════════════════════════════════════════════════════════
 // GAME STATE
 // ═══════════════════════════════════════════════════════════
 let state = {
-  currentScreen: 'screen-start',
-  gameActive:    false,
-  hits:          0,         // blocks destroyed
-  energy:        0,
-  combo:         1,
-  maxCombo:      1,
-  score:         0,
-  timeLeft:      GAME_DURATION,
-  wavesCleared:  0,
-  carTargetsHit: 0,
+  currentScreen:   'screen-start',
+  gameActive:      false,
+  hits:            0,
+  energy:          0,
+  combo:           1,
+  maxCombo:        1,
+  score:           0,
+  wavesCleared:    0,
+  carTargetsHit:   0,
   fullChargeBonuses: 0,
   fullChargeRewarded: false,
-  gameInterval:  null,      // setInterval 1s timer
-  rafId:         null,      // requestAnimationFrame id
-  lastFrameTime: 0,
-  ballSpeedPx:   0,         // actual pixel speed per second
-  // Level system
-  level:         1,         // 1-4
+  rafId:           null,
+  lastFrameTime:   0,
+  ballSpeedPx:     0,
+  // Life system
+  lives:           MAX_LIVES,
+  // Level system (1–4, then bonus)
+  level:           1,
   maxLevelReached: 1,
-  levelWaveCleared: false,  // flag: wave was cleared in current level
+  bonusMode:       false,  // true after Level 4 cleared
+  bonusWave:       0,      // bonus wave counter
   // Ghost car
-  ghostOvertaken: false,    // set to true when ghost is overtaken (permanent for score)
-  ghostTrackPos:  0.65,     // 0..1, ghost position on track
+  ghostOvertaken:  false,
+  ghostTrackPos:   0.65,
+  // Instant-win
+  instantWinTriggered: false,  // only once per game
+  gamepaused:      false,
   // Multi-ball (Level 4)
   multiBallActive: false,
   multiBallTimer:  0,
@@ -130,30 +132,25 @@ let state = {
 // CANVAS & GAME OBJECTS
 // ═══════════════════════════════════════════════════════════
 let canvas, ctx;
-let cw = 0, ch = 0;        // logical canvas dimensions
+let cw = 0, ch = 0;
 
 const paddle = { x: 0, y: 0, w: 0, h: PADDLE_HEIGHT, targetX: 0 };
 const ball   = { x: 0, y: 0, vx: 0, vy: 0, r: 0 };
-const ball2  = { x: 0, y: 0, vx: 0, vy: 0, r: 0, active: false }; // multi-ball
+const ball2  = { x: 0, y: 0, vx: 0, vy: 0, r: 0, active: false };
 
-let blocks      = [];  // { x, y, w, h, row, alive, carTarget, isTurbo, isCar2Hit, hitsLeft }
-let particles   = [];  // { x, y, vx, vy, life, maxLife, color, size }
-let floatTexts  = [];  // { x, y, vy, text, color, life, maxLife }
+let blocks      = [];
+let particles   = [];
+let floatTexts  = [];
 
 let ballLaunched  = false;
 let ballMissFlash = 0;
 let newWaveFlash  = 0;
-let hintAlpha     = 1;   // "move paddle" hint fade
+let hintAlpha     = 1;
 
-// Level overlay
-let levelOverlay     = { active: false, timer: 0, level: 1 };
-const LEVEL_OVERLAY_DURATION = 1.8; // seconds
-
-// Screen shake
+let levelOverlay     = { active: false, timer: 0, level: 1, label: '' };
 let screenShakeTimer = 0;
 let screenShakeAmt   = 0;
 
-// WebAudio context (lazy init)
 let audioCtx = null;
 
 // ═══════════════════════════════════════════════════════════
@@ -183,50 +180,52 @@ function startGame() {
 
 function resetGameState() {
   cancelAnimationFrame(state.rafId);
-  clearInterval(state.gameInterval);
   resetSession();
 
   Object.assign(state, {
-    gameActive:    false,
-    hits:          0,
-    energy:        0,
-    combo:         1,
-    maxCombo:      1,
-    score:         0,
-    timeLeft:      GAME_DURATION,
-    wavesCleared:  0,
-    carTargetsHit: 0,
+    gameActive:       false,
+    hits:             0,
+    energy:           0,
+    combo:            1,
+    maxCombo:         1,
+    score:            0,
+    wavesCleared:     0,
+    carTargetsHit:    0,
     fullChargeBonuses: 0,
     fullChargeRewarded: false,
-    gameInterval:  null,
-    rafId:         null,
-    lastFrameTime: 0,
-    ballSpeedPx:   0,
-    level:         1,
-    maxLevelReached: 1,
-    levelWaveCleared: false,
-    ghostOvertaken: false,
-    ghostTrackPos:  0.65,
-    multiBallActive: false,
-    multiBallTimer:  0,
+    rafId:            null,
+    lastFrameTime:    0,
+    ballSpeedPx:      0,
+    lives:            MAX_LIVES,
+    level:            1,
+    maxLevelReached:  1,
+    bonusMode:        false,
+    bonusWave:        0,
+    ghostOvertaken:   false,
+    ghostTrackPos:    0.65,
+    instantWinTriggered: false,
+    gamepaused:       false,
+    multiBallActive:  false,
+    multiBallTimer:   0,
   });
 
   ball2.active = false;
-  particles   = [];
-  floatTexts  = [];
+  particles    = [];
+  floatTexts   = [];
   ballLaunched  = false;
   ballMissFlash = 0;
   newWaveFlash  = 0;
   hintAlpha     = 1;
-  levelOverlay  = { active: false, timer: 0, level: 1 };
+  levelOverlay  = { active: false, timer: 0, level: 1, label: '' };
   screenShakeTimer = 0;
   screenShakeAmt   = 0;
 
   // Reset HUD
-  setEl('hit-count',     '0');
-  setEl('timer-display', String(GAME_DURATION));
-  setEl('combo-value',   '×1');
-  setEl('battery-pct',   '0%');
+  setEl('hit-count',   '0');
+  setEl('combo-value', '×1');
+  setEl('battery-pct', '0%');
+  updateLivesHUD();
+  updateLevelHUD();
 
   const fill = document.getElementById('battery-fill');
   if (fill) { fill.style.width = '0%'; fill.classList.remove('full'); }
@@ -234,11 +233,9 @@ function resetGameState() {
   const spark = document.getElementById('spark-line');
   if (spark) spark.classList.remove('active');
 
-  // Reset boost overlay
   const boostOverlay = document.getElementById('boost-overlay');
   if (boostOverlay) boostOverlay.classList.remove('show');
 
-  // Reset ghost car
   const ghostEl = document.getElementById('ghost-car');
   if (ghostEl) {
     ghostEl.classList.remove('ghost-overtaken', 'ghost-reset');
@@ -251,13 +248,6 @@ function resetGameState() {
   const comboEl = document.getElementById('combo-value');
   if (comboEl) comboEl.className = 'hud-value combo-val';
 
-  const ringFill = document.getElementById('timer-ring-fill');
-  if (ringFill) {
-    ringFill.style.strokeDashoffset = '0';
-    ringFill.style.stroke = 'var(--orange)';
-  }
-  document.getElementById('game-hud')?.classList.remove('timer-urgent');
-
   const carProgress = document.getElementById('car-progress');
   if (carProgress) carProgress.style.left = '8px';
 
@@ -268,8 +258,9 @@ function resetGameState() {
     numEl.style.filter = 'drop-shadow(0 0 30px var(--orange))';
   }
 
-  // Update level indicator if present
-  updateLevelHUD();
+  // Hide instant-win overlay if visible
+  const iwOverlay = document.getElementById('instant-win-overlay');
+  if (iwOverlay) iwOverlay.classList.add('hidden');
 }
 
 function runCountdown() {
@@ -292,7 +283,7 @@ function runCountdown() {
       beginGameLoop();
     } else {
       numEl.style.animation = 'none';
-      void numEl.offsetHeight; // force reflow
+      void numEl.offsetHeight;
       numEl.style.animation  = '';
       numEl.textContent      = countArr[i];
       if (i === countArr.length - 1) {
@@ -313,16 +304,12 @@ function initCanvas() {
 
   resizeCanvas();
 
-  // Touch controls (passive:false to allow preventDefault)
-  canvas.addEventListener('touchstart',  onTouchInput, { passive: false });
-  canvas.addEventListener('touchmove',   onTouchInput, { passive: false });
-
-  // Pointer/mouse fallback for desktop testing
+  canvas.addEventListener('touchstart',  onTouchInput,   { passive: false });
+  canvas.addEventListener('touchmove',   onTouchInput,   { passive: false });
   canvas.addEventListener('pointermove', onPointerInput);
   canvas.addEventListener('pointerdown', onPointerInput);
 
-  // Init game objects
-  state.ballSpeedPx = BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[0]; // Level 1 speed
+  state.ballSpeedPx = BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[0];
   initPaddle();
   initBallObj();
   initBlocks();
@@ -338,7 +325,7 @@ function resizeCanvas() {
 }
 
 function initPaddle() {
-  const lvlIdx = Math.max(0, Math.min(3, state.level - 1));
+  const lvlIdx = state.bonusMode ? 3 : Math.max(0, Math.min(3, state.level - 1));
   const frac   = LEVEL_PADDLE_FRAC[lvlIdx];
   const rawW   = Math.round(cw * frac);
   paddle.w       = Math.max(PADDLE_MIN_PX, rawW);
@@ -350,24 +337,25 @@ function initPaddle() {
 
 function initBallObj() {
   ball.r = Math.max(8, Math.round(cw * 0.032));
-  placeBallOnPaddle();
+  resetBallToPaddle();
 }
 
-function placeBallOnPaddle() {
+// Sauber Ball auf Paddle zurücksetzen (Level-Up Bug-Fix)
+function resetBallToPaddle() {
   ball.x  = paddle.x + paddle.w / 2;
   ball.y  = paddle.y - ball.r - 4;
   ball.vx = 0;
   ball.vy = 0;
+  ballLaunched = false;
 }
 
 function launchBall() {
-  // Random upward angle: -80° ± 20° from horizontal
   const angleDeg = -80 + Math.random() * 20;
   const angleRad = angleDeg * (Math.PI / 180);
   const dir      = Math.random() > 0.5 ? 1 : -1;
   const spd      = state.ballSpeedPx;
   ball.vx = Math.cos(angleRad) * spd * dir;
-  ball.vy = Math.sin(angleRad) * spd;   // negative = upward
+  ball.vy = Math.sin(angleRad) * spd;
   ballLaunched = true;
 }
 
@@ -378,43 +366,40 @@ function getLevelConfig() {
   return LEVEL_BLOCK_CONFIG[Math.min(state.level - 1, 3)];
 }
 
-function tryLevelUp(reason) {
-  if (state.level >= 4) return false;
+function tryLevelUp() {
+  if (state.level >= 4) {
+    // Enter bonus mode
+    enterBonusMode();
+    return true;
+  }
   state.level++;
   if (state.level > state.maxLevelReached) state.maxLevelReached = state.level;
 
-  // Update ball speed for new level
   const lvlIdx = state.level - 1;
   state.ballSpeedPx = Math.min(
     BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[lvlIdx],
     BALL_MAX_SPEED * ch
   );
 
-  // Update paddle width (shrink)
+  // Update paddle width, keep horizontally centred
   const frac = LEVEL_PADDLE_FRAC[lvlIdx];
-  paddle.w   = Math.max(PADDLE_MIN_PX, Math.round(cw * frac));
-  // Keep paddle centred after shrink
-  paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x + (paddle.w / 2)));
+  const newW = Math.max(PADDLE_MIN_PX, Math.round(cw * frac));
+  paddle.x   = paddle.x + paddle.w / 2 - newW / 2;
+  paddle.w   = newW;
+  paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x));
   paddle.targetX = paddle.x;
 
-  // Trigger ghost speed update
-  // (ghost speed is read dynamically from state.level in update loop)
+  // CRITICAL: reset ball cleanly to paddle — prevents Level-4 auto-score bug
+  resetBallToPaddle();
+  deactivateBall2();
 
-  // Show level overlay
-  levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: state.level };
+  levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: state.level, label: getLevelLabel(state.level) };
 
-  // Screen shake
   triggerScreenShake(8, 0.45);
-
-  // WebAudio level-up jingle
   playLevelUpTone(state.level);
-
-  // Update HUD
   updateLevelHUD();
-
   spawnFloatText(cw / 2, ch * 0.35, `⚡ LEVEL ${state.level}!`, '#67C23A');
 
-  // Level 4: enable multi-ball spawning on next full charge
   if (state.level === 4) {
     spawnFloatText(cw / 2, ch * 0.45, '🔴 MULTI-BALL BEREIT', '#FF4D51');
   }
@@ -422,23 +407,67 @@ function tryLevelUp(reason) {
   return true;
 }
 
-function updateLevelHUD() {
-  // Inject or update level badge in HUD if element exists
-  let badge = document.getElementById('level-badge');
-  if (!badge) return;
-  badge.textContent = `LVL ${state.level}`;
-  badge.className   = `level-badge level-${state.level}`;
+function enterBonusMode() {
+  if (state.bonusMode) {
+    // Already in bonus: just increment wave, speed up
+    state.bonusWave++;
+    const mult = Math.min(
+      BONUS_LEVEL_MAX_SPEED_MULT,
+      Math.pow(BONUS_LEVEL_SPEED_MULT, state.bonusWave)
+    );
+    state.ballSpeedPx = Math.min(
+      BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[3] * mult,
+      BALL_MAX_SPEED * ch
+    );
+  } else {
+    state.bonusMode  = true;
+    state.bonusWave  = 1;
+    state.ballSpeedPx = Math.min(
+      BALL_BASE_SPEED * ch * LEVEL_SPEED_MULT[3] * BONUS_LEVEL_SPEED_MULT,
+      BALL_MAX_SPEED * ch
+    );
+    spawnFloatText(cw / 2, ch * 0.28, '🏆 BONUS-MODE!', '#67C23A');
+    spawnFloatText(cw / 2, ch * 0.38, 'JAGE DEN HIGHSCORE!', '#FFFFFF');
+  }
+
+  // Reset ball cleanly
+  resetBallToPaddle();
+  deactivateBall2();
+
+  levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: 4, label: `BONUS WELLE ${state.bonusWave}` };
+  triggerScreenShake(6, 0.35);
+  updateLevelHUD();
 }
 
-// Check if time backstop triggers a level up
-function checkLevelBackstop() {
-  const elapsed = GAME_DURATION - state.timeLeft;
-  const nextLvl = state.level; // currently at this level, check if next level threshold passed
-  if (nextLvl >= 4) return;
-  const threshold = LEVEL_TIME_BACKSTOPS[nextLvl]; // e.g. level 1 checks [1]=8
-  if (elapsed >= threshold) {
-    tryLevelUp('backstop');
+function getLevelLabel(lvl) {
+  const labels = ['', 'WARM-UP', 'CHARGE', 'BOOST', 'OVERTAKE'];
+  return labels[Math.min(lvl, 4)] || '';
+}
+
+function updateLevelHUD() {
+  const badge = document.getElementById('level-badge');
+  if (!badge) return;
+  if (state.bonusMode) {
+    badge.textContent = `BONUS W${state.bonusWave}`;
+    badge.className   = 'level-badge level-4 bonus';
+  } else {
+    badge.textContent = `LVL ${state.level}`;
+    badge.className   = `level-badge level-${state.level}`;
   }
+}
+
+function updateLivesHUD() {
+  const el = document.getElementById('lives-display');
+  if (!el) return;
+  let html = '';
+  for (let i = 0; i < MAX_LIVES; i++) {
+    if (i < state.lives) {
+      html += '<span class="life-heart life-full">❤️</span>';
+    } else {
+      html += '<span class="life-heart life-empty">🖤</span>';
+    }
+  }
+  el.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -446,14 +475,13 @@ function checkLevelBackstop() {
 // ═══════════════════════════════════════════════════════════
 function initBlocks() {
   blocks = [];
-  const cfg    = getLevelConfig();
-  const rows   = cfg.rows;
-  const cols   = cfg.cols;
+  const cfg     = getLevelConfig();
+  const rows    = cfg.rows;
+  const cols    = cfg.cols;
   const usableW = cw - BLOCK_SIDE_PAD * 2;
   const blockW  = (usableW - BLOCK_GAP * (cols - 1)) / cols;
   const blockH  = Math.max(14, Math.round(ch * 0.055));
 
-  // Determine which block indices are turbo (random spread)
   const totalBlocks  = rows * cols;
   const turboIndices = new Set();
   while (turboIndices.size < Math.min(cfg.turboCount, totalBlocks)) {
@@ -465,17 +493,16 @@ function initBlocks() {
     const isCarRow = cfg.carRows.includes(row);
     const carCol   = (row * 2 + 1) % cols;
     for (let col = 0; col < cols; col++) {
-      const isTurbo   = turboIndices.has(idx);
-      const isCar     = isCarRow && col === carCol;
-      // Car blocks in Level 3+ need 2 hits; turbo = 1 hit
-      const hitsLeft  = (isCar && state.level >= 3) ? 2 : 1;
+      const isTurbo  = turboIndices.has(idx);
+      const isCar    = isCarRow && col === carCol;
+      const hitsLeft = (isCar && state.level >= 3) ? 2 : 1;
       blocks.push({
-        x:     BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
-        y:     BLOCK_TOP_PAD  + row * (blockH + BLOCK_GAP),
-        w:     blockW,
-        h:     blockH,
+        x:         BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
+        y:         BLOCK_TOP_PAD  + row * (blockH + BLOCK_GAP),
+        w:         blockW,
+        h:         blockH,
         row,
-        alive: true,
+        alive:     true,
         carTarget: isCar,
         isTurbo,
         hitsLeft,
@@ -487,20 +514,26 @@ function initBlocks() {
 
 function respawnBlocks() {
   state.wavesCleared++;
-  state.levelWaveCleared = true;
 
-  // Wave-level speed bump (smaller – levels handle big jumps)
+  // Wave-level speed bump
   state.ballSpeedPx = Math.min(
     state.ballSpeedPx * BALL_WAVE_ACCEL,
     BALL_MAX_SPEED * ch
   );
 
   newWaveFlash = 0.8;
-  initBlocks();
-  spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#67C23A');
 
-  // Wave clear triggers a level up if not at max
-  tryLevelUp('wave');
+  if (state.bonusMode) {
+    enterBonusMode();
+  } else {
+    // Build blocks for next level (or current level's new wave)
+    tryLevelUp();
+  }
+
+  initBlocks();
+  if (!state.bonusMode) {
+    spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#67C23A');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -513,10 +546,9 @@ function spawnBall2() {
   ball2.y      = paddle.y - ball2.r - 4;
   ball2.active = true;
 
-  // Launch in roughly mirrored angle
   const angleDeg = -75 + Math.random() * 15;
   const angleRad = angleDeg * (Math.PI / 180);
-  const dir      = ball.vx < 0 ? 1 : -1; // opposite horizontal to main ball
+  const dir      = ball.vx < 0 ? 1 : -1;
   const spd      = state.ballSpeedPx;
   ball2.vx = Math.cos(angleRad) * spd * dir;
   ball2.vy = Math.sin(angleRad) * spd;
@@ -539,19 +571,17 @@ function deactivateBall2() {
 // GHOST CAR
 // ═══════════════════════════════════════════════════════════
 function updateGhostCar(dt) {
-  if (state.ghostOvertaken) return; // ghost already behind, stays put
-  const lvlIdx  = state.level - 1;
-  const spd     = GHOST_SPEED_FRAC[Math.min(lvlIdx, 3)];
+  if (state.ghostOvertaken) return;
+  const lvlIdx = state.bonusMode ? 3 : Math.min(state.level - 1, 3);
+  const spd    = GHOST_SPEED_FRAC[lvlIdx];
   state.ghostTrackPos = Math.min(0.97, state.ghostTrackPos + spd * dt);
 
-  // Update ghost DOM position
   const ghostEl = document.getElementById('ghost-car');
   const track   = document.querySelector('.car-track');
   if (!ghostEl || !track) return;
   const trackW    = track.offsetWidth;
   const playerMax = trackW - 50 - 36;
-  const ghostLeft = 8 + state.ghostTrackPos * playerMax;
-  ghostEl.style.left = `${ghostLeft}px`;
+  ghostEl.style.left = `${8 + state.ghostTrackPos * playerMax}px`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -584,17 +614,16 @@ function playTone(freq, type, gain, duration) {
 function playLevelUpTone(level) {
   const ac = getAudioCtx();
   if (!ac) return;
-  // Ascending chord arpeggio based on level
   const notes = [
-    [440, 554, 659],  // L2: A4-C#5-E5
-    [523, 659, 784],  // L3: C5-E5-G5
-    [659, 880, 1047], // L4: E5-A5-C6 (triumphant)
+    [440, 554, 659],
+    [523, 659, 784],
+    [659, 880, 1047],
   ][Math.min(level - 2, 2)] || [440, 554, 659];
 
   notes.forEach((freq, i) => {
     const delay = i * 0.10;
-    const osc = ac.createOscillator();
-    const env = ac.createGain();
+    const osc   = ac.createOscillator();
+    const env   = ac.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, ac.currentTime + delay);
     env.gain.setValueAtTime(0, ac.currentTime + delay);
@@ -620,46 +649,20 @@ function triggerScreenShake(amt, duration) {
 // ═══════════════════════════════════════════════════════════
 function beginGameLoop() {
   state.gameActive    = true;
+  state.gamepaused    = false;
   state.lastFrameTime = performance.now();
   session.gameStartTs = Date.now();
-
-  // 1-second timer
-  state.gameInterval = setInterval(gameTick, 1000);
 
   // Launch ball immediately
   launchBall();
 
-  // Animation frame
   state.rafId = requestAnimationFrame(gameFrame);
 }
 
-function gameTick() {
-  if (!state.gameActive) return;
-  state.timeLeft = Math.max(0, state.timeLeft - 1);
-
-  setEl('timer-display', String(state.timeLeft));
-
-  const progress = state.timeLeft / GAME_DURATION;
-  const offset   = TIMER_CIRCUMFERENCE * (1 - progress);
-  const ringFill = document.getElementById('timer-ring-fill');
-  if (ringFill) {
-    ringFill.style.strokeDashoffset = offset.toFixed(1);
-    if (state.timeLeft <= 10) {
-      ringFill.style.stroke = '#FF2020';
-      document.getElementById('game-hud')?.classList.add('timer-urgent');
-    }
-  }
-
-  // Check level backstop
-  checkLevelBackstop();
-
-  if (state.timeLeft <= 0) endGame();
-}
-
 function gameFrame(timestamp) {
-  if (!state.gameActive) return;
+  if (!state.gameActive || state.gamepaused) return;
 
-  const dt = Math.min((timestamp - state.lastFrameTime) / 1000, 0.05); // cap at 50ms
+  const dt = Math.min((timestamp - state.lastFrameTime) / 1000, 0.05);
   state.lastFrameTime = timestamp;
 
   update(dt);
@@ -672,20 +675,17 @@ function gameFrame(timestamp) {
 // UPDATE
 // ═══════════════════════════════════════════════════════════
 function update(dt) {
-  // Paddle follows touch/pointer
   const lerp = Math.min(1, PADDLE_LERP_FACTOR * dt);
   paddle.x += (paddle.targetX - paddle.x) * lerp;
   paddle.x  = Math.max(0, Math.min(cw - paddle.w, paddle.x));
 
   if (!ballLaunched) {
-    // Sticky ball follows paddle before launch
     ball.x = paddle.x + paddle.w / 2;
     ball.y = paddle.y - ball.r - 4;
   } else {
     updateBall(dt);
   }
 
-  // Multi-ball update
   if (ball2.active) {
     updateBall2(dt);
     state.multiBallTimer -= dt;
@@ -695,21 +695,17 @@ function update(dt) {
     }
   }
 
-  // Ghost car movement
   updateGhostCar(dt);
 
-  // Level overlay countdown
   if (levelOverlay.active) {
     levelOverlay.timer -= dt;
     if (levelOverlay.timer <= 0) levelOverlay.active = false;
   }
 
-  // Screen shake
   if (screenShakeTimer > 0) {
     screenShakeTimer = Math.max(0, screenShakeTimer - dt);
   }
 
-  // FX updates
   updateParticles(dt);
   updateFloatTexts(dt);
 
@@ -722,7 +718,6 @@ function updateBall(dt) {
   ball.x += ball.vx * dt;
   ball.y += ball.vy * dt;
 
-  // Left / right walls
   if (ball.x - ball.r < 0) {
     ball.x  = ball.r;
     ball.vx = Math.abs(ball.vx);
@@ -731,14 +726,11 @@ function updateBall(dt) {
     ball.x  = cw - ball.r;
     ball.vx = -Math.abs(ball.vx);
   }
-
-  // Top wall
   if (ball.y - ball.r < 0) {
     ball.y  = ball.r;
     ball.vy = Math.abs(ball.vy);
   }
 
-  // Paddle collision (ball moving downward, overlapping paddle)
   if (ball.vy > 0 &&
       ball.y + ball.r >= paddle.y &&
       ball.y + ball.r <= paddle.y + paddle.h + Math.abs(ball.vy * dt * 2) &&
@@ -748,13 +740,11 @@ function updateBall(dt) {
     return;
   }
 
-  // Ball missed (fell below canvas)
   if (ball.y - ball.r > ch) {
     onBallMiss();
     return;
   }
 
-  // Block collisions
   checkBlockCollisions(ball);
 }
 
@@ -764,12 +754,10 @@ function updateBall2(dt) {
   ball2.x += ball2.vx * dt;
   ball2.y += ball2.vy * dt;
 
-  // Walls
-  if (ball2.x - ball2.r < 0)  { ball2.x = ball2.r;       ball2.vx = Math.abs(ball2.vx); }
-  if (ball2.x + ball2.r > cw) { ball2.x = cw - ball2.r;  ball2.vx = -Math.abs(ball2.vx); }
-  if (ball2.y - ball2.r < 0)  { ball2.y = ball2.r;       ball2.vy = Math.abs(ball2.vy); }
+  if (ball2.x - ball2.r < 0)  { ball2.x = ball2.r;      ball2.vx = Math.abs(ball2.vx); }
+  if (ball2.x + ball2.r > cw) { ball2.x = cw - ball2.r; ball2.vx = -Math.abs(ball2.vx); }
+  if (ball2.y - ball2.r < 0)  { ball2.y = ball2.r;      ball2.vy = Math.abs(ball2.vy); }
 
-  // Paddle
   if (ball2.vy > 0 &&
       ball2.y + ball2.r >= paddle.y &&
       ball2.y + ball2.r <= paddle.y + paddle.h + Math.abs(ball2.vy * dt * 2) &&
@@ -779,7 +767,6 @@ function updateBall2(dt) {
     return;
   }
 
-  // Ball2 missed — just deactivate it (main ball still in play)
   if (ball2.y - ball2.r > ch) {
     deactivateBall2();
     spawnFloatText(cw / 2, ch * 0.5, 'MULTI-BALL VERLOREN', '#FF2020');
@@ -790,8 +777,8 @@ function updateBall2(dt) {
 }
 
 function doBouncePaddle(b) {
-  const hitFrac  = (b.x - paddle.x) / paddle.w; // 0..1
-  const norm     = hitFrac * 2 - 1;              // -1..1
+  const hitFrac  = (b.x - paddle.x) / paddle.w;
+  const norm     = hitFrac * 2 - 1;
   const maxAngle = 62 * Math.PI / 180;
   const angle    = norm * maxAngle;
   const spd      = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
@@ -799,40 +786,45 @@ function doBouncePaddle(b) {
   b.vx = Math.sin(angle) * spd;
   b.vy = -Math.abs(Math.cos(angle) * spd);
 
-  // Prevent near-horizontal shots
   const minVY = spd * BALL_MIN_VY_FRAC;
   if (Math.abs(b.vy) < minVY) {
     b.vy = -minVY;
     b.vx = Math.sign(b.vx) * Math.sqrt(Math.max(0, spd * spd - minVY * minVY));
   }
 
-  // Push ball above paddle to avoid re-triggering
   b.y = paddle.y - b.r - 1;
 
-  // Only main ball builds combo
   if (b === ball) {
     state.combo = Math.min(state.combo + 1, 5);
     if (state.combo > state.maxCombo) state.maxCombo = state.combo;
     updateComboUI();
-
-    // Combo screen shake
     if (state.combo >= 4) triggerScreenShake(4, 0.2);
   }
 
-  hintAlpha = 0; // hide hint once player has controlled paddle
+  hintAlpha = 0;
 }
 
 function onBallMiss() {
+  state.lives--;
   state.combo = 1;
   updateComboUI();
+  updateLivesHUD();
   ballMissFlash = 0.5;
-  ballLaunched  = false;
-  placeBallOnPaddle();
+
+  if (state.lives <= 0) {
+    // Alle Leben weg → Game Over
+    endGame();
+    return;
+  }
+
+  // Noch Leben übrig → Ball neu auf Paddle
+  resetBallToPaddle();
+  spawnFloatText(cw / 2, ch * 0.5, `❤️ ${state.lives} LEBEN`, '#FF4D51');
 
   setTimeout(() => {
-    if (!state.gameActive) return;
+    if (!state.gameActive || state.gamepaused) return;
     launchBall();
-  }, 420);
+  }, 600);
 }
 
 function checkBlockCollisions(b) {
@@ -843,17 +835,14 @@ function checkBlockCollisions(b) {
     if (!blk.alive) continue;
     aliveCount++;
 
-    // Closest point on AABB to ball center
     const nearX = Math.max(blk.x, Math.min(b.x, blk.x + blk.w));
     const nearY = Math.max(blk.y, Math.min(b.y, blk.y + blk.h));
     const dx    = b.x - nearX;
     const dy    = b.y - nearY;
 
     if (dx * dx + dy * dy < b.r * b.r) {
-      // Car blocks with 2 hits
       blk.hitsLeft--;
       if (blk.hitsLeft > 0) {
-        // First hit on 2-hit block: flash but don't destroy
         const overlapX = b.r - Math.abs(dx);
         const overlapY = b.r - Math.abs(dy);
         if (overlapX < overlapY) {
@@ -871,7 +860,6 @@ function checkBlockCollisions(b) {
       blk.alive = false;
       aliveCount--;
 
-      // Reflect on shortest overlap axis
       const overlapX = b.r - Math.abs(dx);
       const overlapY = b.r - Math.abs(dy);
       if (overlapX < overlapY) {
@@ -882,19 +870,18 @@ function checkBlockCollisions(b) {
         b.y += Math.sign(dy || -1) * (overlapY + 1);
       }
 
-      // Block type rewards
       let energyGain, scoreGain;
       const baseEnergy = (BLOCK_ROW_ENERGY_BASE[Math.min(blk.row, 3)] || 3) * state.combo;
+      const bonusMult  = state.bonusMode ? 1 + state.bonusWave * 0.15 : 1;
       if (blk.isTurbo) {
-        // Turbo block: extra energy + score
         energyGain = baseEnergy * 2 + 4;
-        scoreGain  = baseEnergy * 20 * state.combo + 180;
+        scoreGain  = Math.round((baseEnergy * 20 * state.combo + 180) * bonusMult);
       } else if (blk.carTarget) {
         energyGain = baseEnergy + CAR_TARGET_BONUS_ENERGY;
-        scoreGain  = baseEnergy * 10 * state.combo + CAR_TARGET_BONUS_SCORE;
+        scoreGain  = Math.round((baseEnergy * 10 * state.combo + CAR_TARGET_BONUS_SCORE) * bonusMult);
       } else {
         energyGain = baseEnergy;
-        scoreGain  = baseEnergy * 10 * state.combo;
+        scoreGain  = Math.round(baseEnergy * 10 * state.combo * bonusMult);
       }
 
       state.energy  = Math.min(state.energy + energyGain, MAX_ENERGY);
@@ -914,7 +901,6 @@ function checkBlockCollisions(b) {
       updateEnergyUI();
       updateCarUI();
 
-      // FX
       const blockColor = blk.isTurbo ? TURBO_BLOCK_COLOR : BLOCK_COLORS[Math.min(blk.row, 3)];
       spawnParticles(blk.x + blk.w / 2, blk.y + blk.h / 2, blockColor);
 
@@ -928,11 +914,10 @@ function checkBlockCollisions(b) {
         state.fullChargeRewarded = true;
       }
 
-      break; // one block per frame – prevents tunnelling artefacts
+      break;
     }
   }
 
-  // Only check wave clear for main ball to avoid double-trigger
   if (b === ball && aliveCount === 0) respawnBlocks();
 }
 
@@ -964,7 +949,7 @@ function updateParticles(dt) {
     const p = particles[i];
     p.x    += p.vx * dt;
     p.y    += p.vy * dt;
-    p.vy   += 260 * dt;  // gravity
+    p.vy   += 260 * dt;
     p.life -= dt;
     if (p.life <= 0) particles.splice(i, 1);
   }
@@ -983,7 +968,6 @@ function updateFloatTexts(dt) {
 // RENDER
 // ═══════════════════════════════════════════════════════════
 function render() {
-  // Screen shake offset
   let shakeX = 0, shakeY = 0;
   if (screenShakeTimer > 0) {
     const mag = screenShakeAmt * (screenShakeTimer / 0.45);
@@ -996,7 +980,6 @@ function render() {
 
   ctx.clearRect(-Math.abs(shakeX) - 2, -Math.abs(shakeY) - 2, cw + 20, ch + 20);
 
-  // Flash overlays
   if (ballMissFlash > 0) {
     ctx.fillStyle = `rgba(255,32,0,${ballMissFlash * 0.22})`;
     ctx.fillRect(0, 0, cw, ch);
@@ -1034,23 +1017,20 @@ function renderBlocks() {
     ctx.shadowBlur  = b.isTurbo ? 14 : 7;
     roundRect(ctx, b.x, b.y, b.w, b.h, 4);
 
-    // 2-hit car blocks: slightly lighter/desaturated on first hit
     const alphaFill = (b.carTarget && b.hitsLeft <= 1 && b.hitsLeft < 2) ? 0.55 : 0.82;
     ctx.fillStyle = hexToRgba(color, alphaFill);
     ctx.fill();
 
-    // Highlight stripe
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, 3, 1.5);
     ctx.fill();
 
-    // Turbo block: extra lightning bolt decoration
     if (b.isTurbo) {
-      ctx.fillStyle   = 'rgba(255,255,255,0.9)';
-      ctx.font        = `bold ${Math.max(8, b.h * 0.65)}px sans-serif`;
-      ctx.textAlign   = 'center';
+      ctx.fillStyle    = 'rgba(255,255,255,0.9)';
+      ctx.font         = `bold ${Math.max(8, b.h * 0.65)}px sans-serif`;
+      ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowBlur  = 0;
+      ctx.shadowBlur   = 0;
       ctx.fillText('⚡', b.x + b.w / 2, b.y + b.h / 2);
     }
 
@@ -1061,13 +1041,12 @@ function renderBlocks() {
       ctx.stroke();
       drawCarBlock(b.x, b.y, b.w, b.h);
 
-      // Show remaining hits for 2-hit blocks
       if (b.hitsLeft >= 2) {
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.font = `bold ${Math.max(7, b.h * 0.55)}px sans-serif`;
-        ctx.textAlign = 'right';
+        ctx.fillStyle    = 'rgba(255,255,255,0.85)';
+        ctx.font         = `bold ${Math.max(7, b.h * 0.55)}px sans-serif`;
+        ctx.textAlign    = 'right';
         ctx.textBaseline = 'top';
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur   = 0;
         ctx.fillText('2×', b.x + b.w - 2, b.y + 1);
       }
     }
@@ -1075,42 +1054,80 @@ function renderBlocks() {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// PADDLE REDESIGN: klarer Tischtennis-Schläger
+// Rundes/ovales Blatt + kurzer Griff, weiß mit grünem Rand
+// ─────────────────────────────────────────────────────────
 function renderPaddle() {
-  const cx = paddle.x + paddle.w / 2;
-  const headW = paddle.w * 0.72;
-  const headH = paddle.h * 1.9;
-  const headCy = paddle.y + paddle.h * 0.2;
-  const handleW = Math.max(9, paddle.w * 0.15);
-  const handleH = Math.max(14, paddle.h * 1.4);
-  const handleX = cx - handleW / 2;
-  const handleY = headCy + headH * 0.35;
+  const cx      = paddle.x + paddle.w / 2;
+  const cy      = paddle.y + paddle.h / 2;
+
+  // Proportions: blade is oval, handle below
+  const bladeRX = paddle.w * 0.50;   // half-width of blade
+  const bladeRY = paddle.h * 1.1;    // half-height of blade (slightly taller than logical height)
+  const bladeCY = cy - paddle.h * 0.15;
+
+  const handleW  = Math.max(7, paddle.w * 0.14);
+  const handleH  = Math.max(12, paddle.h * 1.35);
+  const handleX  = cx - handleW / 2;
+  const handleY  = bladeCY + bladeRY * 0.55;
 
   ctx.save();
-  ctx.shadowColor = 'rgba(103,194,58,0.7)';
-  ctx.shadowBlur  = 16;
 
+  // Green glow
+  ctx.shadowColor = 'rgba(103,194,58,0.75)';
+  ctx.shadowBlur  = 18;
+
+  // Handle: dark rounded rect
   const hg = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
-  hg.addColorStop(0, '#303133');
-  hg.addColorStop(1, '#1A1A1A');
-  roundRect(ctx, handleX, handleY, handleW, handleH, handleW / 3);
+  hg.addColorStop(0, '#2A2A2A');
+  hg.addColorStop(1, '#111111');
+  roundRect(ctx, handleX, handleY, handleW, handleH, handleW / 2.2);
   ctx.fillStyle = hg;
   ctx.fill();
 
+  // Green grip wrap on handle
+  ctx.strokeStyle = 'rgba(103,194,58,0.6)';
+  ctx.lineWidth   = 1.5;
+  for (let gy = handleY + 3; gy < handleY + handleH - 3; gy += 5) {
+    ctx.beginPath();
+    ctx.moveTo(handleX + 1, gy);
+    ctx.lineTo(handleX + handleW - 1, gy + 2);
+    ctx.stroke();
+  }
+
+  // Blade: white oval with green border
+  ctx.shadowBlur = 20;
   ctx.beginPath();
-  ctx.ellipse(cx, headCy, headW / 2, headH / 2, 0, 0, Math.PI * 2);
-  const g = ctx.createLinearGradient(cx, headCy - headH / 2, cx, headCy + headH / 2);
-  g.addColorStop(0, '#FFFFFF');
-  g.addColorStop(1, '#B3B3B3');
-  ctx.fillStyle = g;
+  ctx.ellipse(cx, bladeCY, bladeRX, bladeRY, 0, 0, Math.PI * 2);
+
+  const bg = ctx.createLinearGradient(cx, bladeCY - bladeRY, cx, bladeCY + bladeRY);
+  bg.addColorStop(0,   '#FFFFFF');
+  bg.addColorStop(0.5, '#F0F0F0');
+  bg.addColorStop(1,   '#D8D8D8');
+  ctx.fillStyle = bg;
   ctx.fill();
 
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(103,194,58,0.7)';
+  // Green border
+  ctx.strokeStyle = '#67C23A';
+  ctx.lineWidth   = Math.max(2, paddle.w * 0.025);
+  ctx.shadowColor = 'rgba(103,194,58,0.9)';
+  ctx.shadowBlur  = 8;
   ctx.stroke();
 
+  // Center line (horizontal seam on blade)
+  ctx.shadowBlur   = 0;
+  ctx.strokeStyle  = 'rgba(103,194,58,0.35)';
+  ctx.lineWidth    = 1.2;
   ctx.beginPath();
-  ctx.ellipse(cx - headW * 0.12, headCy - headH * 0.1, headW * 0.22, headH * 0.18, -0.2, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.30)';
+  ctx.moveTo(cx - bladeRX * 0.85, bladeCY);
+  ctx.lineTo(cx + bladeRX * 0.85, bladeCY);
+  ctx.stroke();
+
+  // Highlight glare
+  ctx.beginPath();
+  ctx.ellipse(cx - bladeRX * 0.25, bladeCY - bladeRY * 0.3, bladeRX * 0.28, bladeRY * 0.18, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
   ctx.fill();
 
   ctx.restore();
@@ -1125,16 +1142,15 @@ function renderBall() {
     ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.08,
     ball.x, ball.y, ball.r
   );
-  g.addColorStop(0,    '#FFFFFF');
-  g.addColorStop(0.4,  '#F5E642');
-  g.addColorStop(1,    '#C49A00');
+  g.addColorStop(0,   '#FFFFFF');
+  g.addColorStop(0.4, '#F5E642');
+  g.addColorStop(1,   '#C49A00');
 
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
 
-  // Ping-pong seam
   ctx.strokeStyle = 'rgba(0,0,0,0.14)';
   ctx.lineWidth   = 1.2;
   ctx.beginPath();
@@ -1147,7 +1163,6 @@ function renderBall() {
 function renderBall2() {
   if (!ball2.active) return;
   ctx.save();
-  // Multi-ball: green-soft tint to distinguish from main ball
   ctx.shadowColor = '#67C23A';
   ctx.shadowBlur  = 22;
 
@@ -1164,7 +1179,6 @@ function renderBall2() {
   ctx.fillStyle = g2;
   ctx.fill();
 
-  // Timer ring around ball2
   const timerFrac = state.multiBallTimer / MULTIBALL_DURATION;
   ctx.strokeStyle = `rgba(103,194,58,${0.4 + timerFrac * 0.5})`;
   ctx.lineWidth   = 2;
@@ -1224,7 +1238,6 @@ function renderLevelOverlay() {
   if (!levelOverlay.active) return;
 
   const progress = 1 - levelOverlay.timer / LEVEL_OVERLAY_DURATION;
-  // Fade in fast, hold, then fade out
   let alpha;
   if (progress < 0.15) {
     alpha = progress / 0.15;
@@ -1235,12 +1248,11 @@ function renderLevelOverlay() {
   }
   alpha = Math.max(0, Math.min(1, alpha));
 
-  const scale = 1 + (1 - progress) * 0.4; // zoom in effect
-  const lvl   = levelOverlay.level;
-  const colors = ['', '#67C23A', '#95D475', '#FFFFFF', '#67C23A'];
-  const color  = colors[Math.min(lvl, 4)] || '#67C23A';
-  const labels = ['', 'WARM-UP', 'CHARGE', 'BOOST', 'OVERTAKE'];
-  const label  = labels[Math.min(lvl, 4)] || '';
+  const scale   = 1 + (1 - progress) * 0.4;
+  const lvl     = levelOverlay.level;
+  const colors  = ['', '#67C23A', '#95D475', '#FFFFFF', '#67C23A'];
+  const color   = colors[Math.min(lvl, 4)] || '#67C23A';
+  const label   = levelOverlay.label || getLevelLabel(lvl);
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -1248,7 +1260,6 @@ function renderLevelOverlay() {
   ctx.scale(scale, scale);
   ctx.translate(-cw / 2, -ch / 2);
 
-  // Dark semi-transparent background pill
   const pillW = cw * 0.72;
   const pillH = ch * 0.22;
   const pillX = cw / 2 - pillW / 2;
@@ -1262,7 +1273,6 @@ function renderLevelOverlay() {
   roundRect(ctx, pillX, pillY, pillW, pillH, 16);
   ctx.stroke();
 
-  // "LEVEL X"
   const fs1 = Math.max(18, Math.round(cw * 0.10));
   ctx.fillStyle    = color;
   ctx.shadowColor  = color;
@@ -1270,9 +1280,9 @@ function renderLevelOverlay() {
   ctx.font         = `900 ${fs1}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`LEVEL ${lvl}`, cw / 2, ch / 2 - pillH * 0.12);
+  const titleText  = state.bonusMode ? `BONUS W${state.bonusWave}` : `LEVEL ${lvl}`;
+  ctx.fillText(titleText, cw / 2, ch / 2 - pillH * 0.12);
 
-  // Sub-label
   const fs2 = Math.max(10, Math.round(cw * 0.05));
   ctx.shadowBlur   = 10;
   ctx.fillStyle    = 'rgba(255,255,255,0.85)';
@@ -1332,12 +1342,10 @@ function updateCarUI() {
   const pct         = state.energy / MAX_ENERGY;
   const carProgress = document.getElementById('car-progress');
   if (!carProgress) return;
-  const track   = document.querySelector('.car-track');
-  const trackW  = track ? track.offsetWidth : 200;
+  const track    = document.querySelector('.car-track');
+  const trackW   = track ? track.offsetWidth : 200;
   const playerMax = trackW - 50 - 36;
   carProgress.style.left = `${8 + pct * playerMax}px`;
-
-  // Ghost car DOM position is now handled by updateGhostCar() in the game loop
 
   const carEl = document.getElementById('game-car');
   if (carEl) {
@@ -1358,7 +1366,7 @@ function flashFullCharge() {
   spawnFloatText(cw / 2, ch * 0.40, `⚡ TURBO-BOOST +${FULL_CHARGE_BONUS_SCORE}`, '#67C23A');
 
   const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
-  const turboSpeed = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
+  const turboSpeed   = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
   if (currentSpeed > 0) {
     const k = turboSpeed / currentSpeed;
     ball.vx *= k;
@@ -1366,18 +1374,16 @@ function flashFullCharge() {
   }
   state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.12, BALL_MAX_SPEED * ch);
 
-  // Level 4: spawn multi-ball on turbo
   if (state.level >= 4 && !ball2.active) {
     spawnBall2();
   }
 
-  // Ghost-car overtake
-  state.ghostOvertaken = true;
+  // Ghost-car overtake: trigger instant-win check
+  triggerGhostOvertake();
 
-  // Car: race car emoji + boost CSS + ghost-car overtake DOM
   const carProg  = document.getElementById('car-progress');
   const ghostEl2 = document.getElementById('ghost-car');
-  const carEl = document.getElementById('game-car');
+  const carEl    = document.getElementById('game-car');
   if (carEl) {
     carEl.classList.add('boost-mode');
     carProg?.classList.add('boosting');
@@ -1387,9 +1393,8 @@ function flashFullCharge() {
       setTimeout(() => {
         ghostEl2.classList.remove('ghost-overtaken');
         ghostEl2.classList.add('ghost-reset');
-        // Reset ghost position after overtake
-        state.ghostTrackPos = 0.20; // reset to back of track
-        state.ghostOvertaken = false; // allow ghost to move again
+        state.ghostTrackPos  = 0.20;
+        state.ghostOvertaken = false;
         setTimeout(() => ghostEl2.classList.remove('ghost-reset'), 500);
       }, 1600);
     }
@@ -1401,7 +1406,6 @@ function flashFullCharge() {
     }, 1800);
   }
 
-  // Show boost overlay above battery bar
   const boostOverlay = document.getElementById('boost-overlay');
   if (boostOverlay) {
     boostOverlay.classList.add('show');
@@ -1414,18 +1418,281 @@ function flashFullCharge() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// SOFORT-GEWINN-PAUSE-FLOW (Umbau 2)
+// ═══════════════════════════════════════════════════════════
+function triggerGhostOvertake() {
+  state.ghostOvertaken = true;
+
+  if (state.instantWinTriggered) return; // only once per game
+
+  const ev = window.LEAP_EVENT;
+  if (!ev) return;
+
+  const scoreThreshold = ev.instant_win_score || 1500;
+  const ghostReq       = ev.instant_win_ghost_req !== false;
+
+  // Calculate approximate current score
+  const approxScore = computeCurrentScore();
+
+  if (approxScore >= scoreThreshold && (!ghostReq || state.ghostOvertaken)) {
+    state.instantWinTriggered = true;
+    // Small delay so boost overlay shows first, then pause
+    setTimeout(() => {
+      if (!state.gameActive) return;
+      pauseForInstantWin();
+    }, 800);
+  }
+}
+
+function computeCurrentScore() {
+  // Live score estimate (same formula as endGame but partial)
+  const energyPct = Math.round(state.energy);
+  return Math.round(
+    state.hits            * 18 +
+    (state.maxCombo - 1)  * state.hits * 8 +
+    energyPct             * 12 +
+    state.wavesCleared    * 250 +
+    state.carTargetsHit   * CAR_TARGET_BONUS_SCORE +
+    state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE +
+    (state.maxLevelReached - 1) * 300 +
+    (state.ghostOvertaken ? 500 : 0)
+  );
+}
+
+function pauseForInstantWin() {
+  // Pause game loop
+  state.gamepaused = true;
+  cancelAnimationFrame(state.rafId);
+
+  // Store preliminary score for form
+  const energyPct  = Math.round(state.energy);
+  const durationS  = session.gameStartTs
+    ? Math.round((Date.now() - session.gameStartTs) / 1000)
+    : 0;
+
+  const liveScore = computeCurrentScore();
+  const ev        = window.LEAP_EVENT;
+
+  session.pendingScore = {
+    event_id:        ev ? ev.id : null,
+    score:           liveScore,
+    level_reached:   state.maxLevelReached,
+    ghost_overtaken: true,
+    play_duration_s: durationS,
+    is_instant_win:  true,
+  };
+  if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+
+  // Show overlay
+  const overlay = document.getElementById('instant-win-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    // Populate score preview
+    const scoreEl = document.getElementById('iwo-score');
+    if (scoreEl) scoreEl.textContent = liveScore.toLocaleString('de-DE');
+    // Wire up the "Daten eingeben" button
+    const btn = document.getElementById('iwo-enter-data-btn');
+    if (btn) {
+      btn.onclick = () => {
+        overlay.classList.add('hidden');
+        openOptinForInstantWin();
+      };
+    }
+    // Wire up the "Weiterspielen" button (before form submit)
+    const skipBtn = document.getElementById('iwo-skip-btn');
+    if (skipBtn) {
+      skipBtn.onclick = () => {
+        overlay.classList.add('hidden');
+        resumeAfterInstantWin(false);
+      };
+    }
+  }
+}
+
+function openOptinForInstantWin() {
+  // Show the inline optin on screen-game
+  const section = document.getElementById('game-optin-section');
+  if (section) {
+    section.classList.remove('hidden');
+    const form    = document.getElementById('game-optin-form');
+    if (form) form.reset();
+    const errorEl = document.getElementById('game-optin-error');
+    if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+    const btn = document.getElementById('game-optin-submit-btn');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ GEWINN SICHERN'; }
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function resumeAfterInstantWin(codeShown) {
+  // Resume game loop
+  state.gamepaused    = false;
+  state.lastFrameTime = performance.now();
+  state.rafId         = requestAnimationFrame(gameFrame);
+
+  if (!codeShown) {
+    spawnFloatText(cw / 2, ch * 0.35, '▶ WEITER SPIELEN!', '#67C23A');
+  }
+}
+
+// Submit handler for in-game instant-win form
+function handleGameOptinSubmit(e) {
+  e.preventDefault();
+  if (session.submitted) return;
+
+  const form      = document.getElementById('game-optin-form');
+  const errorEl   = document.getElementById('game-optin-error');
+  const submitBtn = document.getElementById('game-optin-submit-btn');
+  const errors    = [];
+
+  errorEl.textContent = '';
+  errorEl.classList.add('hidden');
+  form.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+  form.querySelectorAll('.error-radio').forEach(el => el.classList.remove('error-radio'));
+
+  const v = id => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+
+  if (!v('gfi-contact')) { errors.push('Kontakt-Wunsch auswählen.'); document.getElementById('gfi-contact').classList.add('error'); }
+  if (!v('gfi-vehicle')) { errors.push('Wunschmodell auswählen.');   document.getElementById('gfi-vehicle').classList.add('error'); }
+  if (!v('gfi-zip') || v('gfi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('gfi-zip').classList.add('error'); }
+  if (!v('gfi-city'))  { errors.push('Ort eingeben.');     document.getElementById('gfi-city').classList.add('error'); }
+  if (!v('gfi-first')) { errors.push('Vorname eingeben.'); document.getElementById('gfi-first').classList.add('error'); }
+  if (!v('gfi-last'))  { errors.push('Nachname eingeben.'); document.getElementById('gfi-last').classList.add('error'); }
+  const emailVal = v('gfi-email');
+  if (!emailVal || !emailVal.includes('@')) { errors.push('Gültige E-Mail-Adresse eingeben.'); document.getElementById('gfi-email').classList.add('error'); }
+
+  const getRadio = name => {
+    const checked = form.querySelector(`input[name="${name}"]:checked`);
+    return checked ? checked.value : null;
+  };
+  const consentStay     = getRadio('g_consent_stay_in_touch');
+  const consentBetter   = getRadio('g_consent_better_offers');
+  const consentPartners = getRadio('g_consent_partners');
+  if (!consentStay)     { errors.push('Newsletter-Einwilligung beantworten.');    form.querySelectorAll('input[name="g_consent_stay_in_touch"]').forEach(r => r.closest('.radio-opt').classList.add('error-radio')); }
+  if (!consentBetter)   { errors.push('Angebote-Einwilligung beantworten.');       form.querySelectorAll('input[name="g_consent_better_offers"]').forEach(r => r.closest('.radio-opt').classList.add('error-radio')); }
+  if (!consentPartners) { errors.push('Partner-Einwilligung beantworten.');         form.querySelectorAll('input[name="g_consent_partners"]').forEach(r => r.closest('.radio-opt').classList.add('error-radio')); }
+
+  const termsChecked = document.getElementById('gfi-terms').checked;
+  if (!termsChecked) { errors.push('Teilnahmebedingungen akzeptieren.'); document.getElementById('gfi-terms').classList.add('error'); }
+
+  if (errors.length > 0) {
+    errorEl.innerHTML = errors.map(m => `• ${m}`).join('<br>');
+    errorEl.classList.remove('hidden');
+    errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  submitBtn.disabled    = true;
+  submitBtn.textContent = '⏳ Wird gespeichert…';
+
+  const ev2 = window.LEAP_EVENT;
+  const playerData = {
+    event_id:              ev2 ? ev2.id : undefined,
+    contact_intent:        v('gfi-contact'),
+    vehicle_interest:      v('gfi-vehicle'),
+    zip:                   v('gfi-zip'),
+    city:                  v('gfi-city'),
+    first_name:            v('gfi-first'),
+    last_name:             v('gfi-last'),
+    email:                 emailVal,
+    phone:                 v('gfi-phone') || null,
+    consent_stay_in_touch: consentStay     === 'yes',
+    consent_better_offers: consentBetter   === 'yes',
+    consent_partners:      consentPartners === 'yes',
+    terms_accepted:        true,
+    terms_version_at_entry: ev2 ? ev2.terms_version : 1,
+    privacy_accepted_at:   new Date().toISOString(),
+    entry_source:          'byod',
+  };
+  if (!playerData.event_id) delete playerData.event_id;
+
+  _doGameOptinSubmit(playerData, submitBtn, errorEl);
+}
+
+async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
+  try {
+    const ps  = session.pendingScore || {};
+    const ev3 = window.LEAP_EVENT;
+    const result = await submitEntry({
+      event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
+      score:            ps.score,
+      ghost_overtaken:  ps.ghost_overtaken,
+      level_reached:    ps.level_reached,
+      play_duration_s:  ps.play_duration_s,
+      contact_intent:   playerData.contact_intent,
+      vehicle_interest: playerData.vehicle_interest,
+      zip:              playerData.zip,
+      city:             playerData.city,
+      first_name:       playerData.first_name,
+      last_name:        playerData.last_name,
+      email:            playerData.email,
+      phone:            playerData.phone,
+      consent_stay:     playerData.consent_stay_in_touch,
+      consent_offers:   playerData.consent_better_offers,
+      consent_partners: playerData.consent_partners,
+      terms_accepted:   playerData.terms_accepted,
+      terms_version:    playerData.terms_version_at_entry,
+      entry_source:     playerData.entry_source || 'byod',
+    });
+
+    session.playerId = result && result.player_id;
+    session.scoreId  = result && result.score_id;
+    if (result && result.is_instant_win && result.claim_code) {
+      session.instantWinCode = result.claim_code;
+    } else {
+      // Fallback: client-side code (shown only if server doesn't return one)
+      session.instantWinCode = session.instantWinCode || generateClaimCode();
+    }
+
+    session.submitted = true;
+
+    submitBtn.textContent = '✅ Gespeichert!';
+    submitBtn.disabled    = true;
+
+    // Show the 4-digit code in game
+    const codeWrap = document.getElementById('game-iw-code-wrap');
+    if (codeWrap) {
+      codeWrap.classList.remove('hidden');
+      setEl('game-iw-code', session.instantWinCode);
+      codeWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Show "Weiterspielen" button
+    const continueBtn = document.getElementById('game-iw-continue-btn');
+    if (continueBtn) {
+      continueBtn.classList.remove('hidden');
+      continueBtn.onclick = () => {
+        const section = document.getElementById('game-optin-section');
+        if (section) section.classList.add('hidden');
+        resumeAfterInstantWin(true);
+      };
+    }
+
+  } catch (err) {
+    console.error('[LEAP] Game opt-in submit failed:', err);
+    submitBtn.disabled    = false;
+    submitBtn.textContent = '✅ GEWINN SICHERN';
+    errorEl.textContent   = `⚠️ Speichern fehlgeschlagen. Bitte erneut versuchen. (${err.message || 'Netzwerkfehler'})`;
+    errorEl.classList.remove('hidden');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // INPUT HANDLERS
 // ═══════════════════════════════════════════════════════════
 function onTouchInput(e) {
   e.preventDefault();
-  if (!state.gameActive || !e.touches.length) return;
-  const touch  = e.touches[0];
-  const rect   = canvas.getBoundingClientRect();
+  if (!state.gameActive || state.gamepaused || !e.touches.length) return;
+  const touch    = e.touches[0];
+  const rect     = canvas.getBoundingClientRect();
   paddle.targetX = (touch.clientX - rect.left) - paddle.w / 2;
 }
 
 function onPointerInput(e) {
-  if (!state.gameActive) return;
+  if (!state.gameActive || state.gamepaused) return;
   const rect     = canvas.getBoundingClientRect();
   paddle.targetX = (e.clientX - rect.left) - paddle.w / 2;
 }
@@ -1435,49 +1702,53 @@ function onPointerInput(e) {
 // ═══════════════════════════════════════════════════════════
 function endGame() {
   cancelAnimationFrame(state.rafId);
-  clearInterval(state.gameInterval);
-  state.gameActive = false;
+  state.gameActive  = false;
+  state.gamepaused  = false;
   if (ball2.active) deactivateBall2();
 
   const energyPct = Math.round(state.energy);
   state.score = Math.round(
-    state.hits          * 18 +
-    (state.maxCombo - 1) * state.hits * 8 +
-    energyPct           * 12 +
-    state.wavesCleared  * 250 +
-    state.carTargetsHit * CAR_TARGET_BONUS_SCORE +
+    state.hits            * 18 +
+    (state.maxCombo - 1)  * state.hits * 8 +
+    energyPct             * 12 +
+    state.wavesCleared    * 250 +
+    state.carTargetsHit   * CAR_TARGET_BONUS_SCORE +
     state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE +
     (state.maxLevelReached - 1) * 300 +
-    (state.ghostOvertaken ? 500 : 0)
+    (state.ghostOvertaken ? 500 : 0) +
+    (state.bonusMode ? state.bonusWave * 200 : 0)
   );
 
-  // --- Instant-win check ---
+  // Instant-win check for end-screen (fallback if not triggered mid-game)
   const ev = window.LEAP_EVENT;
-  let isInstantWin = false;
-  if (ev) {
+  let isInstantWin = state.instantWinTriggered && session.submitted;
+  if (!isInstantWin && ev) {
     const scoreThreshold = ev.instant_win_score || 1500;
     const ghostReq       = ev.instant_win_ghost_req !== false;
     isInstantWin = state.score >= scoreThreshold &&
                    (!ghostReq || state.ghostOvertaken);
   }
 
-  // Compute play duration
   const durationS = session.gameStartTs
     ? Math.round((Date.now() - session.gameStartTs) / 1000)
-    : GAME_DURATION;
+    : 60;
 
-  // Store pending score payload (written to DB after player form submit)
-  session.pendingScore = {
-    event_id:        ev ? ev.id : null,
-    score:           state.score,
-    level_reached:   state.maxLevelReached,
-    ghost_overtaken: state.ghostOvertaken,
-    play_duration_s: durationS,
-    is_instant_win:  isInstantWin,
-  };
-  if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+  if (!session.pendingScore || !session.submitted) {
+    session.pendingScore = {
+      event_id:        ev ? ev.id : null,
+      score:           state.score,
+      level_reached:   state.maxLevelReached,
+      ghost_overtaken: state.ghostOvertaken,
+      play_duration_s: durationS,
+      is_instant_win:  isInstantWin,
+    };
+    if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+  } else {
+    // Update score to final value
+    session.pendingScore.score = state.score;
+  }
 
-  if (isInstantWin) {
+  if (isInstantWin && !session.instantWinCode) {
     session.instantWinCode = generateClaimCode();
   }
 
@@ -1489,76 +1760,85 @@ function endGame() {
 
 function populateEndScreen(energyPct, isInstantWin) {
   setEl('res-hits',   String(state.hits));
-  setEl('res-combo',  `\u00d7${state.maxCombo}`);
+  setEl('res-combo',  `×${state.maxCombo}`);
   setEl('res-energy', `${energyPct}%`);
   setEl('res-score',  state.score.toLocaleString('de-DE'));
   setEl('res-waves',  String(state.wavesCleared));
 
   let title, sub;
   if (energyPct >= 100) {
-    title = 'VOLLGELADEN! \u26a1';
-    sub   = 'Perfekte Aufladung \u2013 Leapmotor voll geladen, Turbo aktiv!';
+    title = 'VOLLGELADEN! ⚡';
+    sub   = 'Perfekte Aufladung – Leapmotor voll geladen, Turbo aktiv!';
   } else if (energyPct >= 75) {
     title = 'FAST VOLL!';
-    sub   = `${energyPct}% Batterie \u2013 starke Tischtennis-Performance!`;
+    sub   = `${energyPct}% Batterie – starke Tischtennis-Performance!`;
   } else if (energyPct >= 40) {
     title = 'GUTES TEMPO!';
-    sub   = `${energyPct}% geladen \u2013 n\u00e4chstes Spiel schaffst du 100%!`;
+    sub   = `${energyPct}% geladen – nächstes Spiel schaffst du 100%!`;
   } else {
-    title = 'WEITER \u00dcBEN!';
-    sub   = `${energyPct}% \u2013 Schlag mehr Bl\u00f6cke, lade den Leapmotor auf!`;
+    title = 'WEITER ÜBEN!';
+    sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
   }
-  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE \ud83c\udfc6'];
-  sub += ` \u00b7 Level ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''}) erreicht.`;
-  if (state.ghostOvertaken) sub += ' \ud83d\ude97 Ghost \u00fcberholt!';
+  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE 🏆'];
+  const lvlLabel   = state.bonusMode ? `BONUS W${state.bonusWave}` : (levelNames[state.maxLevelReached] || '');
+  sub += ` · Level ${state.maxLevelReached} (${lvlLabel}) erreicht.`;
+  if (state.ghostOvertaken) sub += ' 🚗 Ghost überholt!';
 
   setEl('end-title', title);
   setEl('end-sub',   sub);
 
   const trophy = document.getElementById('end-trophy');
-  if (trophy) trophy.textContent = energyPct >= 100 ? '\ud83c\udfc6' : energyPct >= 75 ? '\ud83e\udd48' : '\ud83c\udfd3';
+  if (trophy) trophy.textContent = energyPct >= 100 ? '🏆' : energyPct >= 75 ? '🥈' : '🎯';
 
-  // Show instant-win banner (code revealed AFTER form submit)
   const iwBanner = document.getElementById('instant-win-banner');
   if (iwBanner) {
     if (isInstantWin) {
       iwBanner.classList.remove('hidden');
       iwBanner.classList.add('win-active');
+      // If already submitted (mid-game), show code directly
+      if (session.submitted && session.instantWinCode) {
+        const iwCodeWrap = document.getElementById('iw-code-wrap');
+        if (iwCodeWrap) {
+          iwCodeWrap.classList.remove('hidden');
+          setEl('iw-code', session.instantWinCode);
+        }
+      }
     } else {
       iwBanner.classList.add('hidden');
       iwBanner.classList.remove('win-active');
     }
   }
 
-  // Show opt-in form
   const optinSection = document.getElementById('optin-section');
   if (optinSection) {
-    optinSection.classList.remove('hidden');
-    optinSection.style.opacity = '';
-    optinSection.style.pointerEvents = '';
-    const form = document.getElementById('optin-form');
-    if (form) form.reset();
-    const errorEl = document.getElementById('optin-error');
-    if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
-    const submitBtn = document.getElementById('optin-submit-btn');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '\u2705 ABSENDEN'; }
-    if (isInstantWin) {
-      setEl('optin-sub', '\ud83c\udf89 Gib deine Daten ein \u2013 danach siehst du deinen Sofort-Gewinn-Code!');
+    if (session.submitted) {
+      // Already submitted via mid-game form – collapse/hide to avoid re-submit
+      optinSection.classList.add('hidden');
     } else {
-      setEl('optin-sub', 'Hinterlasse deine Daten f\u00fcr das Leaderboard und deine Gewinnchance!');
+      optinSection.classList.remove('hidden');
+      optinSection.style.opacity      = '';
+      optinSection.style.pointerEvents = '';
+      const form    = document.getElementById('optin-form');
+      if (form) form.reset();
+      const errorEl = document.getElementById('optin-error');
+      if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+      const submitBtn = document.getElementById('optin-submit-btn');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✅ ABSENDEN'; }
+      if (isInstantWin) {
+        setEl('optin-sub', '🎉 Gib deine Daten ein – danach siehst du deinen Sofort-Gewinn-Code!');
+      } else {
+        setEl('optin-sub', 'Hinterlasse deine Daten für das Leaderboard und deine Gewinnchance!');
+      }
     }
   }
 
   animateCountUp('res-score', 0, state.score, 1200);
-
-  // Load real leaderboard (async, graceful)
   buildLeaderboard();
 }
 
 // ═══════════════════════════════════════════════════════════
-// OPT-IN FORM HANDLER
+// OPT-IN FORM HANDLER (end screen)
 // ═══════════════════════════════════════════════════════════
-
 function handleOptinSubmit(e) {
   e.preventDefault();
   if (session.submitted) return;
@@ -1568,49 +1848,25 @@ function handleOptinSubmit(e) {
   const submitBtn = document.getElementById('optin-submit-btn');
   const errors    = [];
 
-  // Clear previous errors
   errorEl.textContent = '';
   errorEl.classList.add('hidden');
   form.querySelectorAll('.error').forEach(function(el) { el.classList.remove('error'); });
   form.querySelectorAll('.error-radio').forEach(function(el) { el.classList.remove('error-radio'); });
 
-  // --- Validate ---
   const v = function(id) {
     const el = document.getElementById(id);
     return el ? el.value.trim() : '';
   };
 
-  if (!v('fi-contact')) {
-    errors.push('Kontakt-Wunsch ausw\u00e4hlen.');
-    document.getElementById('fi-contact').classList.add('error');
-  }
-  if (!v('fi-vehicle')) {
-    errors.push('Wunschmodell ausw\u00e4hlen.');
-    document.getElementById('fi-vehicle').classList.add('error');
-  }
-  if (!v('fi-zip') || v('fi-zip').length < 4) {
-    errors.push('G\u00fcltige PLZ eingeben.');
-    document.getElementById('fi-zip').classList.add('error');
-  }
-  if (!v('fi-city')) {
-    errors.push('Ort eingeben.');
-    document.getElementById('fi-city').classList.add('error');
-  }
-  if (!v('fi-first')) {
-    errors.push('Vorname eingeben.');
-    document.getElementById('fi-first').classList.add('error');
-  }
-  if (!v('fi-last')) {
-    errors.push('Nachname eingeben.');
-    document.getElementById('fi-last').classList.add('error');
-  }
+  if (!v('fi-contact')) { errors.push('Kontakt-Wunsch auswählen.');         document.getElementById('fi-contact').classList.add('error'); }
+  if (!v('fi-vehicle')) { errors.push('Wunschmodell auswählen.');            document.getElementById('fi-vehicle').classList.add('error'); }
+  if (!v('fi-zip') || v('fi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('fi-zip').classList.add('error'); }
+  if (!v('fi-city'))    { errors.push('Ort eingeben.');                      document.getElementById('fi-city').classList.add('error'); }
+  if (!v('fi-first'))   { errors.push('Vorname eingeben.');                  document.getElementById('fi-first').classList.add('error'); }
+  if (!v('fi-last'))    { errors.push('Nachname eingeben.');                 document.getElementById('fi-last').classList.add('error'); }
   const emailVal = v('fi-email');
-  if (!emailVal || !emailVal.includes('@')) {
-    errors.push('G\u00fcltige E-Mail-Adresse eingeben.');
-    document.getElementById('fi-email').classList.add('error');
-  }
+  if (!emailVal || !emailVal.includes('@')) { errors.push('Gültige E-Mail-Adresse eingeben.'); document.getElementById('fi-email').classList.add('error'); }
 
-  // Consent radios – all three must be answered (yes OR no is valid)
   const getRadio = function(name) {
     const checked = form.querySelector('input[name="' + name + '"]:checked');
     return checked ? checked.value : null;
@@ -1618,36 +1874,22 @@ function handleOptinSubmit(e) {
   const consentStay     = getRadio('consent_stay_in_touch');
   const consentBetter   = getRadio('consent_better_offers');
   const consentPartners = getRadio('consent_partners');
-  if (!consentStay) {
-    errors.push('Newsletter-Einwilligung bitte beantworten.');
-    form.querySelectorAll('input[name="consent_stay_in_touch"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
-  }
-  if (!consentBetter) {
-    errors.push('Angebote-Einwilligung bitte beantworten.');
-    form.querySelectorAll('input[name="consent_better_offers"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
-  }
-  if (!consentPartners) {
-    errors.push('Partner-Einwilligung bitte beantworten.');
-    form.querySelectorAll('input[name="consent_partners"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
-  }
+  if (!consentStay)     { errors.push('Newsletter-Einwilligung beantworten.');    form.querySelectorAll('input[name="consent_stay_in_touch"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); }); }
+  if (!consentBetter)   { errors.push('Angebote-Einwilligung beantworten.');       form.querySelectorAll('input[name="consent_better_offers"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); }); }
+  if (!consentPartners) { errors.push('Partner-Einwilligung beantworten.');         form.querySelectorAll('input[name="consent_partners"]').forEach(function(r)   { r.closest('.radio-opt').classList.add('error-radio'); }); }
 
-  // Terms checkbox
   const termsChecked = document.getElementById('fi-terms').checked;
-  if (!termsChecked) {
-    errors.push('Teilnahmebedingungen m\u00fcssen akzeptiert werden.');
-    document.getElementById('fi-terms').classList.add('error');
-  }
+  if (!termsChecked) { errors.push('Teilnahmebedingungen müssen akzeptiert werden.'); document.getElementById('fi-terms').classList.add('error'); }
 
   if (errors.length > 0) {
-    errorEl.innerHTML = errors.map(function(m) { return '\u2022 ' + m; }).join('<br>');
+    errorEl.innerHTML = errors.map(function(m) { return '• ' + m; }).join('<br>');
     errorEl.classList.remove('hidden');
     errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return;
   }
 
-  // --- Submit ---
   submitBtn.disabled    = true;
-  submitBtn.textContent = '\u23f3 Wird gespeichert\u2026';
+  submitBtn.textContent = '⏳ Wird gespeichert…';
 
   const ev2 = window.LEAP_EVENT;
   const playerData = {
@@ -1675,9 +1917,7 @@ function handleOptinSubmit(e) {
 
 async function _doOptinSubmit(playerData, submitBtn, errorEl) {
   try {
-    // Atomarer RPC-Call: Player + Score (+ Instant-Win) in EINER Transaktion.
-    // Sofort-Gewinn wird SERVERSEITIG bestimmt (nicht client-manipulierbar).
-    const ps = session.pendingScore || {};
+    const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
     const result = await submitEntry({
       event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
@@ -1703,7 +1943,6 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
-    // Server ist die Wahrheit über Sofort-Gewinn + Code:
     if (result && result.is_instant_win && result.claim_code) {
       session.instantWinCode = result.claim_code;
     } else {
@@ -1712,8 +1951,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.submitted = true;
 
-    // Success UI
-    submitBtn.textContent = '\u2705 Gespeichert!';
+    submitBtn.textContent = '✅ Gespeichert!';
     submitBtn.disabled    = true;
     const optinSection = document.getElementById('optin-section');
     if (optinSection) {
@@ -1721,7 +1959,6 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
       optinSection.style.pointerEvents = 'none';
     }
 
-    // If instant win: reveal code now
     if (session.instantWinCode) {
       const iwCodeWrap = document.getElementById('iw-code-wrap');
       if (iwCodeWrap) {
@@ -1731,14 +1968,13 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
       }
     }
 
-    // Refresh leaderboard with player now in DB
     buildLeaderboard();
 
   } catch (err) {
     console.error('[LEAP] Opt-in submit failed:', err);
     submitBtn.disabled    = false;
-    submitBtn.textContent = '\u2705 ABSENDEN';
-    errorEl.textContent   = '\u26a0\ufe0f Speichern fehlgeschlagen. Bitte erneut versuchen. (' + (err.message || 'Netzwerkfehler') + ')';
+    submitBtn.textContent = '✅ ABSENDEN';
+    errorEl.textContent   = `⚠️ Speichern fehlgeschlagen. Bitte erneut versuchen. (${err.message || 'Netzwerkfehler'})`;
     errorEl.classList.remove('hidden');
   }
 }
@@ -1746,18 +1982,17 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 // ═══════════════════════════════════════════════════════════
 // REAL LEADERBOARD
 // ═══════════════════════════════════════════════════════════
-
 async function buildLeaderboard() {
   const container = document.getElementById('lb-entries');
   if (!container) return;
 
   const ev = window.LEAP_EVENT;
   if (!ev) {
-    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\ud83d\udce1 Leaderboard nicht verf\u00fcgbar (offline)</div>';
+    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">📡 Leaderboard nicht verfügbar (offline)</div>';
     return;
   }
 
-  container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\u23f3 Lade Leaderboard\u2026</div>';
+  container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">⏳ Lade Leaderboard…</div>';
 
   try {
     const rows = await getLeaderboard(ev.id, 10);
@@ -1772,7 +2007,6 @@ async function buildLeaderboard() {
       };
     });
 
-    // If current run not yet in top 10, show local entry at bottom
     const localInTop = entries.some(function(e) { return e.isYou; });
     if (!localInTop && state.score > 0) {
       entries.push({
@@ -1787,7 +2021,7 @@ async function buildLeaderboard() {
     container.innerHTML = '';
 
     if (entries.length === 0) {
-      container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">Noch keine Eintr\u00e4ge \u2013 sei der Erste!</div>';
+      container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">Noch keine Einträge – sei der Erste!</div>';
       return;
     }
 
@@ -1796,14 +2030,14 @@ async function buildLeaderboard() {
       const el        = document.createElement('div');
       el.className    = 'lb-entry' + (entry.isYou ? ' you' : '');
       const rankClass = rank <= 3 ? ['top1', 'top2', 'top3'][rank - 1] : '';
-      const rankIcon  = rank <= 3 ? ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'][rank - 1] : rank;
+      const rankIcon  = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank;
       const youBadge  = entry.isYou ? '<span class="you-badge">DU</span>' : '';
-      const cityStr   = entry.city ? ' <span style="color:var(--muted);font-size:11px">' + entry.city + '</span>' : '';
+      const cityStr   = entry.city ? ` <span style="color:var(--muted);font-size:11px">${entry.city}</span>` : '';
 
       el.innerHTML =
-        '<span class="lb-rank ' + rankClass + '">' + rankIcon + '</span>' +
-        '<span class="lb-name">' + entry.name + cityStr + youBadge + '</span>' +
-        '<span class="lb-score">' + entry.score.toLocaleString('de-DE') + '</span>';
+        `<span class="lb-rank ${rankClass}">${rankIcon}</span>` +
+        `<span class="lb-name">${entry.name}${cityStr}${youBadge}</span>` +
+        `<span class="lb-score">${entry.score.toLocaleString('de-DE')}</span>`;
 
       container.appendChild(el);
 
@@ -1818,27 +2052,24 @@ async function buildLeaderboard() {
 
   } catch (err) {
     console.warn('[LEAP] Leaderboard load failed:', err.message);
-    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\u26a0\ufe0f Leaderboard konnte nicht geladen werden</div>';
+    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">⚠️ Leaderboard konnte nicht geladen werden</div>';
   }
 }
 
 // ═══════════════════════════════════════════════════════════
 // RESTART / SHARE
 // ═══════════════════════════════════════════════════════════
-// Go to start screen (home)
 function goHome() {
   showScreen('screen-start');
   resetGameState();
 }
 
-// Play again directly – skip start screen
 function playAgainDirect() {
   resetGameState();
   showScreen('screen-game');
   runCountdown();
 }
 
-// Backward-compat alias
 function restartGame() {
   goHome();
 }
@@ -1867,22 +2098,22 @@ function copyShareText() {
 }
 function buildShareText() {
   const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE'];
-  return `🏓⚡🚗 LEAP CHARGE – Tischtennis × E-Drive
+  const lvlLabel   = state.bonusMode ? `BONUS W${state.bonusWave}` : (levelNames[state.maxLevelReached] || '');
+  return `🏓⚡🚗 LEAPMOTOR TT CHALLENGE
 
 Score:    ${state.score.toLocaleString('de-DE')} Punkte
 Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
 Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
-Level:    ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''})${state.ghostOvertaken ? ' · 🚗 Ghost überholt!' : ''}
+Level:    ${state.maxLevelReached} (${lvlLabel})${state.ghostOvertaken ? ' · 🚗 Ghost überholt!' : ''}
 
 Kannst du meinen Leapmotor-Score schlagen?
-#LeapMotor #LeapCharge #Tischtennis #EMobility`;
+#LeapMotor #TTChallenge #Tischtennis #EMobility`;
 }
 
 // ═══════════════════════════════════════════════════════════
-// CAR BLOCK ICON (canvas-drawn car silhouette for targets)
+// CAR BLOCK ICON
 // ═══════════════════════════════════════════════════════════
 function drawCarBlock(bx, by, bw, bh) {
-  // Draw a simplified top-side car silhouette inside the block cell.
   const cx   = bx + bw / 2;
   const cy   = by + bh / 2;
   const half = Math.min(bw * 0.32, bh * 0.42);
@@ -1955,23 +2186,13 @@ function animateCountUp(id, from, to, duration) {
   const start = performance.now();
   const diff  = to - from;
   (function step(now) {
-    const p  = Math.min((now - start) / duration, 1);
-    const e  = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    const p = Math.min((now - start) / duration, 1);
+    const e = 1 - Math.pow(1 - p, 3);
     el.textContent = Math.round(from + diff * e).toLocaleString('de-DE');
     if (p < 1) requestAnimationFrame(step);
   })(start);
 }
 
-// ═══════════════════════════════════════════════════════════
-// GLOBAL EVENT HANDLERS
-// ═══════════════════════════════════════════════════════════
-
-// Prevent scroll during gameplay
-document.addEventListener('touchmove', (e) => {
-  if (state.gameActive) e.preventDefault();
-}, { passive: false });
-
-// Init on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('screen-start').classList.add('active');
-});
+function generateClaimCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
