@@ -53,14 +53,34 @@ async function _supaFetch(path, opts = {}) {
  * Returns the first active event object, or null if none.
  */
 async function getActiveEvent() {
-  const rows = await _supaFetch(
+  // Fetch base fields (always exist in the original schema).
+  const baseRows = await _supaFetch(
     '/rest/v1/events?is_active=eq.true' +
-    '&select=id,name,instant_win_score,instant_win_ghost_req,terms_md,terms_version,' +
-    'difficulty,cfg_ball_base_speed,cfg_ball_max_speed,cfg_lives,' +
-    'cfg_instant_win_score,cfg_extra_ball_enabled,cfg_extra_ball_min_level' +
+    '&select=id,name,instant_win_score,instant_win_ghost_req,terms_md,terms_version' +
     '&limit=1'
   );
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!Array.isArray(baseRows) || baseRows.length === 0) return null;
+  const ev = baseRows[0];
+
+  // Try to fetch the difficulty/config columns separately (added by migration 04).
+  // If the columns do not exist yet (migration not run), we silently fall back
+  // to defaults — the game still works, just uses the normal preset.
+  try {
+    const cfgRows = await _supaFetch(
+      '/rest/v1/events?id=eq.' + encodeURIComponent(ev.id) +
+      '&select=difficulty,cfg_ball_base_speed,cfg_ball_max_speed,cfg_lives,' +
+      'cfg_instant_win_score,cfg_extra_ball_enabled,cfg_extra_ball_min_level' +
+      '&limit=1'
+    );
+    if (Array.isArray(cfgRows) && cfgRows.length > 0) {
+      Object.assign(ev, cfgRows[0]);
+    }
+  } catch(e) {
+    // Migration not yet applied — difficulty fields unavailable, use preset defaults.
+    console.info('[LEAP] difficulty columns not found — using normal preset defaults.');
+  }
+
+  return ev;
 }
 
 /**
