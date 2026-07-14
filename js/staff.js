@@ -1088,6 +1088,80 @@ function exportEventCSV(eventId, eventName, btn) {
     btn.textContent = '⏳ Wird erstellt…';
   }
 
+  // ── Try RPC first (SECURITY DEFINER — bypasses RLS on players table) ──
+  callRpc('get_event_export', {
+    p_event_id:  eventId,
+    p_staff_pin: STAFF_PIN,
+  }).then(function(rpcData) {
+    var players = Array.isArray(rpcData) ? rpcData : [];
+    buildCsvFromRpc(players, eventId, eventName, btn, origText);
+  }).catch(function(rpcErr) {
+    // RPC not deployed yet → fallback to direct table fetch (may fail with RLS)
+    console.warn('[Staff] get_event_export RPC failed (' + rpcErr.message + ') → Fallback auf direkten Fetch.');
+    showToast('\u2139\ufe0f RPC nicht verf\u00fcgbar \u2013 Fallback-Export (RLS evtl. aktiv)', false);
+    exportEventCsvFallback(eventId, eventName, btn, origText);
+  });
+}
+
+// ── RPC-based CSV builder ──────────────────────────────────
+function buildCsvFromRpc(players, eventId, eventName, btn, origText) {
+  var headers = [
+    'Vorname', 'Nachname', 'Email', 'Telefon', 'PLZ', 'Ort',
+    'Kontakt-Wunsch', 'Wunschmodell',
+    'Newsletter-Einw.', 'Angebote-Einw.', 'Partner-Einw.', 'TNB akzeptiert',
+    'Bester Score', 'Level erreicht', 'Ghost überholt', 'Spieldauer (Sek)',
+    'Instant-Win', 'Gewinn-Code', 'Code eingelöst am', 'Eingelöst von Staff',
+    'Eintrag-Zeitstempel', 'Quelle',
+  ];
+
+  function csvCell(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    if (s.indexOf(';') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+  function boolDe(v) { return v ? 'Ja' : 'Nein'; }
+
+  var rows = [headers.map(csvCell).join(';')];
+
+  players.forEach(function(p) {
+    var row = [
+      p.first_name            || '',
+      p.last_name             || '',
+      p.email                 || '',
+      p.phone                 || '',
+      p.zip                   || '',
+      p.city                  || '',
+      p.contact_intent        || '',
+      p.vehicle_interest      || '',
+      boolDe(p.consent_stay_in_touch),
+      boolDe(p.consent_better_offers),
+      boolDe(p.consent_partners),
+      boolDe(p.terms_accepted),
+      p.best_score            !== undefined && p.best_score !== null ? p.best_score           : '',
+      p.level_reached         !== undefined && p.level_reached !== null ? p.level_reached     : '',
+      p.ghost_overtaken === true ? 'Ja' : p.ghost_overtaken === false ? 'Nein' : '',
+      p.play_duration_s       !== undefined && p.play_duration_s !== null ? p.play_duration_s : '',
+      p.instant_win_code      ? 'Ja' : 'Nein',
+      p.instant_win_code      || '',
+      fmtDate(p.instant_win_claimed_at),
+      p.instant_win_claimed_by || '',
+      fmtDate(p.entry_timestamp),
+      p.entry_source          || '',
+    ].map(csvCell);
+    rows.push(row.join(';'));
+  });
+
+  downloadCsv(rows, eventName, players.length, btn, origText);
+}
+
+// ── Fallback: direct table fetch (may hit RLS) ─────────────
+function exportEventCsvFallback(eventId, eventName, btn, origText) {
   Promise.all([
     supaFetch('/rest/v1/players?event_id=eq.' + encodeURIComponent(eventId) +
               '&select=*&order=created_at.asc'),
@@ -1095,32 +1169,28 @@ function exportEventCSV(eventId, eventName, btn) {
               '&select=*&order=score.desc'),
     supaFetch('/rest/v1/instant_wins?event_id=eq.' + encodeURIComponent(eventId) +
               '&select=*'),
-  ]).then(function (results) {
+  ]).then(function(results) {
     var players = results[0] || [];
     var scores  = results[1] || [];
     var wins    = results[2] || [];
 
-    // Best score per player (highest score row)
     var bestScores = {};
-    scores.forEach(function (s) {
+    scores.forEach(function(s) {
       if (!s.player_id) return;
       if (!bestScores[s.player_id] || s.score > bestScores[s.player_id].score) {
         bestScores[s.player_id] = s;
       }
     });
-
-    // Win per player (via score_id → player_id link)
     var scoreMap = {};
-    scores.forEach(function (s) { scoreMap[s.id] = s; });
+    scores.forEach(function(s) { scoreMap[s.id] = s; });
     var winByPlayer = {};
-    wins.forEach(function (w) {
+    wins.forEach(function(w) {
       var sc = scoreMap[w.score_id];
       if (sc && sc.player_id && !winByPlayer[sc.player_id]) {
         winByPlayer[sc.player_id] = w;
       }
     });
 
-    // CSV header row (German, semicolon-separated)
     var headers = [
       'Vorname', 'Nachname', 'Email', 'Telefon', 'PLZ', 'Ort',
       'Kontakt-Wunsch', 'Wunschmodell',
@@ -1137,15 +1207,13 @@ function exportEventCSV(eventId, eventName, btn) {
       }
       return s;
     }
-
     function fmtDate(iso) {
       if (!iso) return '';
       return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
     }
 
     var rows = [headers.map(csvCell).join(';')];
-
-    players.forEach(function (p) {
+    players.forEach(function(p) {
       var bs  = bestScores[p.id] || {};
       var win = winByPlayer[p.id] || {};
       var row = [
@@ -1166,7 +1234,7 @@ function exportEventCSV(eventId, eventName, btn) {
         bs.ghost_overtaken     === true  ? 'Ja'
           : bs.ghost_overtaken === false ? 'Nein' : '',
         bs.play_duration_s     !== undefined ? bs.play_duration_s : '',
-        win.claim_code ? 'Ja' : 'Nein',
+        win.claim_code         ? 'Ja' : 'Nein',
         win.claim_code         || '',
         fmtDate(win.claimed_at),
         win.claimed_by_staff   || '',
@@ -1176,36 +1244,38 @@ function exportEventCSV(eventId, eventName, btn) {
       rows.push(row.join(';'));
     });
 
-    var csv  = '\uFEFF' + rows.join('\r\n');
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var url  = URL.createObjectURL(blob);
-    var now  = new Date().toISOString().slice(0, 10);
-    var safeName = (eventName || 'Event').replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '_');
-    var filename = 'LeapCharge_' + safeName + '_' + now + '.csv';
+    downloadCsv(rows, eventName, players.length, btn, origText);
+  }).catch(function(err) {
+    showToast('⚠️ Fallback-Export fehlgeschlagen: ' + err.message, true);
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  });
+}
 
-    var a = document.createElement('a');
-    a.href     = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+// ── Shared download helper ─────────────────────────────────
+function downloadCsv(rows, eventName, playerCount, btn, origText) {
+  var csv      = '\uFEFF' + rows.join('\r\n');
+  var blob     = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url      = URL.createObjectURL(blob);
+  var now      = new Date().toISOString().slice(0, 10);
+  var safeName = (eventName || 'Event').replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '_');
+  var filename = 'LeapCharge_' + safeName + '_' + now + '.csv';
 
-    if (btn) {
-      btn.textContent = '✅ Heruntergeladen';
-      setTimeout(function () {
-        btn.disabled    = false;
-        btn.textContent = origText;
-      }, 3000);
-    }
-    showToast('✅ CSV für ' + (players.length) + ' Spieler erstellt.');
-  }).catch(function (err) {
-    showToast('⚠️ Export fehlgeschlagen: ' + err.message, true);
-    if (btn) {
+  var a = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+
+  if (btn) {
+    btn.textContent = '✅ Heruntergeladen';
+    setTimeout(function() {
       btn.disabled    = false;
       btn.textContent = origText;
-    }
-  });
+    }, 3000);
+  }
+  showToast('✅ CSV für ' + playerCount + ' Spieler erstellt.');
 }
 
 // ══════════════════════════════════════════════════════════════

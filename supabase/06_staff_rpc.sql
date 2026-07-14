@@ -294,3 +294,89 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.record_fallback_win(uuid, uuid, uuid, text, text)
   TO anon, authenticated;
+
+
+-- ── 5. get_event_export (Sprint B — CSV Export RLS-Fix) ──────
+-- Umgeht RLS auf der players-Tabelle: anon darf normalerweise kein SELECT.
+-- SECURITY DEFINER läuft als postgres → kann alles lesen.
+-- Gibt JSON-Array zurück: alle Spieler + bester Score + Gewinn-Code.
+-- Felder sind identisch mit dem Client-seitigen CSV-Export (staff.js).
+CREATE OR REPLACE FUNCTION public.get_event_export(
+  p_event_id  uuid,
+  p_staff_pin text
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_result json;
+BEGIN
+  -- ── PIN prüfen ──────────────────────────────────────────────
+  IF p_staff_pin <> '1234' THEN
+    RAISE EXCEPTION 'invalid_pin';
+  END IF;
+
+  -- ── Export-Query ────────────────────────────────────────────
+  -- Für jeden Spieler: Kontaktdaten, bester Score, Sofort-Gewinn-Code
+  SELECT json_agg(row_to_json(export_row))
+  INTO   v_result
+  FROM (
+    SELECT
+      p.id                  AS player_id,
+      p.first_name,
+      p.last_name,
+      p.email,
+      p.phone,
+      p.zip,
+      p.city,
+      p.contact_intent,
+      p.vehicle_interest,
+      p.consent_stay        AS consent_stay_in_touch,
+      p.consent_offers      AS consent_better_offers,
+      p.consent_partners,
+      p.terms_accepted,
+      p.created_at          AS entry_timestamp,
+      p.entry_source,
+      -- Bester Score dieses Spielers für dieses Event
+      bs.score              AS best_score,
+      bs.level_reached,
+      bs.ghost_overtaken,
+      bs.play_duration_s,
+      -- Sofort-Gewinn
+      iw.claim_code         AS instant_win_code,
+      iw.claimed_at         AS instant_win_claimed_at,
+      iw.claimed_by_staff   AS instant_win_claimed_by,
+      CASE WHEN iw.claimed_at IS NOT NULL THEN true ELSE false END AS instant_win_redeemed
+    FROM players p
+    -- Bester Score per Spieler (höchster score)
+    LEFT JOIN LATERAL (
+      SELECT score, level_reached, ghost_overtaken, play_duration_s
+      FROM scores s
+      WHERE s.player_id = p.id
+        AND s.event_id  = p_event_id
+      ORDER BY s.score DESC
+      LIMIT 1
+    ) bs ON true
+    -- Sofort-Gewinn (falls vorhanden, via scores.id)
+    LEFT JOIN LATERAL (
+      SELECT iw2.claim_code, iw2.claimed_at, iw2.claimed_by_staff
+      FROM instant_wins iw2
+      JOIN scores sc ON sc.id = iw2.score_id
+      WHERE sc.player_id = p.id
+        AND iw2.event_id = p_event_id
+      ORDER BY iw2.created_at ASC
+      LIMIT 1
+    ) iw ON true
+    WHERE p.event_id = p_event_id
+    ORDER BY p.created_at ASC
+  ) export_row;
+
+  -- Gib leeres Array zurück wenn keine Spieler
+  RETURN COALESCE(v_result, '[]'::json);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_event_export(uuid, text)
+  TO anon, authenticated;
