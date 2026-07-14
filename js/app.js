@@ -1133,18 +1133,14 @@ function doBouncePaddle(b) {
   let   spd      = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
 
   // SLICE MECHANIC: outer 30% of paddle slows the ball (like a slice shot).
-  // edgeFrac: 0 = center, 1 = extreme edge
+  // Floor = base speed: if already at/below base speed, no slice at all.
+  // Applies per-ball (b = ball or ball2).
   const edgeFrac = Math.abs(norm);
-  let sliced = false;
-  if (edgeFrac > 0.70) {
-    // Slice zone: reduce speed up to 30% at the very edge
+  const baseSpd  = GAME_CFG.ballBaseSpeed * ch;
+  if (edgeFrac > 0.70 && spd > baseSpd) {
     const sliceMult = 1 - ((edgeFrac - 0.70) / 0.30) * 0.30;
-    const minSpd    = GAME_CFG.ballBaseSpeed * ch * 0.65;  // never too slow
-    spd = Math.max(spd * sliceMult, minSpd);
-    sliced = true;
-    if (b === ball) {
-      spawnFloatText(b.x, paddle.y - 20, 'SLICE', '#95D475');
-    }
+    spd = Math.max(spd * sliceMult, baseSpd);  // never slower than base
+    spawnFloatText(b.x, paddle.y - 20, 'SLICE', '#95D475');
   }
 
   b.vx = Math.sin(angle) * spd;
