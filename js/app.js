@@ -2064,6 +2064,8 @@ function openOptinForInstantWin() {
     if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
     const btn = document.getElementById('game-optin-submit-btn');
     if (btn) { btn.disabled = false; btn.textContent = '✅ GEWINN SICHERN'; }
+    // Prefill from localStorage for convenience
+    prefillGameOptinFromStorage();
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
@@ -2194,6 +2196,9 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.submitted = true;
 
+    // Save player data to localStorage for future prefill
+    savePlayerToStorage(playerData);
+
     submitBtn.textContent = '✅ Gespeichert!';
     submitBtn.disabled    = true;
 
@@ -2248,6 +2253,75 @@ function onPointerInput(e) {
 function onLaunchInput(e) {
   if (!state.gameActive || state.gamepaused) return;
   if (!ballLaunched) launchBall();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOCAL STORAGE – PLAYER PREFILL
+// ═══════════════════════════════════════════════════════════
+const PLAYER_STORAGE_KEY = 'leap_player_v1';
+
+function savePlayerToStorage(formData) {
+  try {
+    const toSave = {
+      first_name:       formData.first_name       || '',
+      last_name:        formData.last_name         || '',
+      email:            formData.email             || '',
+      phone:            formData.phone             || '',
+      zip:              formData.zip               || '',
+      city:             formData.city              || '',
+      vehicle_interest: formData.vehicle_interest  || '',
+      contact_intent:   formData.contact_intent    || '',
+    };
+    localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    console.warn('[LEAP] savePlayerToStorage failed:', e);
+  }
+}
+
+function prefillFormFromStorage() {
+  try {
+    const raw = localStorage.getItem(PLAYER_STORAGE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    const setField = function(id, val) {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    };
+    setField('fi-first',   d.first_name);
+    setField('fi-last',    d.last_name);
+    setField('fi-email',   d.email);
+    setField('fi-phone',   d.phone);
+    setField('fi-zip',     d.zip);
+    setField('fi-city',    d.city);
+    setField('fi-vehicle', d.vehicle_interest);
+    setField('fi-contact', d.contact_intent);
+    // Consents + TNB: NEVER prefill (DSGVO — must be explicit each time)
+  } catch (e) {
+    console.warn('[LEAP] prefillFormFromStorage failed:', e);
+  }
+}
+
+function prefillGameOptinFromStorage() {
+  try {
+    const raw = localStorage.getItem(PLAYER_STORAGE_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    const setField = function(id, val) {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    };
+    setField('gfi-first',   d.first_name);
+    setField('gfi-last',    d.last_name);
+    setField('gfi-email',   d.email);
+    setField('gfi-phone',   d.phone);
+    setField('gfi-zip',     d.zip);
+    setField('gfi-city',    d.city);
+    setField('gfi-vehicle', d.vehicle_interest);
+    setField('gfi-contact', d.contact_intent);
+    // Consents + TNB: NEVER prefill (DSGVO)
+  } catch (e) {
+    console.warn('[LEAP] prefillGameOptinFromStorage failed:', e);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2315,83 +2389,82 @@ function endGame() {
 }
 
 function populateEndScreen(energyPct, isInstantWin) {
+  // Fill score values (DOM ready, but not visible until reveal)
   setEl('res-hits',   String(state.hits));
   setEl('res-combo',  `×${state.maxCombo}`);
   setEl('res-energy', `${energyPct}%`);
-  setEl('res-score',  state.score.toLocaleString('de-DE'));
+  setEl('res-score',  '0');  // will be animated on reveal
   setEl('res-waves',  String(state.wavesCleared));
 
-  let title, sub;
-  if (energyPct >= 100) {
-    title = 'VOLLGELADEN! ⚡';
-    sub   = 'Perfekte Aufladung – Leapmotor voll geladen, Turbo aktiv!';
-  } else if (energyPct >= 75) {
-    title = 'FAST VOLL!';
-    sub   = `${energyPct}% Batterie – starke Tischtennis-Performance!`;
-  } else if (energyPct >= 40) {
-    title = 'GUTES TEMPO!';
-    sub   = `${energyPct}% geladen – nächstes Spiel schaffst du 100%!`;
+  // Hero sub-text based on win state
+  const isWinner = isInstantWin || state.instantWinPending;
+  if (isWinner) {
+    setEl('end-hero-sub', '🎉 Du hast einen Sofort-Gewinn! Trag dich ein, um deinen Gewinn-Code und Leaderboard-Platz zu sehen.');
   } else {
-    title = 'WEITER ÜBEN!';
-    sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
+    setEl('end-hero-sub', 'Füll das Formular aus – dann enthüllen wir deinen Score und deinen Leaderboard-Platz.');
   }
-  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE 🏆'];
-  const lvlLabel   = state.maxLevelReached >= 5 ? 'OVERTAKE 🏆' : (levelNames[state.maxLevelReached] || '');
-  sub += ` · Level ${state.maxLevelReached} (${lvlLabel}) erreicht.`;
-  if (state.ghostOvertaken) sub += ' 🚗 Ghost überholt!';
 
-  setEl('end-title', title);
-  setEl('end-sub',   sub);
+  // CTA button text
+  const submitBtn = document.getElementById('optin-submit-btn');
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    if (isWinner) {
+      submitBtn.textContent = '⚡ GEWINN ABHOLEN & HIGHSCORE SICHERN';
+    } else {
+      submitBtn.textContent = '🏆 HIGHSCORE SICHERN & RANGLISTE BETRETEN';
+    }
+  }
 
-  const trophy = document.getElementById('end-trophy');
-  if (trophy) trophy.textContent = energyPct >= 100 ? '🏆' : energyPct >= 75 ? '🥈' : '🎯';
+  // Show/hide CTA card
+  const ctaCard   = document.getElementById('end-cta-card');
+  const revealDiv = document.getElementById('end-reveal');
 
+  if (session.submitted) {
+    // Already submitted via mid-game form – skip form, show reveal directly
+    if (ctaCard)   ctaCard.classList.add('hidden');
+    if (revealDiv) {
+      revealDiv.classList.remove('hidden');
+      revealDiv.classList.add('reveal-active');
+    }
+    // Show instant win code if available
+    _showInstantWinIfNeeded(isInstantWin);
+    animateCountUp('res-score', 0, state.score, 1200);
+    buildLeaderboard();
+  } else {
+    // Default: show form, hide reveal
+    if (ctaCard) {
+      ctaCard.classList.remove('hidden');
+      ctaCard.style.opacity       = '';
+      ctaCard.style.pointerEvents = '';
+    }
+    if (revealDiv) revealDiv.classList.add('hidden');
+    // Reset form
+    const form    = document.getElementById('optin-form');
+    if (form) form.reset();
+    const errorEl = document.getElementById('optin-error');
+    if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+    // Prefill from localStorage
+    prefillFormFromStorage();
+  }
+}
+
+function _showInstantWinIfNeeded(isInstantWin) {
   const iwBanner = document.getElementById('instant-win-banner');
-  if (iwBanner) {
-    if (isInstantWin) {
-      iwBanner.classList.remove('hidden');
-      iwBanner.classList.add('win-active');
-      // If already submitted (mid-game), show code directly
-      if (session.submitted && session.instantWinCode) {
-        const iwCodeWrap = document.getElementById('iw-code-wrap');
-        if (iwCodeWrap) {
-          iwCodeWrap.classList.remove('hidden');
-          setEl('iw-code', session.instantWinCode);
-        }
-      }
-    } else {
-      iwBanner.classList.add('hidden');
-      iwBanner.classList.remove('win-active');
-    }
-  }
-
-  const optinSection = document.getElementById('optin-section');
-  if (optinSection) {
-    if (session.submitted) {
-      // Already submitted via mid-game form – collapse/hide to avoid re-submit
-      optinSection.classList.add('hidden');
-    } else {
-      optinSection.classList.remove('hidden');
-      optinSection.style.opacity      = '';
-      optinSection.style.pointerEvents = '';
-      const form    = document.getElementById('optin-form');
-      if (form) form.reset();
-      const errorEl = document.getElementById('optin-error');
-      if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
-      const submitBtn = document.getElementById('optin-submit-btn');
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✅ ABSENDEN'; }
-      if (isInstantWin || state.instantWinPending) {
-        setEl('optin-sub', '🎉 Du hast einen Sofort-Gewinn! Gib deine Daten ein um deinen Gewinn-Code zu erhalten.');
-        const optinHeading = optinSection.querySelector('.optin-heading');
-        if (optinHeading) optinHeading.textContent = '🏆 Sofort-Gewinn abholen!';
-      } else {
-        setEl('optin-sub', 'Hinterlasse deine Daten für das Leaderboard und deine Gewinnchance!');
+  if (!iwBanner) return;
+  if (isInstantWin || state.instantWinPending) {
+    iwBanner.classList.remove('hidden');
+    iwBanner.classList.add('win-active');
+    if (session.instantWinCode) {
+      const iwCodeWrap = document.getElementById('iw-code-wrap');
+      if (iwCodeWrap) {
+        iwCodeWrap.classList.remove('hidden');
+        setEl('iw-code', session.instantWinCode);
       }
     }
+  } else {
+    iwBanner.classList.add('hidden');
+    iwBanner.classList.remove('win-active');
   }
-
-  animateCountUp('res-score', 0, state.score, 1200);
-  buildLeaderboard();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2477,12 +2550,15 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
   try {
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
+    // Forward is_instant_win when player had pending win from "Weiterspielen"
+    const forceInstantWin = ps.is_instant_win || state.instantWinPending;
     const result = await submitEntry({
       event_id:         ev3 ? ev3.id : (ps.event_id || undefined),
       score:            ps.score,
       ghost_overtaken:  ps.ghost_overtaken,
       level_reached:    ps.level_reached,
       play_duration_s:  ps.play_duration_s,
+      is_instant_win:   forceInstantWin || undefined,
       contact_intent:   playerData.contact_intent,
       vehicle_interest: playerData.vehicle_interest,
       zip:              playerData.zip,
@@ -2509,20 +2585,39 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.submitted = true;
 
+    // Save player data to localStorage (DSGVO: only personal info, no consents)
+    savePlayerToStorage(playerData);
+
     submitBtn.textContent = '✅ Gespeichert!';
     submitBtn.disabled    = true;
-    const optinSection = document.getElementById('optin-section');
-    if (optinSection) {
-      optinSection.style.opacity      = '0.5';
-      optinSection.style.pointerEvents = 'none';
+
+    // Hide form card
+    const ctaCard = document.getElementById('end-cta-card');
+    if (ctaCard) {
+      ctaCard.classList.add('hidden');
     }
 
+    // Show reveal section with fade-in
+    const revealDiv = document.getElementById('end-reveal');
+    if (revealDiv) {
+      revealDiv.classList.remove('hidden');
+      // Trigger reflow for animation
+      void revealDiv.offsetWidth;
+      revealDiv.classList.add('reveal-active');
+    }
+
+    // Animate score count-up
+    animateCountUp('res-score', 0, state.score, 1200);
+
+    // Show instant win banner + code if applicable
+    const isWinner = (state.instantWinTriggered && session.submitted) ||
+                     state.instantWinPending || !!(result && result.is_instant_win);
+    _showInstantWinIfNeeded(isWinner);
     if (session.instantWinCode) {
       const iwCodeWrap = document.getElementById('iw-code-wrap');
       if (iwCodeWrap) {
         iwCodeWrap.classList.remove('hidden');
         setEl('iw-code', session.instantWinCode);
-        iwCodeWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
 
