@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0A0A1A">
+  <title>Teilnahmebedingungen – LEAP CHARGE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange: #FF5500;
+      --dark:   #0A0A1A;
+      --muted:  rgba(255,255,255,0.55);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--dark);
+      color: #fff;
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.6;
+      padding: 24px 20px 48px;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .brand {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: var(--orange);
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--orange);
+    }
+    p, li { font-size: 14px; color: rgba(255,255,255,0.85); margin-bottom: 8px; }
+    li { margin-left: 20px; }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 28px;
+      color: var(--orange);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .terms-md {
+      white-space: pre-wrap;
+      font-size: 14px;
+      color: rgba(255,255,255,0.85);
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">LEAP CHARGE · LEAPMOTOR</div>
+  <a class="back-link" href="index.html">← Zurück zum Spiel</a>
+
+  <h1>Teilnahmebedingungen</h1>
+
+  <!-- If an active event with terms_md is loaded, we render it here. -->
+  <div id="terms-content">
+    <p id="terms-loading" style="color:var(--muted)">Lade Teilnahmebedingungen…</p>
+  </div>
+
+  <script src="js/supabase-config.js?v=20260714c"></script>
+  <script src="js/api.js?v=20260714c"></script>
+  <script>
+    (async function() {
+      const el = document.getElementById('terms-content');
+      // initLeapEvent() was already called by api.js; wait a tick then read
+      await new Promise(function(r) { setTimeout(r, 800); });
+      const ev = window.LEAP_EVENT;
+      if (ev && ev.terms_md) {
+        el.innerHTML = '<pre class="terms-md">' + ev.terms_md.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
+      } else {
+        el.innerHTML =
+          '<h2>\u00a7\u00a0 1 Veranstalter</h2>' +
+          '<p>Das Gewinnspiel wird veranstaltet von Leapmotor Germany / Event-Partner.</p>' +
+          '<h2>\u00a7\u00a0 2 Teilnahmeberechtigung</h2>' +
+          '<p>Teilnehmen d\u00fcrf en nat\u00fcrliche Personen ab 18 Jahren mit Wohnsitz in Deutschland.</p>' +
+          '<h2>\u00a7\u00a0 3 Durchf\u00fchrung</h2>' +
+          '<p>Das Spiel l\u00e4uft w\u00e4hrend der Veranstaltung. Jeder Teilnehmer darf einmal am Gewinnspiel teilnehmen.</p>' +
+          '<h2>\u00a7\u00a0 4 Sofort-Gewinn</h2>' +
+          '<p>Wer den Schwellenwert \u00fcberschreitet und den Gegner \u00fcberholt, erh\u00e4lt einen vierstelligen Code. ' +
+          'Der Code ist am Stand-Personal einzul\u00f6sen. Je Event gibt es genau einen Sofort-Gewinner.</p>' +
+          '<h2>\u00a7\u00a0 5 Datenschutz</h2>' +
+          '<p>Deine Daten werden ausschlie\u00dflich im Rahmen dieses Events verwendet und nicht ohne deine Zustimmung weitergegeben.</p>' +
+          '<p style="color:var(--muted);font-size:12px;margin-top:24px">Stand: Juli 2026 \u00b7 Vollst\u00e4ndige Bedingungen beim Veranstalter erh\u00e4ltlich.</p>';
+      }
+    })();
+  </script>
+</body>
+</html>

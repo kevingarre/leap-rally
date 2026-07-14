@@ -69,19 +69,30 @@ const MULTIBALL_DURATION = 3.0; // seconds
 // FX
 const PARTICLE_COUNT = 8;
 
-// Fake leaderboard
-const FAKE_LEADERBOARD = [
-  { name: 'TigerSpin_DE',   score: 3840, energy: 100, blocks: 48 },
-  { name: 'SpeedRacer22',   score: 3520, energy: 100, blocks: 42 },
-  { name: 'ElectroBall',    score: 3280, energy: 98,  blocks: 38 },
-  { name: 'PingPong_Pro',   score: 3010, energy: 92,  blocks: 34 },
-  { name: 'LeapFan2025',    score: 2780, energy: 87,  blocks: 29 },
-  { name: 'ChargeMaster',   score: 2490, energy: 79,  blocks: 26 },
-  { name: 'PingAce_MUC',    score: 2220, energy: 72,  blocks: 23 },
-  { name: 'VoltSmasher',    score: 1950, energy: 66,  blocks: 19 },
-  { name: 'E_Champ2025',    score: 1680, energy: 59,  blocks: 15 },
-  { name: 'NewDriver',      score: 1300, energy: 48,  blocks: 10 },
-];
+// FAKE_LEADERBOARD removed – replaced with real Supabase leaderboard (see buildLeaderboard)
+
+// ═══════════════════════════════════════════════════════════
+// BACKEND / SESSION STATE
+// ═══════════════════════════════════════════════════════════
+
+// Holds data for the current game run (cleared on resetGameState)
+let session = {
+  gameStartTs:   null,  // Date.now() when game started
+  pendingScore:  null,  // { score, level_reached, ghost_overtaken, play_duration_s, is_instant_win }
+  scoreId:       null,  // UUID after DB write
+  playerId:      null,  // UUID after player form submit
+  instantWinCode: null, // 4-digit string if instant win triggered
+  submitted:     false, // form was successfully submitted
+};
+
+function resetSession() {
+  session.gameStartTs   = null;
+  session.pendingScore  = null;
+  session.scoreId       = null;
+  session.playerId      = null;
+  session.instantWinCode = null;
+  session.submitted     = false;
+}
 
 // ═══════════════════════════════════════════════════════════
 // GAME STATE
@@ -173,6 +184,7 @@ function startGame() {
 function resetGameState() {
   cancelAnimationFrame(state.rafId);
   clearInterval(state.gameInterval);
+  resetSession();
 
   Object.assign(state, {
     gameActive:    false,
@@ -609,6 +621,7 @@ function triggerScreenShake(amt, duration) {
 function beginGameLoop() {
   state.gameActive    = true;
   state.lastFrameTime = performance.now();
+  session.gameStartTs = Date.now();
 
   // 1-second timer
   state.gameInterval = setInterval(gameTick, 1000);
@@ -1434,95 +1447,363 @@ function endGame() {
     state.wavesCleared  * 250 +
     state.carTargetsHit * CAR_TARGET_BONUS_SCORE +
     state.fullChargeBonuses * FULL_CHARGE_BONUS_SCORE +
-    (state.maxLevelReached - 1) * 300 +  // bonus for reaching higher levels
-    (state.ghostOvertaken ? 500 : 0)     // ghost overtake bonus
+    (state.maxLevelReached - 1) * 300 +
+    (state.ghostOvertaken ? 500 : 0)
   );
+
+  // --- Instant-win check ---
+  const ev = window.LEAP_EVENT;
+  let isInstantWin = false;
+  if (ev) {
+    const scoreThreshold = ev.instant_win_score || 1500;
+    const ghostReq       = ev.instant_win_ghost_req !== false;
+    isInstantWin = state.score >= scoreThreshold &&
+                   (!ghostReq || state.ghostOvertaken);
+  }
+
+  // Compute play duration
+  const durationS = session.gameStartTs
+    ? Math.round((Date.now() - session.gameStartTs) / 1000)
+    : GAME_DURATION;
+
+  // Store pending score payload (written to DB after player form submit)
+  session.pendingScore = {
+    event_id:        ev ? ev.id : null,
+    score:           state.score,
+    level_reached:   state.maxLevelReached,
+    ghost_overtaken: state.ghostOvertaken,
+    play_duration_s: durationS,
+    is_instant_win:  isInstantWin,
+  };
+  if (!session.pendingScore.event_id) delete session.pendingScore.event_id;
+
+  if (isInstantWin) {
+    session.instantWinCode = generateClaimCode();
+  }
 
   setTimeout(() => {
     showScreen('screen-end');
-    populateEndScreen(energyPct);
+    populateEndScreen(energyPct, isInstantWin);
   }, 600);
 }
 
-function populateEndScreen(energyPct) {
+function populateEndScreen(energyPct, isInstantWin) {
   setEl('res-hits',   String(state.hits));
-  setEl('res-combo',  `×${state.maxCombo}`);
+  setEl('res-combo',  `\u00d7${state.maxCombo}`);
   setEl('res-energy', `${energyPct}%`);
   setEl('res-score',  state.score.toLocaleString('de-DE'));
   setEl('res-waves',  String(state.wavesCleared));
 
   let title, sub;
   if (energyPct >= 100) {
-    title = 'VOLLGELADEN! ⚡';
-    sub   = 'Perfekte Aufladung – Leapmotor voll geladen, Turbo aktiv!';
+    title = 'VOLLGELADEN! \u26a1';
+    sub   = 'Perfekte Aufladung \u2013 Leapmotor voll geladen, Turbo aktiv!';
   } else if (energyPct >= 75) {
     title = 'FAST VOLL!';
-    sub   = `${energyPct}% Batterie – starke Tischtennis-Performance!`;
+    sub   = `${energyPct}% Batterie \u2013 starke Tischtennis-Performance!`;
   } else if (energyPct >= 40) {
     title = 'GUTES TEMPO!';
-    sub   = `${energyPct}% geladen – nächstes Spiel schaffst du 100%!`;
+    sub   = `${energyPct}% geladen \u2013 n\u00e4chstes Spiel schaffst du 100%!`;
   } else {
-    title = 'WEITER ÜBEN!';
-    sub   = `${energyPct}% – Schlag mehr Blöcke, lade den Leapmotor auf!`;
+    title = 'WEITER \u00dcBEN!';
+    sub   = `${energyPct}% \u2013 Schlag mehr Bl\u00f6cke, lade den Leapmotor auf!`;
   }
-
-  // Append level reached info
-  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE 🏆'];
-  sub += ` · Level ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''}) erreicht.`;
-  if (state.ghostOvertaken) sub += ' 🚗 Ghost überholt!';
+  const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE \ud83c\udfc6'];
+  sub += ` \u00b7 Level ${state.maxLevelReached} (${levelNames[state.maxLevelReached] || ''}) erreicht.`;
+  if (state.ghostOvertaken) sub += ' \ud83d\ude97 Ghost \u00fcberholt!';
 
   setEl('end-title', title);
   setEl('end-sub',   sub);
 
   const trophy = document.getElementById('end-trophy');
-  if (trophy) trophy.textContent = energyPct >= 100 ? '🏆' : energyPct >= 75 ? '🥈' : '🏓';
+  if (trophy) trophy.textContent = energyPct >= 100 ? '\ud83c\udfc6' : energyPct >= 75 ? '\ud83e\udd48' : '\ud83c\udfd3';
 
-  buildLeaderboard(state.score, energyPct);
+  // Show instant-win banner (code revealed AFTER form submit)
+  const iwBanner = document.getElementById('instant-win-banner');
+  if (iwBanner) {
+    if (isInstantWin) {
+      iwBanner.classList.remove('hidden');
+      iwBanner.classList.add('win-active');
+    } else {
+      iwBanner.classList.add('hidden');
+      iwBanner.classList.remove('win-active');
+    }
+  }
+
+  // Show opt-in form
+  const optinSection = document.getElementById('optin-section');
+  if (optinSection) {
+    optinSection.classList.remove('hidden');
+    optinSection.style.opacity = '';
+    optinSection.style.pointerEvents = '';
+    const form = document.getElementById('optin-form');
+    if (form) form.reset();
+    const errorEl = document.getElementById('optin-error');
+    if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+    const submitBtn = document.getElementById('optin-submit-btn');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '\u2705 ABSENDEN'; }
+    if (isInstantWin) {
+      setEl('optin-sub', '\ud83c\udf89 Gib deine Daten ein \u2013 danach siehst du deinen Sofort-Gewinn-Code!');
+    } else {
+      setEl('optin-sub', 'Hinterlasse deine Daten f\u00fcr das Leaderboard und deine Gewinnchance!');
+    }
+  }
+
   animateCountUp('res-score', 0, state.score, 1200);
+
+  // Load real leaderboard (async, graceful)
+  buildLeaderboard();
 }
 
-function buildLeaderboard(playerScore, playerEnergy) {
-  const playerEntry = {
-    name:   'DU',
-    score:  playerScore,
-    energy: Math.round(playerEnergy),
-    blocks: state.hits,
-    isYou:  true,
+// ═══════════════════════════════════════════════════════════
+// OPT-IN FORM HANDLER
+// ═══════════════════════════════════════════════════════════
+
+function handleOptinSubmit(e) {
+  e.preventDefault();
+  if (session.submitted) return;
+
+  const form      = document.getElementById('optin-form');
+  const errorEl   = document.getElementById('optin-error');
+  const submitBtn = document.getElementById('optin-submit-btn');
+  const errors    = [];
+
+  // Clear previous errors
+  errorEl.textContent = '';
+  errorEl.classList.add('hidden');
+  form.querySelectorAll('.error').forEach(function(el) { el.classList.remove('error'); });
+  form.querySelectorAll('.error-radio').forEach(function(el) { el.classList.remove('error-radio'); });
+
+  // --- Validate ---
+  const v = function(id) {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
   };
 
-  const entries = [
-    ...FAKE_LEADERBOARD.map(e => ({ ...e, isYou: false })),
-    playerEntry,
-  ].sort((a, b) => b.score - a.score).slice(0, 12);
+  if (!v('fi-contact')) {
+    errors.push('Kontakt-Wunsch ausw\u00e4hlen.');
+    document.getElementById('fi-contact').classList.add('error');
+  }
+  if (!v('fi-vehicle')) {
+    errors.push('Wunschmodell ausw\u00e4hlen.');
+    document.getElementById('fi-vehicle').classList.add('error');
+  }
+  if (!v('fi-zip') || v('fi-zip').length < 4) {
+    errors.push('G\u00fcltige PLZ eingeben.');
+    document.getElementById('fi-zip').classList.add('error');
+  }
+  if (!v('fi-city')) {
+    errors.push('Ort eingeben.');
+    document.getElementById('fi-city').classList.add('error');
+  }
+  if (!v('fi-first')) {
+    errors.push('Vorname eingeben.');
+    document.getElementById('fi-first').classList.add('error');
+  }
+  if (!v('fi-last')) {
+    errors.push('Nachname eingeben.');
+    document.getElementById('fi-last').classList.add('error');
+  }
+  const emailVal = v('fi-email');
+  if (!emailVal || !emailVal.includes('@')) {
+    errors.push('G\u00fcltige E-Mail-Adresse eingeben.');
+    document.getElementById('fi-email').classList.add('error');
+  }
 
+  // Consent radios – all three must be answered (yes OR no is valid)
+  const getRadio = function(name) {
+    const checked = form.querySelector('input[name="' + name + '"]:checked');
+    return checked ? checked.value : null;
+  };
+  const consentStay     = getRadio('consent_stay_in_touch');
+  const consentBetter   = getRadio('consent_better_offers');
+  const consentPartners = getRadio('consent_partners');
+  if (!consentStay) {
+    errors.push('Newsletter-Einwilligung bitte beantworten.');
+    form.querySelectorAll('input[name="consent_stay_in_touch"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
+  }
+  if (!consentBetter) {
+    errors.push('Angebote-Einwilligung bitte beantworten.');
+    form.querySelectorAll('input[name="consent_better_offers"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
+  }
+  if (!consentPartners) {
+    errors.push('Partner-Einwilligung bitte beantworten.');
+    form.querySelectorAll('input[name="consent_partners"]').forEach(function(r) { r.closest('.radio-opt').classList.add('error-radio'); });
+  }
+
+  // Terms checkbox
+  const termsChecked = document.getElementById('fi-terms').checked;
+  if (!termsChecked) {
+    errors.push('Teilnahmebedingungen m\u00fcssen akzeptiert werden.');
+    document.getElementById('fi-terms').classList.add('error');
+  }
+
+  if (errors.length > 0) {
+    errorEl.innerHTML = errors.map(function(m) { return '\u2022 ' + m; }).join('<br>');
+    errorEl.classList.remove('hidden');
+    errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  // --- Submit ---
+  submitBtn.disabled    = true;
+  submitBtn.textContent = '\u23f3 Wird gespeichert\u2026';
+
+  const ev2 = window.LEAP_EVENT;
+  const playerData = {
+    event_id:              ev2 ? ev2.id : undefined,
+    contact_intent:        v('fi-contact'),
+    vehicle_interest:      v('fi-vehicle'),
+    zip:                   v('fi-zip'),
+    city:                  v('fi-city'),
+    first_name:            v('fi-first'),
+    last_name:             v('fi-last'),
+    email:                 emailVal,
+    phone:                 v('fi-phone') || null,
+    consent_stay_in_touch: consentStay     === 'yes',
+    consent_better_offers: consentBetter   === 'yes',
+    consent_partners:      consentPartners === 'yes',
+    terms_accepted:        true,
+    terms_version_at_entry: ev2 ? ev2.terms_version : 1,
+    privacy_accepted_at:   new Date().toISOString(),
+    entry_source:          'byod',
+  };
+  if (!playerData.event_id) delete playerData.event_id;
+
+  _doOptinSubmit(playerData, submitBtn, errorEl);
+}
+
+async function _doOptinSubmit(playerData, submitBtn, errorEl) {
+  try {
+    // 1. Create player record
+    const playerId = await createPlayer(playerData);
+    session.playerId = playerId;
+
+    // 2. Write score with player_id
+    const scorePayload = Object.assign({}, session.pendingScore, { player_id: playerId });
+    const scoreId = await submitScore(scorePayload);
+    session.scoreId = scoreId;
+
+    // 3. If instant win: persist claim record
+    if (session.instantWinCode && scoreId) {
+      const ev3 = window.LEAP_EVENT;
+      await createInstantWin({
+        event_id:   ev3 ? ev3.id : undefined,
+        score_id:   scoreId,
+        claim_code: session.instantWinCode,
+      });
+    }
+
+    session.submitted = true;
+
+    // Success UI
+    submitBtn.textContent = '\u2705 Gespeichert!';
+    submitBtn.disabled    = true;
+    const optinSection = document.getElementById('optin-section');
+    if (optinSection) {
+      optinSection.style.opacity      = '0.5';
+      optinSection.style.pointerEvents = 'none';
+    }
+
+    // If instant win: reveal code now
+    if (session.instantWinCode) {
+      const iwCodeWrap = document.getElementById('iw-code-wrap');
+      if (iwCodeWrap) {
+        iwCodeWrap.classList.remove('hidden');
+        setEl('iw-code', session.instantWinCode);
+        iwCodeWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // Refresh leaderboard with player now in DB
+    buildLeaderboard();
+
+  } catch (err) {
+    console.error('[LEAP] Opt-in submit failed:', err);
+    submitBtn.disabled    = false;
+    submitBtn.textContent = '\u2705 ABSENDEN';
+    errorEl.textContent   = '\u26a0\ufe0f Speichern fehlgeschlagen. Bitte erneut versuchen. (' + (err.message || 'Netzwerkfehler') + ')';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// REAL LEADERBOARD
+// ═══════════════════════════════════════════════════════════
+
+async function buildLeaderboard() {
   const container = document.getElementById('lb-entries');
   if (!container) return;
-  container.innerHTML = '';
 
-  entries.forEach((entry, idx) => {
-    const rank      = idx + 1;
-    const el        = document.createElement('div');
-    el.className    = 'lb-entry' + (entry.isYou ? ' you' : '');
-    const rankClass = rank <= 3 ? ['top1', 'top2', 'top3'][rank - 1] : '';
-    const rankIcon  = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1]       : rank;
-    const nameBadge = entry.isYou ? '<span class="you-badge">YOU</span>' : '';
+  const ev = window.LEAP_EVENT;
+  if (!ev) {
+    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\ud83d\udce1 Leaderboard nicht verf\u00fcgbar (offline)</div>';
+    return;
+  }
 
-    el.innerHTML = `
-      <span class="lb-rank ${rankClass}">${rankIcon}</span>
-      <span class="lb-name">${entry.name}${nameBadge}</span>
-      <span class="lb-energy">${entry.energy}%⚡</span>
-      <span class="lb-score">${entry.score.toLocaleString('de-DE')}</span>
-    `;
-    container.appendChild(el);
+  container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\u23f3 Lade Leaderboard\u2026</div>';
 
-    el.style.opacity   = '0';
-    el.style.transform = 'translateX(20px)';
-    setTimeout(() => {
-      el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-      el.style.opacity    = '1';
-      el.style.transform  = 'translateX(0)';
-    }, idx * 60 + 200);
-  });
+  try {
+    const rows = await getLeaderboard(ev.id, 10);
+
+    const entries = rows.map(function(r) {
+      return {
+        name:  ((r.first_name || '').charAt(0) + '. ' + (r.last_name || '')).trim(),
+        city:  r.city || '',
+        score: r.best_score,
+        level: r.max_level,
+        isYou: !!(session.playerId && r.player_id === session.playerId),
+      };
+    });
+
+    // If current run not yet in top 10, show local entry at bottom
+    const localInTop = entries.some(function(e) { return e.isYou; });
+    if (!localInTop && state.score > 0) {
+      entries.push({
+        name:  'DU (diese Runde)',
+        city:  '',
+        score: state.score,
+        level: state.maxLevelReached,
+        isYou: true,
+      });
+    }
+
+    container.innerHTML = '';
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">Noch keine Eintr\u00e4ge \u2013 sei der Erste!</div>';
+      return;
+    }
+
+    entries.forEach(function(entry, idx) {
+      const rank      = idx + 1;
+      const el        = document.createElement('div');
+      el.className    = 'lb-entry' + (entry.isYou ? ' you' : '');
+      const rankClass = rank <= 3 ? ['top1', 'top2', 'top3'][rank - 1] : '';
+      const rankIcon  = rank <= 3 ? ['\ud83e\udd47', '\ud83e\udd48', '\ud83e\udd49'][rank - 1] : rank;
+      const youBadge  = entry.isYou ? '<span class="you-badge">DU</span>' : '';
+      const cityStr   = entry.city ? ' <span style="color:var(--muted);font-size:11px">' + entry.city + '</span>' : '';
+
+      el.innerHTML =
+        '<span class="lb-rank ' + rankClass + '">' + rankIcon + '</span>' +
+        '<span class="lb-name">' + entry.name + cityStr + youBadge + '</span>' +
+        '<span class="lb-score">' + entry.score.toLocaleString('de-DE') + '</span>';
+
+      container.appendChild(el);
+
+      el.style.opacity   = '0';
+      el.style.transform = 'translateX(20px)';
+      setTimeout(function() {
+        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        el.style.opacity    = '1';
+        el.style.transform  = 'translateX(0)';
+      }, idx * 60 + 100);
+    });
+
+  } catch (err) {
+    console.warn('[LEAP] Leaderboard load failed:', err.message);
+    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">\u26a0\ufe0f Leaderboard konnte nicht geladen werden</div>';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════

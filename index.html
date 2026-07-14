@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260714b">
+  <link rel="stylesheet" href="css/style.css?v=20260714c">
 </head>
 <body>
 <div id="app">
@@ -330,6 +330,128 @@
       </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════
+         INSTANT WIN SCREEN (hidden until triggered)
+    ═══════════════════════════════════════════════ -->
+    <div id="instant-win-banner" class="instant-win-banner hidden">
+      <div class="iw-glow-ring"></div>
+      <div class="iw-icon">🏆⚡</div>
+      <h2 class="iw-headline">SOFORT-GEWINNER!</h2>
+      <p class="iw-sub">Du hast den Highscore geknackt! Trag dich ein, um deinen Code zu erhalten.</p>
+      <div class="iw-code-wrap hidden" id="iw-code-wrap">
+        <span class="iw-code-label">DEIN GEWINN-CODE</span>
+        <span class="iw-code" id="iw-code">----</span>
+        <p class="iw-hint">Zeig diesen Code dem Leapmotor-Stand-Personal.</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         OPT-IN FORM
+    ═══════════════════════════════════════════════ -->
+    <div id="optin-section" class="optin-section hidden">
+      <h3 class="optin-heading">🏅 Eintragen &amp; Leaderboard-Platz sichern</h3>
+      <p class="optin-sub" id="optin-sub">Hinterlasse deine Daten für das Leaderboard und deine Gewinnchance!</p>
+
+      <form id="optin-form" class="optin-form" onsubmit="handleOptinSubmit(event)" novalidate>
+
+        <div class="form-row">
+          <label class="form-label" for="fi-contact">Kontakt-Wunsch *</label>
+          <select id="fi-contact" name="contact_intent" required class="form-select">
+            <option value="">– bitte wählen –</option>
+            <option value="probefahrt">Probefahrt vereinbaren</option>
+            <option value="angebot">Angebot anfordern</option>
+            <option value="nein">Kein Kontakt gewünscht</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="fi-vehicle">Wunschmodell *</label>
+          <select id="fi-vehicle" name="vehicle_interest" required class="form-select">
+            <option value="">– bitte wählen –</option>
+            <option value="t03">Leapmotor T03</option>
+            <option value="b05">Leapmotor B05</option>
+            <option value="b10">Leapmotor B10</option>
+            <option value="c10">Leapmotor C10</option>
+          </select>
+        </div>
+
+        <div class="form-row form-row-half">
+          <div class="form-col">
+            <label class="form-label" for="fi-zip">PLZ *</label>
+            <input id="fi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
+          </div>
+          <div class="form-col">
+            <label class="form-label" for="fi-city">Ort *</label>
+            <input id="fi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row form-row-half">
+          <div class="form-col">
+            <label class="form-label" for="fi-first">Vorname *</label>
+            <input id="fi-first" name="first_name" type="text" required placeholder="Max" class="form-input">
+          </div>
+          <div class="form-col">
+            <label class="form-label" for="fi-last">Nachname *</label>
+            <input id="fi-last" name="last_name" type="text" required placeholder="Mustermann" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="fi-email">E-Mail *</label>
+          <input id="fi-email" name="email" type="email" required placeholder="max@beispiel.de" class="form-input">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="fi-phone">Telefon (optional)</label>
+          <input id="fi-phone" name="phone" type="tel" placeholder="+49 30 …" class="form-input">
+        </div>
+
+        <!-- Consent radios -->
+        <div class="consent-block">
+          <p class="consent-title">Einwilligungen (alle Felder Pflicht – Nein ist gültig)</p>
+
+          <div class="consent-row">
+            <span class="consent-label">📧 Newsletter &amp; Updates erhalten</span>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="consent_stay_in_touch" value="yes" required> Ja</label>
+              <label class="radio-opt"><input type="radio" name="consent_stay_in_touch" value="no"> Nein</label>
+            </div>
+          </div>
+
+          <div class="consent-row">
+            <span class="consent-label">🚗 Individuelle Angebote erhalten</span>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="consent_better_offers" value="yes" required> Ja</label>
+              <label class="radio-opt"><input type="radio" name="consent_better_offers" value="no"> Nein</label>
+            </div>
+          </div>
+
+          <div class="consent-row">
+            <span class="consent-label">🤝 Weitergabe an Partner</span>
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="consent_partners" value="yes" required> Ja</label>
+              <label class="radio-opt"><input type="radio" name="consent_partners" value="no"> Nein</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row form-row-check">
+          <label class="check-label">
+            <input type="checkbox" id="fi-terms" name="terms_accepted" required>
+            <span>Ich habe die <a href="teilnahmebedingungen.html" target="_blank" class="form-link">Teilnahmebedingungen</a> gelesen und akzeptiere sie. *</span>
+          </label>
+        </div>
+
+        <div id="optin-error" class="optin-error hidden"></div>
+
+        <button type="submit" class="btn btn-primary glow-btn optin-submit" id="optin-submit-btn">
+          ✅ ABSENDEN
+        </button>
+
+      </form>
+    </div>
+
     <div class="leaderboard">
       <h3 class="lb-heading">🏅 LEADERBOARD – TOP 10</h3>
       <div class="lb-entries" id="lb-entries"></div>
@@ -375,6 +497,8 @@
   </div>
 </div>
 
-<script src="js/app.js?v=20260714b"></script>
+<script src="js/supabase-config.js?v=20260714c"></script>
+<script src="js/api.js?v=20260714c"></script>
+<script src="js/app.js?v=20260714c"></script>
 </body>
 </html>
