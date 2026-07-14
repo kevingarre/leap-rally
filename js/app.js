@@ -839,11 +839,24 @@ function getAudioCtx() {
 
 // Call this synchronously inside a user-gesture (tap/click) handler.
 // On iOS Safari, resume() must happen in the same call stack as the gesture.
+// iOS Safari requires a silent sound to be played synchronously inside a
+// user-gesture handler to permanently unlock the AudioContext.
+// After this "silent buffer trick" fires, audio works everywhere — including
+// from setTimeout/setInterval callbacks and requestAnimationFrame.
 function ensureAudioResumed() {
   const ac = getAudioCtx();
-  if (ac && ac.state !== 'running') {
-    ac.resume().catch(function() {});
-  }
+  if (!ac) return ac;
+  try {
+    // 1. Resume if suspended
+    if (ac.state === 'suspended') ac.resume().catch(function() {});
+    // 2. iOS Safari silent-buffer unlock (the definitive iOS fix)
+    const buf = ac.createBuffer(1, 1, ac.sampleRate || 22050);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.connect(ac.destination);
+    src.start(0);
+    src.stop(0.001);
+  } catch(e) {}
   return ac;
 }
 
