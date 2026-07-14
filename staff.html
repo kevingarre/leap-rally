@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#000000">
   <meta name="robots" content="noindex,nofollow">
+  <!-- v20260714-sprint-a: CSV export, DB setup helper, fallback-win RPC -->
   <title>LEAP CHARGE · Staff Panel</title>
   <style>
     /* ── Local Fonts (Montserrat) ─────────────────────────────── */
@@ -602,6 +603,80 @@
       line-height: 1.5;
     }
 
+    /* ── DB-Setup section ──────────────────────────────────── */
+    .btn-setup {
+      padding: 9px 14px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      color: var(--lm-grey);
+      font-size: 14px;
+      min-height: 44px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-setup:active { background: rgba(255,255,255,0.07); }
+
+    .mig-row {
+      margin-bottom: 12px;
+    }
+    .mig-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mig-ok   { background: rgba(103,194,58,0.12); color: var(--lm-green); border: 1px solid rgba(103,194,58,0.3); }
+    .mig-warn { background: rgba(255,184,0,0.10);  color: var(--lm-warn);  border: 1px solid rgba(255,184,0,0.3); }
+
+    .sql-details {
+      margin-bottom: 12px;
+    }
+    .sql-details summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--lm-grey);
+      padding: 6px 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .sql-details summary:hover { color: var(--lm-white); }
+    .sql-block-wrap {
+      position: relative;
+      margin-top: 8px;
+    }
+    .sql-pre {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 11px;
+      color: #95D475;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      white-space: pre;
+      max-height: 220px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+    .btn-copy {
+      margin-top: 6px;
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      color: var(--lm-white);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      min-height: 40px;
+      transition: background 0.15s;
+    }
+    .btn-copy:active { background: rgba(255,255,255,0.12); }
+
     /* ── Toast ───────────────────────────────────────────────── */
     #staff-toast {
       position: fixed;
@@ -676,6 +751,7 @@
         <div class="topbar-divider"></div>
         <span class="topbar-title">Staff Panel</span>
       </div>
+      <button class="btn-setup" onclick="toggleDbSetup()" title="DB-Setup prüfen">⚙</button>
       <button class="btn-logout" onclick="logout()">🚪 Logout</button>
     </div>
 
@@ -762,6 +838,17 @@
         </div>
         <div id="wins-content">
           <div class="msg-loading">⏳ Lade Gewinn-Codes…</div>
+        </div>
+      </div>
+
+      <!-- ══ E: DB-SETUP HELPER ═══════════════════════════════ -->
+      <div class="section-card" id="db-setup-section" style="display:none;">
+        <div class="section-head">
+          <span class="section-title">⚙ DB-Migrations-Status</span>
+          <button class="btn-refresh" onclick="toggleDbSetup()">✕ Schließen</button>
+        </div>
+        <div class="section-body" id="db-setup-content">
+          <div class="msg-loading">⏳ Prüfe Status…</div>
         </div>
       </div>
 

@@ -3122,6 +3122,28 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
       // (e.g. score calculated slightly differently). Keep existing code
       // or generate one as fallback so the player always gets their prize.
       if (!session.instantWinCode) session.instantWinCode = generateClaimCode();
+      // Best-effort: write fallback code to DB so Staff Panel can verify it.
+      // Non-blocking — no error shown to player if this fails.
+      (function() {
+        var _code     = session.instantWinCode;
+        var _eventId  = resolvedEventId2;
+        var _scoreId  = session.scoreId;
+        var _playerId = session.playerId;
+        if (_code && _eventId && _scoreId) {
+          _supaFetch('/rest/v1/rpc/record_fallback_win', {
+            method: 'POST',
+            body: JSON.stringify({
+              p_event_id:   _eventId,
+              p_player_id:  _playerId || null,
+              p_score_id:   _scoreId,
+              p_claim_code: _code,
+              p_staff_pin:  '1234',  // matches STAFF_PIN in staff.js
+            }),
+          }).catch(function(e) {
+            console.warn('[LEAP] record_fallback_win (best-effort) failed:', e.message);
+          });
+        }
+      })();
     } else {
       session.instantWinCode = null;
     }

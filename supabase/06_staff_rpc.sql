@@ -243,3 +243,54 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_staff_wins(uuid, text)
   TO anon, authenticated;
+
+
+-- ── 5. record_fallback_win ───────────────────────────────────
+-- Schreibt einen frontend-generierten Fallback-Code in die DB.
+-- Wird aufgerufen wenn is_instant_win=false vom Server zurückkam, aber
+-- das Frontend einen Instant-Win getriggert und einen lokalen Code generiert hat.
+-- Verhindert "Zombie-Codes" die Staff nicht verifizieren kann.
+--
+-- Gibt true zurück wenn erfolgreich eingetragen,
+-- false wenn der Code für dieses Event bereits existiert (Duplikat).
+CREATE OR REPLACE FUNCTION public.record_fallback_win(
+  p_event_id   uuid,
+  p_player_id  uuid,
+  p_score_id   uuid,
+  p_claim_code text,
+  p_staff_pin  text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_exists boolean;
+BEGIN
+  -- ── PIN prüfen ──────────────────────────────────────────────
+  IF p_staff_pin <> '1234' THEN
+    RAISE EXCEPTION 'invalid_pin';
+  END IF;
+
+  -- ── Duplikat-Schutz ─────────────────────────────────────────
+  SELECT EXISTS(
+    SELECT 1 FROM instant_wins
+     WHERE claim_code = p_claim_code
+       AND event_id   = p_event_id
+  ) INTO v_exists;
+
+  IF v_exists THEN
+    RETURN false;  -- Code für dieses Event bereits vorhanden
+  END IF;
+
+  -- ── Fallback-Gewinn eintragen ───────────────────────────────
+  INSERT INTO instant_wins (event_id, score_id, claim_code)
+  VALUES (p_event_id, p_score_id, p_claim_code);
+
+  RETURN true;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.record_fallback_win(uuid, uuid, uuid, text, text)
+  TO anon, authenticated;
