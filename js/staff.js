@@ -13,6 +13,9 @@
 // ── Konstante PIN (leicht änderbar) ──────────────────────────
 var STAFF_PIN = '1234';
 
+// ── Konfigurierbare Spiel-URL (leicht aenderbar) ──────────────
+var GAME_URL = 'https://kevingarre.github.io/leap-rally/';
+
 // ── sessionStorage Keys ───────────────────────────────────────
 var SS_AUTHED       = 'leap_staff_authed';
 var SS_ATTEMPTS     = 'leap_staff_attempts';
@@ -193,6 +196,7 @@ function showDashboard() {
     dashScreen.style.display       = 'flex';
     dashScreen.style.flexDirection = 'column';
   }
+  renderQrSection();
   loadDashboard();
 }
 
@@ -237,7 +241,7 @@ function callRpc(funcName, body) {
 // ══════════════════════════════════════════════════════════════
 function loadDashboard() {
   loadActiveEvent().then(function () {
-    return Promise.all([loadLeaderboard(), loadInstantWins()]);
+    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics()]);
   }).catch(function (err) {
     console.error('[Staff] loadDashboard error:', err);
   });
@@ -720,6 +724,151 @@ function copyDemoLink(btn) {
     // Fallback: prompt
     window.prompt('Demo-Link (manuell kopieren):', demoUrl);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// QR-CODE
+// ══════════════════════════════════════════════════════════════
+
+function generateQrUrl(targetUrl) {
+  return 'https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=' +
+    encodeURIComponent(targetUrl) + '&choe=UTF-8';
+}
+
+function renderQrSection() {
+  var cont = document.getElementById('qr-section-body');
+  if (!cont) return;
+  var gameUrl = GAME_URL;
+  var qrSrc   = generateQrUrl(gameUrl);
+
+  cont.innerHTML =
+    '<div id="qr-print-section" class="qr-print-section">' +
+      '<div class="qr-wrap">' +
+        '<img id="qr-img" src="' + escHtml(qrSrc) + '" alt="QR-Code Spiel" width="220" height="220" class="qr-img">' +
+      '</div>' +
+      '<p class="qr-url" id="qr-url">' + escHtml(gameUrl) + '</p>' +
+    '</div>' +
+    '<div class="qr-actions">' +
+      '<button class="btn-action" onclick="window.print()">\uD83D\uDDA8 Drucken</button>' +
+      '<button class="btn-action" id="btn-demo-qr" onclick="toggleDemoQr(this)">Demo-Link QR</button>' +
+    '</div>';
+}
+
+var _demoQrActive = false;
+function toggleDemoQr(btn) {
+  _demoQrActive = !_demoQrActive;
+  var targetUrl = _demoQrActive ? (GAME_URL + '?demo=1') : GAME_URL;
+  var img   = document.getElementById('qr-img');
+  var urlEl = document.getElementById('qr-url');
+  if (img)   img.src           = generateQrUrl(targetUrl);
+  if (urlEl) urlEl.textContent = targetUrl;
+  if (btn)   btn.textContent   = _demoQrActive ? 'Normal-QR' : 'Demo-Link QR';
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════════════════════════════
+
+function loadAnalytics() {
+  var cont = document.getElementById('analytics-content');
+  if (!cont) return Promise.resolve();
+  if (!currentEventId) {
+    cont.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
+    return Promise.resolve();
+  }
+  cont.innerHTML = '<div class="msg-loading">\u23f3 Lade Analytics\u2026</div>';
+
+  var scoresP = supaFetch(
+    '/rest/v1/scores?event_id=eq.' + encodeURIComponent(currentEventId) +
+    '&select=score,play_duration_s,created_at'
+  );
+
+  // Players-fetch may be blocked by RLS (anon no SELECT) - catch gracefully
+  var playersP = supaFetch(
+    '/rest/v1/players?event_id=eq.' + encodeURIComponent(currentEventId) +
+    '&select=vehicle_interest,contact_intent'
+  ).catch(function() { return null; });
+
+  return Promise.all([scoresP, playersP]).then(function(results) {
+    renderAnalytics(results[0] || [], results[1], cont);
+  }).catch(function(err) {
+    cont.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+  });
+}
+
+function renderAnalytics(scores, players, cont) {
+  var total = scores.length;
+  var avgScore    = 0;
+  var avgDuration = 0;
+
+  if (total > 0) {
+    var sumScore    = 0;
+    var sumDuration = 0;
+    var dCount      = 0;
+    scores.forEach(function(s) {
+      sumScore += (s.score || 0);
+      if (s.play_duration_s) { sumDuration += s.play_duration_s; dCount++; }
+    });
+    avgScore    = Math.round(sumScore / total);
+    avgDuration = dCount > 0 ? Math.round(sumDuration / dCount) : 0;
+  }
+
+  var html = '<div class="analytics-grid">';
+  html += analyticsBox('Runs', total);
+  html += analyticsBox('\xd8 Score', formatNum(avgScore));
+  html += analyticsBox('\xd8 Spielzeit', avgDuration ? avgDuration + 's' : '\u2013');
+  html += '</div>';
+
+  if (players !== null) {
+    var pCount   = players.length;
+    var convRate = total > 0 ? Math.round((pCount / total) * 100) : 0;
+
+    var vCounts = {};
+    var cCounts = {};
+    players.forEach(function(p) {
+      if (p.vehicle_interest) { vCounts[p.vehicle_interest] = (vCounts[p.vehicle_interest] || 0) + 1; }
+      if (p.contact_intent)   { cCounts[p.contact_intent]   = (cCounts[p.contact_intent]   || 0) + 1; }
+    });
+
+    var topModel = '\u2013';
+    var topCount = 0;
+    Object.keys(vCounts).forEach(function(v) {
+      if (vCounts[v] > topCount) { topCount = vCounts[v]; topModel = v.toUpperCase(); }
+    });
+
+    html += '<div class="analytics-grid" style="margin-top:8px;">';
+    html += analyticsBox('Conversion', convRate + '%');
+    html += analyticsBox('Top Modell', topModel + (topCount ? ' \u00d7' + topCount : ''));
+    html += analyticsBox('Spieler', pCount);
+    html += '</div>';
+
+    var pfahrt  = cCounts['probefahrt'] || 0;
+    var angebot = cCounts['angebot']    || 0;
+    var nein    = cCounts['nein']       || 0;
+
+    html +=
+      '<div class="analytics-contacts">' +
+        '<div class="ac-row"><span class="ac-label">Probefahrt</span>' +
+          '<span class="ac-val ac-green">' + pfahrt + '</span></div>' +
+        '<div class="ac-row"><span class="ac-label">Angebot</span>' +
+          '<span class="ac-val ac-green">' + angebot + '</span></div>' +
+        '<div class="ac-row"><span class="ac-label">Kein Kontakt</span>' +
+          '<span class="ac-val ac-muted">' + nein + '</span></div>' +
+      '</div>';
+  } else {
+    html += '<p class="analytics-note">Player-Daten nicht abrufbar (RLS aktiv). Score-Stats oben vollst\u00e4ndig.</p>';
+  }
+
+  cont.innerHTML = html;
+}
+
+function analyticsBox(label, value) {
+  return (
+    '<div class="analytics-box">' +
+      '<span class="analytics-val">' + escHtml(String(value)) + '</span>' +
+      '<span class="analytics-lbl">' + escHtml(label) + '</span>' +
+    '</div>'
+  );
 }
 
 // ══════════════════════════════════════════════════════════════
