@@ -933,12 +933,9 @@ function update(dt) {
   }
 
   if (ball2.active) {
+    // Multi-ball stays active until the second ball is actually lost
+    // (no timer). deactivateBall2() is called in updateBall2 when it drops out.
     updateBall2(dt);
-    state.multiBallTimer -= dt;
-    if (state.multiBallTimer <= 0) {
-      deactivateBall2();
-      spawnFloatText(cw / 2, ch * 0.4, 'MULTI-BALL ENDE', '#FFB800');
-    }
   }
 
   updateGhostCar(dt);
@@ -1438,11 +1435,11 @@ function renderBall2() {
   ctx.fillStyle = g2;
   ctx.fill();
 
-  const timerFrac = state.multiBallTimer / MULTIBALL_DURATION;
-  ctx.strokeStyle = `rgba(103,194,58,${0.4 + timerFrac * 0.5})`;
+  // Constant accent ring (no timer — multi-ball lasts until the ball is lost)
+  ctx.strokeStyle = 'rgba(103,194,58,0.6)';
   ctx.lineWidth   = 2;
   ctx.beginPath();
-  ctx.arc(ball2.x, ball2.y, ball2.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerFrac);
+  ctx.arc(ball2.x, ball2.y, ball2.r + 4, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.restore();
