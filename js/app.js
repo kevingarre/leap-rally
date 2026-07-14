@@ -2956,6 +2956,8 @@ function populateEndScreen(energyPct, isInstantWin) {
     _showInstantWinIfNeeded(isInstantWin);
     animateCountUp('res-score', 0, state.score, 1200);
     buildLeaderboard();
+    // Launch confetti celebration (bigger for instant-win winners)
+    setTimeout(function() { launchConfetti(isWinner); }, 200);
   } else {
     // Default: show form, hide reveal
     if (ctaCard) {
@@ -3266,6 +3268,7 @@ async function buildLeaderboard() {
 // RESTART / SHARE
 // ═══════════════════════════════════════════════════════════
 function goHome() {
+  stopConfetti();
   showScreen('screen-start');
   resetGameState();
 }
@@ -3622,6 +3625,133 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
   ctx.fillText(shape.label, cx, labelY);
 
   ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFETTI / FIREWORKS (End Screen Celebration)
+// ═══════════════════════════════════════════════════════════
+let confettiActive  = false;
+let confettiPieces  = [];
+let confettiRafId   = null;
+const CONFETTI_COLORS = ['#67C23A','#FFFFFF','#FFD700','#FF6B00','#00CFFF','#FF4D51','#95D475'];
+
+function launchConfetti(isWinner) {
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas) return;
+  const ctx2  = canvas.getContext('2d');
+  const W     = canvas.offsetWidth;
+  const H     = canvas.offsetHeight;
+  canvas.width  = W;
+  canvas.height = H;
+
+  confettiPieces = [];
+  confettiActive = true;
+
+  // Spawn initial burst
+  const count = isWinner ? 160 : 80;
+  for (let i = 0; i < count; i++) {
+    spawnConfettiPiece(W, H, isWinner, true);
+  }
+
+  // If winner: add 2-3 firework bursts
+  if (isWinner) {
+    [0, 300, 600].forEach(function(delay) {
+      setTimeout(function() {
+        if (!confettiActive) return;
+        spawnFireworkBurst(W * (0.25 + Math.random()*0.5), H * 0.15 + Math.random()*H*0.2);
+      }, delay);
+    });
+  }
+
+  if (confettiRafId) cancelAnimationFrame(confettiRafId);
+  const startTime = performance.now();
+  const duration  = isWinner ? 5000 : 3500;
+
+  function loop(now) {
+    if (!confettiActive) { ctx2.clearRect(0,0,W,H); return; }
+    ctx2.clearRect(0, 0, W, H);
+
+    // Trickle new pieces during animation
+    if (now - startTime < duration - 800 && Math.random() < (isWinner ? 0.45 : 0.25)) {
+      spawnConfettiPiece(W, H, isWinner, false);
+    }
+
+    for (let i = confettiPieces.length - 1; i >= 0; i--) {
+      const p = confettiPieces[i];
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.vy += 0.12;                    // gravity
+      p.vx += (Math.random()-0.5)*0.1; // slight drift
+      p.rot += p.rotV;
+      p.life -= 0.012;
+
+      if (p.y > H + 20 || p.life <= 0) { confettiPieces.splice(i,1); continue; }
+
+      ctx2.save();
+      ctx2.globalAlpha = Math.min(1, p.life * 3);
+      ctx2.translate(p.x, p.y);
+      ctx2.rotate(p.rot);
+      ctx2.fillStyle = p.color;
+      if (p.type === 'rect') {
+        ctx2.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      } else {
+        ctx2.beginPath();
+        ctx2.arc(0, 0, p.w/2, 0, Math.PI*2);
+        ctx2.fill();
+      }
+      ctx2.restore();
+    }
+
+    if (now - startTime < duration || confettiPieces.length > 0) {
+      confettiRafId = requestAnimationFrame(loop);
+    } else {
+      confettiActive = false;
+      ctx2.clearRect(0, 0, W, H);
+    }
+  }
+  confettiRafId = requestAnimationFrame(loop);
+}
+
+function spawnConfettiPiece(W, H, isWinner, burst) {
+  if (confettiPieces.length > 200) return;
+  const color = CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];
+  confettiPieces.push({
+    x:    burst ? W * Math.random() : W * (0.1 + Math.random()*0.8),
+    y:    burst ? (isWinner ? H*0.1 + Math.random()*H*0.3 : -10) : -10,
+    vx:   (Math.random()-0.5) * (burst ? 6 : 2.5),
+    vy:   burst ? (-4 - Math.random()*6) : (1 + Math.random()*3),
+    rot:  Math.random()*Math.PI*2,
+    rotV: (Math.random()-0.5)*0.25,
+    w:    4 + Math.random()*7,
+    h:    5 + Math.random()*9,
+    color,
+    life: 0.7 + Math.random()*0.5,
+    type: Math.random() < 0.7 ? 'rect' : 'circle',
+  });
+}
+
+function spawnFireworkBurst(bx, by) {
+  const colors = ['#FFD700','#FFFFFF','#67C23A','#FF6B00','#00CFFF'];
+  for (let i = 0; i < 30; i++) {
+    const angle = (Math.PI*2*i/30) + Math.random()*0.3;
+    const spd   = 3 + Math.random()*5;
+    confettiPieces.push({
+      x: bx, y: by,
+      vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 2,
+      rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.3,
+      w: 3 + Math.random()*5, h: 3 + Math.random()*5,
+      color: colors[i%colors.length],
+      life: 0.6 + Math.random()*0.4,
+      type: Math.random()<0.5?'rect':'circle',
+    });
+  }
+}
+
+function stopConfetti() {
+  confettiActive = false;
+  if (confettiRafId) cancelAnimationFrame(confettiRafId);
+  const canvas = document.getElementById('confetti-canvas');
+  if (canvas) canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
 }
 
 // ═══════════════════════════════════════════════════════════
