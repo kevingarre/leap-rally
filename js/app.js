@@ -49,7 +49,7 @@ const PADDLE_LERP_FACTOR = 18;
 
 // Level block layout: [rows, cols, turboCount, carBlockRows]
 const LEVEL_BLOCK_CONFIG = [
-  { rows: 2, cols: 6, turboCount: 0, carRows: [1] },
+  { rows: 2, cols: 5, turboCount: 0, carRows: [1] },
   { rows: 3, cols: 6, turboCount: 2, carRows: [1, 2] },
   { rows: 4, cols: 6, turboCount: 3, carRows: [1, 2, 3] },
   { rows: 4, cols: 7, turboCount: 4, carRows: [2, 3] },
@@ -122,6 +122,7 @@ let state = {
   ghostTrackPos:   0.65,
   // Instant-win
   instantWinTriggered: false,  // only once per game
+  instantWinPending:   false,  // player chose to keep playing after instant-win
   gamepaused:      false,
   // Multi-ball (Level 4)
   multiBallActive: false,
@@ -302,6 +303,7 @@ function resetGameState() {
     ghostOvertaken:   false,
     ghostTrackPos:    0.65,
     instantWinTriggered: false,
+    instantWinPending:   false,
     gamepaused:       false,
     multiBallActive:  false,
     multiBallTimer:   0,
@@ -605,24 +607,28 @@ function initBlocks() {
     turboIndices.add(Math.floor(Math.random() * totalBlocks));
   }
 
-  let idx = 0;
+  let idx      = 0;
+  let carCount = 0;  // track car block index for sprite rotation
   for (let row = 0; row < rows; row++) {
     const isCarRow = cfg.carRows.includes(row);
     const carCol   = (row * 2 + 1) % cols;
     for (let col = 0; col < cols; col++) {
-      const isTurbo  = turboIndices.has(idx);
-      const isCar    = isCarRow && col === carCol;
-      const hitsLeft = (isCar && state.level >= 3) ? 2 : 1;
+      const isTurbo    = turboIndices.has(idx);
+      const isCar      = isCarRow && col === carCol;
+      const hitsLeft   = (isCar && state.level >= 3) ? 2 : 1;
+      const vehicleKey = isCar ? VEHICLE_KEYS[carCount % VEHICLE_KEYS.length] : null;
+      if (isCar) carCount++;
       blocks.push({
-        x:         BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
-        y:         BLOCK_TOP_PAD  + row * (blockH + BLOCK_GAP),
-        w:         blockW,
-        h:         blockH,
+        x:          BLOCK_SIDE_PAD + col * (blockW + BLOCK_GAP),
+        y:          BLOCK_TOP_PAD  + row * (blockH + BLOCK_GAP),
+        w:          blockW,
+        h:          blockH,
         row,
-        alive:     true,
-        carTarget: isCar,
+        alive:      true,
+        carTarget:  isCar,
         isTurbo,
         hitsLeft,
+        vehicleKey,
       });
       idx++;
     }
@@ -708,10 +714,14 @@ function getAudioCtx() {
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { audioCtx.resume(); } catch(e) {}
+  }
   return audioCtx;
 }
 
 function playTone(freq, type, gain, duration) {
+  if (!soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
   try {
@@ -729,6 +739,7 @@ function playTone(freq, type, gain, duration) {
 }
 
 function playLevelUpTone(level) {
+  if (!soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
   const notes = [
@@ -772,6 +783,9 @@ function beginGameLoop() {
 
   // Launch ball immediately
   launchBall();
+
+  // Start background music
+  startBgMusic();
 
   state.rafId = requestAnimationFrame(gameFrame);
 }
@@ -1175,7 +1189,12 @@ function renderBlocks() {
       ctx.strokeStyle = b.hitsLeft >= 2 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
       roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
       ctx.stroke();
-      drawCarBlock(b.x, b.y, b.w, b.h);
+      // Draw vehicle sprite (or fallback icon)
+      if (b.vehicleKey) {
+        drawVehicleSprite(b.x, b.y, b.w, b.h, b.vehicleKey);
+      } else {
+        drawCarBlock(b.x, b.y, b.w, b.h);
+      }
 
       if (b.hitsLeft >= 2) {
         ctx.fillStyle    = 'rgba(255,255,255,0.85)';
@@ -1191,74 +1210,66 @@ function renderBlocks() {
 }
 
 // ─────────────────────────────────────────────────────────
-// PADDLE REDESIGN: klarer Tischtennis-Schläger
-// Rundes/ovales Blatt + kurzer Griff, weiß mit grünem Rand
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
+// PADDLE REDESIGN: sleek neon-pong bar, Leapmotor-CI
+// ─────────────────────────────────────────────────────
 function renderPaddle() {
-  // Clean horizontal table-tennis bat: rounded-rect blade (hit surface =
-  // full paddle width) + a short handle nub on the right. Subtle glow.
   const x = paddle.x;
   const y = paddle.y;
   const w = paddle.w;
   const h = Math.max(12, paddle.h);
-  const r = h / 2;
+  const r = h / 2;  // fully rounded ends
 
   ctx.save();
 
-  // Subtle green ground-glow (no giant halo)
-  ctx.shadowColor   = 'rgba(103,194,58,0.5)';
-  ctx.shadowBlur    = 9;
-  ctx.shadowOffsetY = 1;
-
-  // Blade body: white with slight vertical shade, rounded ends
+  // Outer green glow
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = 18;
   roundRect(ctx, x, y, w, h, r);
-  const bg = ctx.createLinearGradient(x, y, x, y + h);
-  bg.addColorStop(0,    '#FFFFFF');
-  bg.addColorStop(0.55, '#F2F2F2');
-  bg.addColorStop(1,    '#DDDDDD');
-  ctx.fillStyle = bg;
+  ctx.strokeStyle = 'rgba(103,194,58,0.55)';
+  ctx.lineWidth   = 4;
+  ctx.stroke();
+
+  ctx.shadowBlur  = 0;
+
+  // Main body: dark glossy black
+  roundRect(ctx, x, y, w, h, r);
+  const bodyGrad = ctx.createLinearGradient(x, y, x, y + h);
+  bodyGrad.addColorStop(0,    '#2A2A2A');
+  bodyGrad.addColorStop(0.45, '#111111');
+  bodyGrad.addColorStop(1,    '#000000');
+  ctx.fillStyle = bodyGrad;
   ctx.fill();
 
-  ctx.shadowBlur    = 0;
-  ctx.shadowOffsetY = 0;
-
-  // Green "rubber" hitting surface along the top edge
-  const edgeH = Math.max(3, h * 0.34);
+  // Green accent stripe at top
+  const stripeH = Math.max(3, h * 0.30);
   ctx.save();
   roundRect(ctx, x, y, w, h, r);
   ctx.clip();
-  const eg = ctx.createLinearGradient(x, y, x, y + edgeH);
-  eg.addColorStop(0, '#7BD34A');
-  eg.addColorStop(1, '#529B2E');
-  ctx.fillStyle = eg;
-  ctx.fillRect(x, y, w, edgeH);
+  const stripeGrad = ctx.createLinearGradient(x, y, x, y + stripeH);
+  stripeGrad.addColorStop(0, 'rgba(103,194,58,0.90)');
+  stripeGrad.addColorStop(1, 'rgba(103,194,58,0.20)');
+  ctx.fillStyle = stripeGrad;
+  ctx.fillRect(x, y, w, stripeH);
   ctx.restore();
 
-  // Crisp green outline
+  // Crisp bright-green border line
   roundRect(ctx, x, y, w, h, r);
   ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = 2;
+  ctx.lineWidth   = 1.5;
   ctx.stroke();
 
-  // Handle nub on the right so it reads as a bat, not a pill
-  const handleW = Math.max(8, w * 0.10);
-  const handleH = Math.max(6, h * 0.7);
-  const handleX = x + w - handleW * 0.35;
-  const handleY = y + (h - handleH) / 2;
-  roundRect(ctx, handleX, handleY, handleW, handleH, handleH / 2);
-  ctx.fillStyle = '#1A1A1A';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(103,194,58,0.5)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Thin white sheen line
-  ctx.beginPath();
-  ctx.moveTo(x + r, y + h * 0.64);
-  ctx.lineTo(x + w - r, y + h * 0.64);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  // White sheen highlight (top portion)
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.45);
+  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.18)');
+  sheenGrad.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+  sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = sheenGrad;
+  ctx.fillRect(x, y, w, h * 0.45);
+  ctx.restore();
 
   ctx.restore();
 }
@@ -1627,8 +1638,11 @@ function triggerGhostOvertake() {
   startOvertakeDrama();
 
   // Check instant-win threshold AFTER drama
+  // Require level 2 completed (maxLevelReached >= 3 means player entered level 3)
   const ev = window.LEAP_EVENT;
   if (!ev) return;
+
+  if (state.maxLevelReached < 3) return; // hold popup until level 2 cleared
 
   const scoreThreshold = ev.instant_win_score || 1500;
   const ghostReq       = ev.instant_win_ghost_req !== false;
@@ -1697,6 +1711,7 @@ function spawnOvertakeBurst(x, y) {
 }
 
 function playOvertakeTone() {
+  if (!soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
   // Rising triumphant arpeggio: A4 → E5 → A5 → C#6 (energetic)
@@ -1744,6 +1759,7 @@ function pauseForInstantWin() {
   // Pause game loop
   state.gamepaused = true;
   cancelAnimationFrame(state.rafId);
+  stopBgMusic();
 
   // Store preliminary score for form
   const energyPct  = Math.round(state.energy);
@@ -1779,10 +1795,11 @@ function pauseForInstantWin() {
         openOptinForInstantWin();
       };
     }
-    // Wire up the "Weiterspielen" button (before form submit)
+    // Wire up the "Weiterspielen & Highscore knacken" button
     const skipBtn = document.getElementById('iwo-skip-btn');
     if (skipBtn) {
       skipBtn.onclick = () => {
+        state.instantWinPending = true;
         overlay.classList.add('hidden');
         resumeAfterInstantWin(false);
       };
@@ -1810,6 +1827,7 @@ function resumeAfterInstantWin(codeShown) {
   state.gamepaused    = false;
   state.lastFrameTime = performance.now();
   state.rafId         = requestAnimationFrame(gameFrame);
+  startBgMusic();
 
   if (!codeShown) {
     spawnFloatText(cw / 2, ch * 0.35, '▶ WEITER SPIELEN!', '#67C23A');
@@ -1993,6 +2011,7 @@ function endGame() {
   cancelAnimationFrame(state.rafId);
   state.gameActive  = false;
   state.gamepaused  = false;
+  stopBgMusic();
   if (ball2.active) deactivateBall2();
 
   const energyPct = Math.round(state.energy);
@@ -2008,9 +2027,11 @@ function endGame() {
     (state.bonusMode ? state.bonusWave * 200 : 0)
   );
 
-  // Instant-win check for end-screen (fallback if not triggered mid-game)
+  // Instant-win check for end-screen
+  // Also true if player chose to keep playing (instantWinPending)
   const ev = window.LEAP_EVENT;
-  let isInstantWin = state.instantWinTriggered && session.submitted;
+  let isInstantWin = (state.instantWinTriggered && session.submitted) ||
+                     state.instantWinPending;
   if (!isInstantWin && ev) {
     const scoreThreshold = ev.instant_win_score || 1500;
     const ghostReq       = ev.instant_win_ghost_req !== false;
@@ -2113,8 +2134,10 @@ function populateEndScreen(energyPct, isInstantWin) {
       if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
       const submitBtn = document.getElementById('optin-submit-btn');
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✅ ABSENDEN'; }
-      if (isInstantWin) {
-        setEl('optin-sub', '🎉 Gib deine Daten ein – danach siehst du deinen Sofort-Gewinn-Code!');
+      if (isInstantWin || state.instantWinPending) {
+        setEl('optin-sub', '🎉 Du hast einen Sofort-Gewinn! Gib deine Daten ein um deinen Gewinn-Code zu erhalten.');
+        const optinHeading = optinSection.querySelector('.optin-heading');
+        if (optinHeading) optinHeading.textContent = '🏆 Sofort-Gewinn abholen!';
       } else {
         setEl('optin-sub', 'Hinterlasse deine Daten für das Leaderboard und deine Gewinnchance!');
       }
@@ -2485,3 +2508,69 @@ function animateCountUp(id, from, to, duration) {
 function generateClaimCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
+
+// ═══════════════════════════════════════════════════════════
+// VEHICLE SPRITE PRELOAD
+// ═══════════════════════════════════════════════════════════
+const VEHICLE_KEYS  = ['t03', 'b05', 'b10', 'c10'];
+const vehicleSprites = {}; // key -> HTMLImageElement (ready when .loaded=true)
+
+function preloadVehicleSprites() {
+  VEHICLE_KEYS.forEach(function(key) {
+    const img = new Image();
+    img.loaded = false;
+    img.onload  = function() { img.loaded = true; };
+    img.onerror = function() { img.loaded = false; };
+    img.src = 'assets/vehicles/' + key + '.png';
+    vehicleSprites[key] = img;
+  });
+}
+
+function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
+  const img = vehicleSprites[spriteKey];
+  if (!img || !img.loaded) {
+    drawCarBlock(bx, by, bw, bh);
+    return;
+  }
+  // Contain the sprite inside the block bounds with small padding
+  const pad    = 2;
+  const maxW   = bw - pad * 2;
+  const maxH   = bh - pad * 2;
+  const ratio  = img.naturalWidth / img.naturalHeight;
+  let dw, dh;
+  if (maxW / maxH > ratio) {
+    dh = maxH;
+    dw = dh * ratio;
+  } else {
+    dw = maxW;
+    dh = dw / ratio;
+  }
+  const dx = bx + pad + (maxW - dw) / 2;
+  const dy = by + pad + (maxH - dh) / 2;
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  ctx.drawImage(img, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT ON LOAD
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  // Sync sound buttons with persisted state
+  syncSoundButtons();
+
+  // Preload vehicle sprites
+  preloadVehicleSprites();
+
+  // Resume AudioContext on first user interaction (autoplay policy)
+  function resumeAudioOnce() {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(function() {});
+    }
+    document.removeEventListener('pointerdown', resumeAudioOnce);
+    document.removeEventListener('touchstart',  resumeAudioOnce);
+  }
+  document.addEventListener('pointerdown', resumeAudioOnce, { once: true });
+  document.addEventListener('touchstart',  resumeAudioOnce, { once: true, passive: true });
+});

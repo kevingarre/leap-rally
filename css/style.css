@@ -1625,3 +1625,42 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   .game-title { font-size: 54px; }
   .start-logo-img { height: 116px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   SOUND TOGGLE BUTTON
+══════════════════════════════════════════════════════════ */
+.sound-toggle-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1.5px solid var(--leap-green);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--leap-white);
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  box-shadow: 0 2px 10px rgba(103, 194, 58, 0.3);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.sound-toggle-btn:active {
+  transform: scale(0.92);
+}
+.sound-toggle-btn.sound-off {
+  border-color: var(--leap-grey);
+  box-shadow: none;
+  opacity: 0.7;
+}
+/* In-game position: right of the level-badge row, clear of HUD */
+.sound-toggle-ingame {
+  top: 10px;
+  right: 10px;
+}
