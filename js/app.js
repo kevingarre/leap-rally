@@ -204,6 +204,11 @@ let state = {
   // Multi-ball (Level 4)
   multiBallActive: false,
   multiBallTimer:  0,
+  // Vehicle Power-Ups
+  pierceActive:    false,
+  speedBoostTimer: 0,
+  paddleBoostTimer: 0,
+  paddleBaseW:     0,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -389,6 +394,10 @@ function resetGameState() {
     gamepaused:       false,
     multiBallActive:  false,
     multiBallTimer:   0,
+    pierceActive:     false,
+    speedBoostTimer:  0,
+    paddleBoostTimer: 0,
+    paddleBaseW:      0,
   });
 
   ball2.active = false;
@@ -968,6 +977,36 @@ function update(dt) {
     hintAlpha = Math.max(0, hintAlpha - dt * 0.4);
   }
   if (overtakeFlash  > 0) overtakeFlash  = Math.max(0, overtakeFlash  - dt);
+
+  // ── Vehicle Power-Up timers ──────────────────────────────────────────────
+  // B05: Speed Boost — restore speed when timer expires
+  if (state.speedBoostTimer > 0) {
+    state.speedBoostTimer -= dt;
+    if (state.speedBoostTimer <= 0) {
+      state.speedBoostTimer = 0;
+      const curSpd = Math.hypot(ball.vx, ball.vy);
+      if (curSpd > 0) {
+        const restoreSpd = curSpd / 1.3;
+        ball.vx = ball.vx / curSpd * restoreSpd;
+        ball.vy = ball.vy / curSpd * restoreSpd;
+      }
+      state.ballSpeedPx = Math.max(state.ballSpeedPx / 1.3, GAME_CFG.ballBaseSpeed * ch);
+    }
+  }
+
+  // B10: Paddle Boost — restore width when timer expires
+  if (state.paddleBoostTimer > 0) {
+    state.paddleBoostTimer -= dt;
+    if (state.paddleBoostTimer <= 0) {
+      state.paddleBoostTimer = 0;
+      if (state.paddleBaseW > 0) {
+        const oldW = paddle.w;
+        paddle.w = state.paddleBaseW;
+        paddle.x = Math.max(0, Math.min(cw - paddle.w, paddle.x + (oldW - paddle.w) / 2));
+        state.paddleBaseW = 0;
+      }
+    }
+  }
 }
 
 function updateBall(dt) {
@@ -1054,6 +1093,7 @@ function doBouncePaddle(b) {
     // Paddle contact resets the block-streak (STREAK = consecutive block hits).
     state.combo = 1;
     updateComboUI();
+    playPaddleBounceTone();
   }
 
   hintAlpha = 0;
@@ -1093,7 +1133,16 @@ function checkBlockCollisions(b) {
 
     if (dx * dx + dy * dy < b.r * b.r) {
       blk.hitsLeft--;
+
+      // T03 Pierce: force-destroy block and skip bounce
+      const wasPiercing = (state.pierceActive && b === ball);
+      if (wasPiercing) {
+        blk.hitsLeft  = 0;
+        state.pierceActive = false;
+      }
+
       if (blk.hitsLeft > 0) {
+        // Block still alive (first hit of multi-hit block)
         const overlapX = b.r - Math.abs(dx);
         const overlapY = b.r - Math.abs(dy);
         if (overlapX < overlapY) {
@@ -1104,7 +1153,11 @@ function checkBlockCollisions(b) {
           b.y += Math.sign(dy || -1) * (overlapY + 1);
         }
         spawnParticles(blk.x + blk.w / 2, blk.y + blk.h / 2, '#FFFFFF');
-        spawnFloatText(blk.x + blk.w / 2, blk.y, '💥 -1 HIT', '#FFB800');
+        spawnFloatText(blk.x + blk.w / 2, blk.y, '\uD83D\uDCA5 -1 HIT', '#FFB800');
+        // First-hit sounds
+        if (blk.carTarget)  playVehicleHitTone(true);
+        else if (blk.isTurbo) playTurboBlockTone();
+        else                 playBlockHitTone(state.combo);
         break;
       }
 
@@ -1122,13 +1175,21 @@ function checkBlockCollisions(b) {
 
       const overlapX = b.r - Math.abs(dx);
       const overlapY = b.r - Math.abs(dy);
-      if (overlapX < overlapY) {
-        b.vx = -b.vx;
-        b.x += Math.sign(dx || 1) * (overlapX + 1);
-      } else {
-        b.vy = -b.vy;
-        b.y += Math.sign(dy || -1) * (overlapY + 1);
+      // Skip bounce when piercing
+      if (!wasPiercing) {
+        if (overlapX < overlapY) {
+          b.vx = -b.vx;
+          b.x += Math.sign(dx || 1) * (overlapX + 1);
+        } else {
+          b.vy = -b.vy;
+          b.y += Math.sign(dy || -1) * (overlapY + 1);
+        }
       }
+
+      // Final-destroy hit sounds
+      if (blk.carTarget)  playVehicleHitTone(false);
+      else if (blk.isTurbo) playTurboBlockTone();
+      else                 playBlockHitTone(state.combo);
 
       let energyGain, scoreGain;
       const baseEnergy = (BLOCK_ROW_ENERGY_BASE[Math.min(blk.row, 3)] || 3) * state.combo;
@@ -1188,6 +1249,11 @@ function checkBlockCollisions(b) {
         flashFullCharge();
         // Reset battery for next cycle (rechargeable)
         state.fullChargeRewarded = true;  // guard flag: cleared inside flashFullCharge after reset
+      }
+
+      // Vehicle Power-Up activation (einmalig pro finalem Treffer)
+      if (blk.carTarget && blk.vehicleKey) {
+        activateVehiclePowerUp(blk.vehicleKey, blk.x + blk.w / 2, blk.y + blk.h / 2);
       }
 
       break;
@@ -1984,6 +2050,206 @@ function playOvertakeTone() {
       osc.stop(ac.currentTime + t + dur + 0.05);
     } catch(e) {}
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HIT SOUNDS
+// ═══════════════════════════════════════════════════════════
+
+// Normal block hit — pitch rises with combo
+function playBlockHitTone(combo) {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const freq = 220 * (1 + Math.min(combo, 8) * 0.08);
+    const osc  = ac.createOscillator();
+    const env  = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    env.gain.setValueAtTime(0.15, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+    osc.connect(env); env.connect(ac.destination);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.17);
+  } catch(e) {}
+}
+
+// Turbo block hit — electric zap
+function playTurboBlockTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ac.currentTime + 0.15);
+    env.gain.setValueAtTime(0.20, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
+    osc.connect(env); env.connect(ac.destination);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.20);
+  } catch(e) {}
+}
+
+// Vehicle block hit: first hit = dull thud, final = satisfying impact sweep
+function playVehicleHitTone(isFirstHit) {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'sine';
+    if (isFirstHit) {
+      osc.frequency.setValueAtTime(120, ac.currentTime);
+      env.gain.setValueAtTime(0.30, ac.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.20);
+      osc.connect(env); env.connect(ac.destination);
+      osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.25);
+    } else {
+      osc.frequency.setValueAtTime(260, ac.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ac.currentTime + 0.25);
+      env.gain.setValueAtTime(0.35, ac.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.25);
+      osc.connect(env); env.connect(ac.destination);
+      osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.30);
+    }
+  } catch(e) {}
+}
+
+// Paddle bounce — soft dong
+function playPaddleBounceTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(320, ac.currentTime);
+    env.gain.setValueAtTime(0.12, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+    osc.connect(env); env.connect(ac.destination);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.23);
+  } catch(e) {}
+}
+
+// T03 Power-Up: electric zap
+function playElectroZapTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1200, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ac.currentTime + 0.3);
+    env.gain.setValueAtTime(0.20, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
+    osc.connect(env); env.connect(ac.destination);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.35);
+  } catch(e) {}
+}
+
+// B05 Power-Up: whoosh sweep
+function playSpeedBoostTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    const osc = ac.createOscillator();
+    const env = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ac.currentTime + 0.4);
+    env.gain.setValueAtTime(0.22, ac.currentTime);
+    env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.4);
+    osc.connect(env); env.connect(ac.destination);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.45);
+  } catch(e) {}
+}
+
+// B10 Power-Up: ascending power chime (3 notes)
+function playPaddleBoostTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  const notes = [440, 554, 659];
+  notes.forEach(function(freq, i) {
+    const delay = i * 0.12;
+    try {
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, ac.currentTime + delay);
+      env.gain.setValueAtTime(0, ac.currentTime + delay);
+      env.gain.linearRampToValueAtTime(0.20, ac.currentTime + delay + 0.04);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + 0.35);
+      osc.connect(env); env.connect(ac.destination);
+      osc.start(ac.currentTime + delay);
+      osc.stop(ac.currentTime + delay + 0.40);
+    } catch(e) {}
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VEHICLE POWER-UPS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Triggered when a vehicle block is finally destroyed.
+ * @param {string} key  One of VEHICLE_KEYS
+ * @param {number} blkX  Block centre x
+ * @param {number} blkY  Block centre y
+ */
+function activateVehiclePowerUp(key, blkX, blkY) {
+  switch (key) {
+    case 't03': {
+      // ELEKTRO-BALL: next block hit pierces without deflecting
+      state.pierceActive = true;
+      spawnFloatText(blkX, blkY - 20, '\u26A1 ELEKTRO-BALL!', '#FFD700');
+      playElectroZapTone();
+      break;
+    }
+    case 'b05': {
+      // SPEED BOOST: +30% for 4 s
+      if (state.speedBoostTimer <= 0) {
+        // Only apply multiplier if not already boosted
+        const curSpd = Math.hypot(ball.vx, ball.vy);
+        if (curSpd > 0) {
+          ball.vx *= 1.3;
+          ball.vy *= 1.3;
+        }
+        state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.3, GAME_CFG.ballMaxSpeed * ch);
+      }
+      state.speedBoostTimer = 4.0;
+      spawnFloatText(blkX, blkY - 20, '\uD83D\uDD25 SPEED BOOST!', '#FF8C00');
+      playSpeedBoostTone();
+      break;
+    }
+    case 'b10': {
+      // PADDLE BOOST: +40% width for 4 s
+      if (state.paddleBoostTimer <= 0) {
+        // Only save base width when not already boosted
+        state.paddleBaseW = paddle.w;
+        const newW = Math.min(paddle.w * 1.4, cw * 0.6);
+        paddle.x  += (paddle.w - newW) / 2; // re-centre
+        paddle.w   = newW;
+        paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x));
+      }
+      state.paddleBoostTimer = 4.0;
+      spawnFloatText(blkX, blkY - 20, '\u2194\uFE0F PADDLE BOOST!', '#67C23A');
+      playPaddleBoostTone();
+      break;
+    }
+    case 'c10': {
+      // JACKPOT MULTIBALL: spawn extra ball (jackpot text+sound already in checkBlockCollisions)
+      if (!ball2.active) spawnBall2();
+      break;
+    }
+  }
 }
 
 function computeCurrentScore() {
@@ -2864,6 +3130,7 @@ function generateClaimCode() {
 // PNG assets no longer used; all 4 models drawn via Canvas paths.
 // ═══════════════════════════════════════════════════════════
 const VEHICLE_KEYS = ['t03', 'b05', 'b10', 'c10'];
+const vehicleSprites = {}; // preloaded Image objects, keyed by VEHICLE_KEYS
 
 // ─── Vehicle shape parameters (unitless, scaled to fit block) ───────────────
 // Each entry describes the silhouette proportions:
@@ -2891,6 +3158,56 @@ const VEHICLE_SHAPES = {
  * @param {string} spriteKey  One of VEHICLE_KEYS
  */
 function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
+  const cx  = bx + bw / 2;
+
+  // ── PNG path: use real KI-render when loaded ────────────────────────────
+  const img = vehicleSprites[spriteKey];
+  if (img && img.loaded) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // Dark block background (blends with black PNG background seamlessly)
+    ctx.fillStyle = '#0A0A0A';
+    ctx.fillRect(bx, by, bw, bh);
+
+    // Contain PNG (1536×1024 = 1.5:1 aspect) with 6% inset padding
+    const pad = Math.round(Math.min(bw, bh) * 0.06);
+    const drawW = bw - pad * 2;
+    const drawH = bh - pad * 2;
+    const imgAspect = 1536 / 1024; // 1.5
+    let renderW, renderH;
+    if (drawW / drawH > imgAspect) {
+      renderH = drawH;
+      renderW = renderH * imgAspect;
+    } else {
+      renderW = drawW;
+      renderH = renderW / imgAspect;
+    }
+    const renderX = bx + (bw - renderW) / 2;
+    const renderY = by + (bh - renderH) / 2;
+    ctx.drawImage(img, renderX, renderY, renderW, renderH);
+
+    // Green border around block
+    ctx.strokeStyle = '#67C23A';
+    ctx.lineWidth   = 2;
+    ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+
+    // Model label at bottom-centre
+    const labelFontSz = Math.max(7, Math.round(bh * 0.20));
+    ctx.fillStyle    = '#FFFFFF';
+    ctx.font         = `800 ${labelFontSz}px 'Montserrat', sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.shadowColor  = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur   = 4;
+    ctx.fillText(spriteKey.toUpperCase(), cx, by + bh - 2);
+
+    ctx.restore();
+    return;
+  }
+
+  // ── Fallback: parametrised vector silhouette (until PNG loads) ────────────
   const shape = VEHICLE_SHAPES[spriteKey] || VEHICLE_SHAPES.b05;
 
   // ── Contain silhouette in block with aspect ~shape.bodyAspect : 1 ──────────
@@ -2908,7 +3225,7 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     carH = carW / shape.bodyAspect;
   }
 
-  const cx  = bx + bw / 2;
+  // cx already defined at top of function (bx + bw/2)
   const carY = by + pad + (maxH - carH) / 2; // vertically centred in reserved area
 
   // ── Geometry ────────────────────────────────────────────────────────────────
@@ -3046,4 +3363,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   document.addEventListener('pointerdown', resumeAudioOnce, { once: true });
   document.addEventListener('touchstart',  resumeAudioOnce, { once: true, passive: true });
+
+  // Preload vehicle PNG sprites
+  VEHICLE_KEYS.forEach(function(key) {
+    const img = new Image();
+    img.onload  = function() { img.loaded = true; };
+    img.onerror = function() { img.loaded = false; };
+    img.src = 'assets/vehicles/' + key + '.png';
+    vehicleSprites[key] = img;
+  });
 });
