@@ -358,6 +358,9 @@ function showScreen(id) {
 // GAME INITIALIZATION
 // ═══════════════════════════════════════════════════════════
 function startGame() {
+  // Ensure AudioContext is created and resumed synchronously inside this
+  // user-gesture handler — iOS Safari requires this in the same call stack.
+  ensureAudioResumed();
   resetGameState();
   showScreen('screen-game');
   runCountdown();
@@ -486,19 +489,10 @@ function runCountdown() {
   if (textEl) textEl.textContent = 'ACHTUNG…';
   updateLights(0);
 
-  // Ensure AudioContext is running (user gesture = "Spielen"-button click)
-  // ac.resume() is async — await it before scheduling any tones so they are
-  // not lost while the context is still 'suspended'.
-  const ac0 = getAudioCtx();
-  const doStartAudio = function() {
-    startBgMusic();
-    playCountdownBlip(0);
-  };
-  if (ac0 && ac0.state === 'suspended') {
-    ac0.resume().then(doStartAudio).catch(doStartAudio);
-  } else {
-    doStartAudio();
-  }
+  // AudioContext was already resumed synchronously in startGame() (user gesture).
+  // Safe to schedule audio immediately on all browsers incl. iOS Safari.
+  startBgMusic();
+  playCountdownBlip(0);
 
   const tick = setInterval(function() {
     i++;
@@ -823,14 +817,23 @@ function updateGhostCar(dt) {
 // ═══════════════════════════════════════════════════════════
 // WEBAUDIO
 // ═══════════════════════════════════════════════════════════
+// IMPORTANT: AudioContext must be created AND resumed synchronously inside
+// a user-gesture handler on iOS Safari. Do NOT auto-resume here.
 function getAudioCtx() {
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    try { audioCtx.resume(); } catch(e) {}
-  }
   return audioCtx;
+}
+
+// Call this synchronously inside a user-gesture (tap/click) handler.
+// On iOS Safari, resume() must happen in the same call stack as the gesture.
+function ensureAudioResumed() {
+  const ac = getAudioCtx();
+  if (ac && ac.state !== 'running') {
+    ac.resume().catch(function() {});
+  }
+  return ac;
 }
 
 function playTone(freq, type, gain, duration) {
