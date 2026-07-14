@@ -471,6 +471,27 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 }
 
 /* HUD */
+.level-badge {
+  position: relative;
+  z-index: 11;
+  align-self: center;
+  margin: 6px auto 0;
+  padding: 3px 14px;
+  border-radius: 999px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #0A0A1A;
+  background: var(--orange);
+  box-shadow: 0 2px 12px var(--orange-glow);
+  transition: background .3s, box-shadow .3s, transform .2s;
+}
+.level-badge.level-1 { background: var(--green);  box-shadow: 0 2px 12px var(--green-glow); }
+.level-badge.level-2 { background: var(--blue);   box-shadow: 0 2px 12px var(--blue-glow); }
+.level-badge.level-3 { background: var(--orange-light); box-shadow: 0 2px 12px var(--orange-glow); }
+.level-badge.level-4 { background: var(--orange); box-shadow: 0 2px 16px var(--orange-glow); transform: scale(1.06); }
+
 .game-hud {
   position: relative;
   z-index: 10;
