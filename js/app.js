@@ -279,6 +279,7 @@ function startGame() {
 
 function resetGameState() {
   cancelAnimationFrame(state.rafId);
+  stopBgMusic();
   resetSession();
 
   Object.assign(state, {
