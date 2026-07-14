@@ -126,10 +126,10 @@ const PADDLE_LERP_FACTOR = 18;
 
 // Level block layout: [rows, cols, turboCount, carBlockRows]
 const LEVEL_BLOCK_CONFIG = [
-  { rows: 2, cols: 5, turboCount: 0, carRows: [1] },
-  { rows: 3, cols: 6, turboCount: 2, carRows: [1, 2] },
-  { rows: 4, cols: 6, turboCount: 3, carRows: [1, 2, 3] },
-  { rows: 4, cols: 7, turboCount: 4, carRows: [2, 3] },
+  { rows: 3, cols: 4, turboCount: 1, carRows: [1, 2] },       // L1: compact, 2 full car rows
+  { rows: 4, cols: 5, turboCount: 2, carRows: [1, 2, 3] },    // L2: 3 car rows
+  { rows: 4, cols: 5, turboCount: 3, carRows: [0, 2, 3] },    // L3: top + bottom car rows
+  { rows: 5, cols: 5, turboCount: 4, carRows: [1, 2, 3, 4] }, // L4+: max vehicles
 ];
 
 // Ghost car speed per level
@@ -732,10 +732,10 @@ function initBlocks() {
   let carCount = 0;  // track car block index for sprite rotation
   for (let row = 0; row < rows; row++) {
     const isCarRow = cfg.carRows.includes(row);
-    const carCol   = (row * 2 + 1) % cols;
     for (let col = 0; col < cols; col++) {
       const isTurbo    = turboIndices.has(idx);
-      const isCar      = isCarRow && col === carCol;
+      // All blocks in a carRow are vehicle blocks for more Leapmotor presence
+      const isCar      = isCarRow;
       const hitsLeft   = (isCar && state.level >= 3) ? 2 : 1;
       const vehicleKey = isCar ? VEHICLE_KEYS[carCount % VEHICLE_KEYS.length] : null;
       if (isCar) carCount++;
@@ -1436,9 +1436,9 @@ function renderPaddle() {
 
   ctx.save();
 
-  // Outer green glow
+  // Outer glow — brighter + wider when paddle-boost is active
   ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = 18;
+  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 40 : 18;
   roundRect(ctx, x, y, w, h, r);
   ctx.strokeStyle = 'rgba(103,194,58,0.55)';
   ctx.lineWidth   = 4;
@@ -1490,16 +1490,36 @@ function renderPaddle() {
 
 function renderBall() {
   ctx.save();
-  ctx.shadowColor = '#F5E642';
-  ctx.shadowBlur  = 20;
+  // Power-up visual: pierce = electric blue, speed = orange trail glow, default = yellow
+  if (state.pierceActive) {
+    ctx.shadowColor = '#00CFFF';
+    ctx.shadowBlur  = 32;
+  } else if (state.speedBoostTimer > 0) {
+    ctx.shadowColor = '#FF6B00';
+    ctx.shadowBlur  = 28;
+  } else {
+    ctx.shadowColor = '#F5E642';
+    ctx.shadowBlur  = 20;
+  }
 
   const g = ctx.createRadialGradient(
     ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.08,
     ball.x, ball.y, ball.r
   );
-  g.addColorStop(0,   '#FFFFFF');
-  g.addColorStop(0.4, '#F5E642');
-  g.addColorStop(1,   '#C49A00');
+  // Colour shifts with active power-up
+  if (state.pierceActive) {
+    g.addColorStop(0,   '#FFFFFF');
+    g.addColorStop(0.4, '#00CFFF');
+    g.addColorStop(1,   '#0070AA');
+  } else if (state.speedBoostTimer > 0) {
+    g.addColorStop(0,   '#FFFFFF');
+    g.addColorStop(0.4, '#FF9E3D');
+    g.addColorStop(1,   '#C85000');
+  } else {
+    g.addColorStop(0,   '#FFFFFF');
+    g.addColorStop(0.4, '#F5E642');
+    g.addColorStop(1,   '#C49A00');
+  }
 
   ctx.beginPath();
   ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
@@ -3383,7 +3403,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Preload vehicle PNG sprites
   VEHICLE_KEYS.forEach(function(key) {
     const img = new Image();
-    img.onload  = function() { img.loaded = true; };
+    img.onload  = function() { img.loaded = true; }; // sprite ready, next frame picks it up
     img.onerror = function() { img.loaded = false; };
     img.src = 'assets/vehicles/' + key + '.png';
     vehicleSprites[key] = img;
