@@ -633,17 +633,11 @@ function tryLevelUp() {
   paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x));
   paddle.targetX = paddle.x;
 
-  // CRITICAL: reset ball cleanly to paddle — prevents Level-4 auto-score bug
+  // Reset ball cleanly to paddle. NO auto-launch — the player must tap/click
+  // to start the ball (Kevin: never auto-start a new level or after a life loss).
   resetBallToPaddle();
   deactivateBall2();
-
-  // BUGFIX: auto-launch ball after the level overlay clears so the player
-  // is not stuck with a ball glued to the paddle on Level 2+ (input handlers
-  // only move the paddle, they never launch).
-  setTimeout(() => {
-    if (!state.gameActive || state.gamepaused) return;
-    if (!ballLaunched) launchBall();
-  }, Math.round(LEVEL_OVERLAY_DURATION * 1000) + 100);
+  hintAlpha = 1;  // show "tap to launch" hint again
 
   levelOverlay = { active: true, timer: LEVEL_OVERLAY_DURATION, level: state.level, label: getLevelLabel(state.level) };
 
@@ -885,8 +879,9 @@ function beginGameLoop() {
   state.lastFrameTime = performance.now();
   session.gameStartTs = Date.now();
 
-  // Launch ball immediately
-  launchBall();
+  // Do NOT auto-launch — ball waits on the paddle until the player taps/clicks.
+  resetBallToPaddle();
+  hintAlpha = 1;  // show "tap to launch" hint
 
   // Background music was already started at countdown; only start if not yet active
   // (handles edge case where countdown was skipped or bgMusic stopped somehow)
@@ -962,7 +957,13 @@ function update(dt) {
 
   if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
   if (newWaveFlash   > 0) newWaveFlash   = Math.max(0, newWaveFlash   - dt * 1.0); // slower fade for overtake flash
-  if (hintAlpha      > 0) hintAlpha      = Math.max(0, hintAlpha      - dt * 0.4);
+  // Keep the hint fully visible while the ball waits on the paddle (tap-to-launch);
+  // only fade it out once the ball is in play.
+  if (!ballLaunched) {
+    hintAlpha = 1;
+  } else if (hintAlpha > 0) {
+    hintAlpha = Math.max(0, hintAlpha - dt * 0.4);
+  }
   if (overtakeFlash  > 0) overtakeFlash  = Math.max(0, overtakeFlash  - dt);
 }
 
@@ -1069,14 +1070,10 @@ function onBallMiss() {
     return;
   }
 
-  // Noch Leben übrig → Ball neu auf Paddle
+  // Noch Leben übrig → Ball neu auf Paddle. NO auto-launch: player taps to start.
   resetBallToPaddle();
+  hintAlpha = 1;  // re-show "tap to launch" hint
   spawnFloatText(cw / 2, ch * 0.5, `❤️ ${state.lives} LEBEN`, '#FF4D51');
-
-  setTimeout(() => {
-    if (!state.gameActive || state.gamepaused) return;
-    launchBall();
-  }, 600);
 }
 
 function checkBlockCollisions(b) {
@@ -1492,7 +1489,11 @@ function renderHint() {
   ctx.font         = `600 ${fontSize}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('← Schläger bewegen · 🚗 Ziele treffen →', cw / 2, hintY);
+  // When the ball waits on the paddle, prompt the player to tap to launch.
+  const hintMsg = ballLaunched
+    ? '← Schläger bewegen · 🚗 Ziele treffen →'
+    : '👆 TIPPEN ZUM STARTEN';
+  ctx.fillText(hintMsg, cw / 2, hintY);
   ctx.restore();
 }
 
