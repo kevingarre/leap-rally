@@ -595,6 +595,8 @@ function tryLevelUp() {
 
   if (state.level === 4) {
     spawnFloatText(cw / 2, ch * 0.45, '🔴 MULTI-BALL BEREIT', '#FF4D51');
+  } else if (state.level === 5) {
+    spawnFloatText(cw / 2, ch * 0.45, 'JAGE DEN HIGHSCORE!', '#FFFFFF');
   }
 
   return true;
