@@ -661,6 +661,17 @@ function tryLevelUp() {
     spawnFloatText(cw / 2, ch * 0.45, 'JAGE DEN HIGHSCORE!', '#FFFFFF');
   }
 
+  // Level 3 reached = Level 2 cleared. Check for instant-win trigger.
+  // Don't rely solely on battery-full event — trigger directly here so the
+  // player always gets the overtake moment if conditions are met.
+  if (state.level === 3 && !state.instantWinTriggered) {
+    const overlayMs = Math.round(LEVEL_OVERLAY_DURATION * 1000) + 400;
+    setTimeout(function() {
+      if (!state.gameActive || state.instantWinTriggered) return;
+      if (isInstantWinReady()) triggerGhostOvertake();
+    }, overlayMs);
+  }
+
   return true;
 }
 
