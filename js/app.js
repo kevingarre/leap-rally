@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LEAP CHARGE – Breakout Edition  v20260714i
+   LEAP CHARGE – Breakout Edition  v20260714j
    Leapmotor × Tischtennis × E-Mobility
    Mobile-first · No build step · No backend
 ═══════════════════════════════════════════════════════════ */
@@ -32,8 +32,8 @@ const TURBO_BLOCK_COLOR = '#67C23A';
 const CAR_BLOCK_COLOR   = '#95D475';
 
 // Ball physics (fractions of canvas height per second)
-const BALL_BASE_SPEED  = 0.38;
-const BALL_MAX_SPEED   = 1.15;  // Bonus level can go faster
+const BALL_BASE_SPEED  = 0.50;  // raised from 0.38 (+32%) — spuerbar schneller ab Level 1
+const BALL_MAX_SPEED   = 1.40;  // raised from 1.15 — cap fuer Level 4 + Bonus, kein Tunneling-Risiko
 const BALL_WAVE_ACCEL  = 1.06;
 const BALL_MIN_VY_FRAC = 0.30;
 
