@@ -224,6 +224,7 @@ const ball2  = { x: 0, y: 0, vx: 0, vy: 0, r: 0, active: false };
 let blocks      = [];
 let particles   = [];
 let floatTexts  = [];
+let lightningArcs = [];  // electric arcs for T03 Elektro-Ball
 
 let ballLaunched  = false;
 let ballMissFlash = 0;
@@ -407,6 +408,7 @@ function resetGameState() {
   ball2.active = false;
   particles    = [];
   floatTexts   = [];
+  lightningArcs = [];
   ballLaunched  = false;
   vehiclePreview = { active: false, key: null, label: '', timer: 0, maxTimer: 2.2 };
   ballMissFlash = 0;
@@ -995,6 +997,11 @@ function update(dt) {
   }
 
   updateParticles(dt);
+  updateLightningArcs(dt);
+  // Ambient electric arcs around ball while Elektro-Ball is armed
+  if (state.pierceActive && ballLaunched && Math.random() < 0.35) {
+    spawnLightningArcs(ball.x, ball.y, 2, false);
+  }
   updateFloatTexts(dt);
 
   if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
@@ -1204,6 +1211,8 @@ function checkBlockCollisions(b) {
       if (wasPiercing) {
         blk.hitsLeft  = 0;
         state.pierceActive = false;
+        // Lightning burst at impact point
+        spawnLightningArcs(blk.x + blk.w/2, blk.y + blk.h/2, 6, true);
       }
 
       // STREAK: increment on every block hit (any ball).
@@ -1403,6 +1412,7 @@ function render() {
 
   renderBlocks();
   renderParticles();
+  renderLightningArcs();
   renderPaddle();
   renderBall();
   if (ball2.active) renderBall2();
@@ -1610,6 +1620,53 @@ function renderBall2() {
   ctx.arc(ball2.x, ball2.y, ball2.r + 4, 0, Math.PI * 2);
   ctx.stroke();
 
+  ctx.restore();
+}
+
+// ── LIGHTNING ARC SYSTEM (T03 Elektro-Ball) ────────────────
+function spawnLightningArcs(x, y, count, big) {
+  if (lightningArcs.length > 12) return; // cap
+  const num = big ? (count || 6) : (count || 3);
+  for (let i = 0; i < num; i++) {
+    const angle  = Math.random() * Math.PI * 2;
+    const length = big ? (20 + Math.random() * 28) : (10 + Math.random() * 16);
+    lightningArcs.push({
+      x, y, angle, length,
+      life: big ? 0.22 : 0.14,
+      maxLife: big ? 0.22 : 0.14,
+      big: !!big,
+    });
+  }
+}
+
+function updateLightningArcs(dt) {
+  for (let i = lightningArcs.length - 1; i >= 0; i--) {
+    lightningArcs[i].life -= dt;
+    if (lightningArcs[i].life <= 0) lightningArcs.splice(i, 1);
+  }
+}
+
+function renderLightningArcs() {
+  if (!lightningArcs.length) return;
+  ctx.save();
+  for (const arc of lightningArcs) {
+    const alpha = arc.life / arc.maxLife;
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.strokeStyle = arc.big ? '#FFFFFF' : '#00CFFF';
+    ctx.shadowColor = '#00CFFF';
+    ctx.shadowBlur  = arc.big ? 12 : 6;
+    ctx.lineWidth   = arc.big ? 2.2 : 1.4;
+    ctx.beginPath();
+    // Jagged lightning bolt: main direction + random jags
+    const ex = arc.x + Math.cos(arc.angle) * arc.length;
+    const ey = arc.y + Math.sin(arc.angle) * arc.length;
+    const mx = (arc.x + ex) / 2 + Math.cos(arc.angle + Math.PI/2) * (arc.length * 0.35 * (Math.random()-0.5)*2);
+    const my = (arc.y + ey) / 2 + Math.sin(arc.angle + Math.PI/2) * (arc.length * 0.35 * (Math.random()-0.5)*2);
+    ctx.moveTo(arc.x, arc.y);
+    ctx.lineTo(mx, my);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -2323,6 +2380,7 @@ function activateVehiclePowerUp(key, blkX, blkY) {
       // ELEKTRO-BALL: next block hit pierces without deflecting
       state.pierceActive = true;
       spawnFloatText(blkX, blkY - 20, '\u26A1 ELEKTRO-BALL!', '#FFD700');
+      spawnLightningArcs(blkX, blkY, 8, true);
       playElectroZapTone();
       break;
     }
