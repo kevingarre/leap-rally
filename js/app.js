@@ -1000,7 +1000,11 @@ function update(dt) {
   if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
   if (vehiclePreview.active) {
     vehiclePreview.timer -= dt;
-    if (vehiclePreview.timer <= 0) vehiclePreview.active = false;
+    if (vehiclePreview.timer <= 0) {
+      vehiclePreview.active = false;
+      const vpBar = document.getElementById('vehicle-preview-bar');
+      if (vpBar) vpBar.classList.add('hidden');
+    }
   }
   if (newWaveFlash   > 0) newWaveFlash   = Math.max(0, newWaveFlash   - dt * 1.0); // slower fade for overtake flash
   // Keep the hint fully visible while the ball waits on the paddle (tap-to-launch);
@@ -1408,7 +1412,6 @@ function render() {
   if (ball2.active) renderBall2();
   renderFloatTexts();
   if (hintAlpha > 0) renderHint();
-  if (vehiclePreview.active) renderVehiclePreview();
   if (levelOverlay.active) renderLevelOverlay();
   if (overtakeFlash > 0) renderOvertakeBanner();
 
@@ -1660,60 +1663,6 @@ function renderHint() {
     ? '← Schläger bewegen · 🚗 Ziele treffen →'
     : '👆 TIPPEN ZUM STARTEN';
   ctx.fillText(hintMsg, cw / 2, hintY);
-  ctx.restore();
-}
-
-function renderVehiclePreview() {
-  if (!vehiclePreview.active) return;
-  const progress  = vehiclePreview.timer / vehiclePreview.maxTimer;
-  // Fade in first 15%, hold, fade out last 25%
-  let alpha;
-  if (progress > 0.85)      alpha = (1 - progress) / 0.15;
-  else if (progress < 0.25) alpha = progress / 0.25;
-  else                      alpha = 1.0;
-  alpha = Math.max(0, Math.min(1, alpha));
-
-  // Compact top-right card — game stays fully visible
-  const img   = vehicleSprites[vehiclePreview.key];
-  const cardW = Math.round(cw * 0.46);   // ~46% width, not too big
-  const imgH  = Math.round(cardW / 1.5); // 1536:1024 aspect
-  const lblH  = Math.round(cw * 0.045);  // label font size
-  const pad   = 8;
-  const cardH = imgH + lblH + pad * 3;
-  const cardX = cw - cardW - 10;         // top-right, small margin
-  const cardY = 52;                       // below the top-bar logo
-
-  ctx.save();
-  ctx.globalAlpha = alpha * 0.92;
-
-  // Semi-transparent card background
-  ctx.fillStyle = 'rgba(0,0,0,0.78)';
-  roundRect(ctx, cardX, cardY, cardW, cardH, 10);
-  ctx.fill();
-
-  // Green border
-  ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = 2;
-  ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = 8;
-  roundRect(ctx, cardX, cardY, cardW, cardH, 10);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-
-  // Vehicle image inside card
-  if (img && img.loaded) {
-    ctx.drawImage(img, cardX + pad, cardY + pad, cardW - pad * 2, imgH);
-  }
-
-  // Effect label below image
-  ctx.globalAlpha  = alpha;
-  ctx.fillStyle    = '#FFFFFF';
-  ctx.font         = `800 ${lblH}px 'Montserrat', sans-serif`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor  = '#67C23A';
-  ctx.shadowBlur   = 6;
-  ctx.fillText(vehiclePreview.label, cardX + cardW / 2, cardY + pad + imgH + lblH / 2 + 4);
   ctx.restore();
 }
 
@@ -2357,6 +2306,21 @@ function activateVehiclePowerUp(key, blkX, blkY) {
     timer:    2.2,
     maxTimer: 2.2,
   };
+  // Show DOM preview bar above the game canvas
+  const vpBar   = document.getElementById('vehicle-preview-bar');
+  const vpImg   = document.getElementById('vehicle-preview-img');
+  const vpLabel = document.getElementById('vehicle-preview-label');
+  if (vpBar && vpImg && vpLabel) {
+    const img = vehicleSprites[key];
+    vpImg.src   = (img && img.src) ? img.src : '';
+    vpLabel.textContent = PREVIEW_LABELS[key] || key.toUpperCase();
+    vpBar.classList.remove('hidden');
+    // Force restart animation
+    void vpBar.offsetWidth;
+    vpBar.style.animation = 'none';
+    void vpBar.offsetWidth;
+    vpBar.style.animation = '';
+  }
 
   switch (key) {
     case 't03': {

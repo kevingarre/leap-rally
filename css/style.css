@@ -1878,6 +1878,45 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   font-size: 17px;
 }
 
+/* Vehicle power-up preview bar — slim strip above logo, slides in/out */
+.vehicle-preview-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: rgba(0,0,0,0.88);
+  border-bottom: 2px solid #67C23A;
+  box-shadow: 0 2px 12px rgba(103,194,58,0.3);
+  animation: vpb-slide 0.25s ease-out;
+}
+.vehicle-preview-bar.hidden { display: none; }
+@keyframes vpb-slide {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.vpb-img {
+  height: 36px;
+  width:  54px;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.vpb-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #FFFFFF;
+  text-transform: uppercase;
+  flex: 1;
+}
+
 /* Top bar with centered Leapmotor logo */
 .game-topbar {
   position: absolute;
