@@ -3025,6 +3025,7 @@ function populateEndScreen(energyPct, isInstantWin) {
     _showInstantWinIfNeeded(isInstantWin);
     animateCountUp('res-score', 0, state.score, 1200);
     buildLeaderboard();
+    showShareActions();
     // Launch confetti celebration (bigger for instant-win winners)
     setTimeout(function() { launchConfetti(isWinner); }, 200);
   } else {
@@ -3168,6 +3169,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     var rScore = document.getElementById('res-score');  if (rScore) rScore.textContent = state.score.toLocaleString('de-DE');
     if (submitBtn) { submitBtn.disabled = false; }
     buildLeaderboard();
+    showShareActions();
     return;
   }
 
@@ -3284,6 +3286,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     }
 
     buildLeaderboard();
+    showShareActions();
 
   } catch (err) {
     console.error('[LEAP] Opt-in submit failed:', err);
@@ -3422,6 +3425,45 @@ function playAgainDirect() {
 
 function restartGame() {
   goHome();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SOCIAL SHARING (WhatsApp + Native Share)
+// ═══════════════════════════════════════════════════════════
+var SHARE_GAME_URL = 'https://kevingarre.github.io/leap-rally/';
+
+function showShareActions() {
+  var wrap = document.getElementById('share-actions-wrap');
+  if (!wrap) return;
+  var shareText = buildShareText();
+  var fullText  = shareText + '\n\n' + SHARE_GAME_URL;
+  var waUrl     = 'https://wa.me/?text=' + encodeURIComponent(fullText);
+
+  var waBtn = document.getElementById('share-btn-wa');
+  if (waBtn) waBtn.href = waUrl;
+
+  var nativeBtn = document.getElementById('share-btn-native');
+  if (nativeBtn) {
+    nativeBtn.onclick = function() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Leapmotor TT Challenge',
+          text:  shareText,
+          url:   SHARE_GAME_URL,
+        }).catch(function() {});
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullText).then(function() {
+          var orig = nativeBtn.textContent;
+          nativeBtn.textContent = 'Kopiert! ✓';
+          setTimeout(function() { nativeBtn.textContent = orig; }, 2000);
+        }).catch(function() {});
+      } else {
+        window.prompt('Link kopieren:', SHARE_GAME_URL);
+      }
+    };
+  }
+
+  wrap.classList.remove('hidden');
 }
 
 function showShareModal() {
