@@ -2772,9 +2772,9 @@ function populateEndScreen(energyPct, isInstantWin) {
   if (submitBtn) {
     submitBtn.disabled = false;
     if (isWinner) {
-      submitBtn.textContent = '⚡ GEWINN ABHOLEN & HIGHSCORE SICHERN';
+      submitBtn.textContent = '⚡ JETZT AUSFÜLLEN & SOFORT-GEWINN SICHERN!';
     } else {
-      submitBtn.textContent = '🏆 HIGHSCORE SICHERN & RANGLISTE BETRETEN';
+      submitBtn.textContent = '⚡ JETZT AUSFÜLLEN & HIGHSCORE SICHERN!';
     }
   }
 

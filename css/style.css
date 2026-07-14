@@ -1148,22 +1148,27 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 
 /* Big green submit button inside end-cta-card */
 .end-cta-submit {
-  margin-top: 8px;
+  margin-top: 12px;
   width: 100%;
-  font-size: 14px;
-  letter-spacing: 1px;
-  padding: 16px 20px;
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  padding: 20px 24px;
   background: var(--leap-green);
   color: #000;
   font-weight: 900;
   border-radius: 50px;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(103,194,58,0.4);
+  box-shadow: 0 6px 32px rgba(103,194,58,0.6), 0 0 0 2px rgba(103,194,58,0.3);
   transition: box-shadow 0.2s, transform 0.1s;
+  animation: cta-pulse 2s ease-in-out infinite;
 }
-.end-cta-submit:active { transform: scale(0.97); }
-.end-cta-submit:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+@keyframes cta-pulse {
+  0%,100% { box-shadow: 0 6px 32px rgba(103,194,58,0.6), 0 0 0 2px rgba(103,194,58,0.3); }
+  50%      { box-shadow: 0 6px 48px rgba(103,194,58,0.9), 0 0 0 4px rgba(103,194,58,0.5); }
+}
+.end-cta-submit:active { transform: scale(0.97); animation: none; }
+.end-cta-submit:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; animation: none; }
 
 /* Reveal section */
 .end-reveal {
