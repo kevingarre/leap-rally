@@ -1002,6 +1002,13 @@ function update(dt) {
   if (state.pierceActive && ballLaunched && Math.random() < 0.35) {
     spawnLightningArcs(ball.x, ball.y, 2, false);
   }
+  // Fire trail behind ball while Speed Boost is active
+  if (state.speedBoostTimer > 0 && ballLaunched && Math.random() < 0.6) {
+    spawnFireTrail(ball.x, ball.y);
+  }
+  if (state.speedBoostTimer > 0 && ball2.active && Math.random() < 0.6) {
+    spawnFireTrail(ball2.x, ball2.y);
+  }
   updateFloatTexts(dt);
 
   if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
@@ -1668,6 +1675,41 @@ function renderLightningArcs() {
     ctx.stroke();
   }
   ctx.restore();
+}
+
+// ── FIRE PARTICLE SYSTEM (B05 Speed Boost) ─────────────────
+function spawnFireTrail(x, y) {
+  if (particles.length > 75) return; // respect particle cap
+  const colors = ['#FF6B00','#FF9E3D','#FFD700','#FF4500'];
+  const p = {
+    x: x + (Math.random()-0.5)*8,
+    y: y + (Math.random()-0.5)*8,
+    vx: (Math.random()-0.5)*40,
+    vy: -30 - Math.random()*60,   // upward — like flames rising
+    life: 0.18 + Math.random()*0.18,
+    maxLife: 0.36,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    size: 2 + Math.random()*4,
+  };
+  particles.push(p);
+}
+
+function spawnFireBurst(x, y) {
+  if (particles.length > 60) return;
+  const colors = ['#FF6B00','#FF9E3D','#FFD700','#FF4500','#FFFFFF'];
+  for (let i = 0; i < 18; i++) {
+    const angle = (Math.PI * 2 * i / 18) + Math.random()*0.4;
+    const spd = 60 + Math.random()*120;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle)*spd,
+      vy: Math.sin(angle)*spd - 80,
+      life: 0.3 + Math.random()*0.25,
+      maxLife: 0.55,
+      color: colors[i % colors.length],
+      size: 2.5 + Math.random()*4,
+    });
+  }
 }
 
 function renderParticles() {
@@ -2393,6 +2435,8 @@ function activateVehiclePowerUp(key, blkX, blkY) {
           ball.vx *= 1.3;
           ball.vy *= 1.3;
         }
+        // Fire burst on activate
+        spawnFireBurst(blkX, blkY);
         state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.3, GAME_CFG.ballMaxSpeed * ch);
       }
       state.speedBoostTimer = 4.0;
