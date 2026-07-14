@@ -177,20 +177,33 @@ async function submitEntry(f) {
 
 /**
  * Load the active event once at app start and store in window.LEAP_EVENT.
- * Gracefully fails: if Supabase is unreachable, LEAP_EVENT stays null
- * and the game still runs (offline mode).
+ * Retries up to 3 times with 1s/2s/3s backoff on failure.
+ * Gracefully fails: if all attempts fail, LEAP_EVENT stays null (offline mode).
  */
 async function initLeapEvent() {
-  try {
-    const ev = await getActiveEvent();
-    if (ev) {
-      window.LEAP_EVENT = ev;
-      console.info('[LEAP] Active event loaded:', ev.name, '| id:', ev.id);
-    } else {
-      console.warn('[LEAP] No active event found in Supabase – offline mode.');
+  const DELAYS = [1000, 2000, 3000];
+  for (let attempt = 0; attempt <= DELAYS.length; attempt++) {
+    try {
+      const ev = await getActiveEvent();
+      if (ev) {
+        window.LEAP_EVENT = ev;
+        window.LEAP_EVENT_LOAD_FAILED = false;
+        console.info('[LEAP] Active event loaded (attempt ' + (attempt + 1) + '):', ev.name, '| id:', ev.id);
+        return;
+      } else {
+        console.warn('[LEAP] No active event found in Supabase – offline mode.');
+        window.LEAP_EVENT_LOAD_FAILED = true;
+        return;
+      }
+    } catch (err) {
+      if (attempt < DELAYS.length) {
+        console.warn('[LEAP] Event load failed (attempt ' + (attempt + 1) + '), retrying in ' + DELAYS[attempt] + 'ms…', err.message);
+        await new Promise(function(r) { setTimeout(r, DELAYS[attempt]); });
+      } else {
+        console.warn('[LEAP] Could not load event after ' + (DELAYS.length + 1) + ' attempts (offline mode):', err.message);
+        window.LEAP_EVENT_LOAD_FAILED = true;
+      }
     }
-  } catch (err) {
-    console.warn('[LEAP] Could not load event from Supabase (offline mode):', err.message);
   }
 }
 

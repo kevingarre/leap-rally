@@ -2544,10 +2544,19 @@ async function buildLeaderboard() {
   const container = document.getElementById('lb-entries');
   if (!container) return;
 
-  const ev = window.LEAP_EVENT;
+  let ev = window.LEAP_EVENT;
   if (!ev) {
-    container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">📡 Leaderboard nicht verfügbar (offline)</div>';
-    return;
+    // One-shot re-fetch when event was not available at app start and has not
+    // been retried from this call yet.  Guard flag prevents infinite loops.
+    if (!window.LEAP_EVENT_LOAD_FAILED) {
+      container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">📡 Verbindung wird hergestellt…</div>';
+      await initLeapEvent();
+      ev = window.LEAP_EVENT;
+    }
+    if (!ev) {
+      container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">📡 Nicht verfügbar (offline)</div>';
+      return;
+    }
   }
 
   container.innerHTML = '<div class="lb-entry" style="justify-content:center;color:var(--muted);font-size:13px">⏳ Lade Leaderboard…</div>';
