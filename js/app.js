@@ -7,6 +7,13 @@
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
+// DEMO MODE — URL-Parameter ?demo=1
+// When active: no real Supabase writes, fake leaderboard, DEMO badges.
+// initLeapEvent() still runs to load event config.
+// ═══════════════════════════════════════════════════════════
+let demoMode = false;
+
+// ═══════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════
 const MAX_LIVES          = 3;
@@ -2648,6 +2655,28 @@ function handleGameOptinSubmit(e) {
 }
 
 async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
+  // ── Demo Mode: fake success, no Supabase write ─────────────────
+  if (demoMode) {
+    session.submitted = true;
+    session.instantWinCode = 'TEST';
+    const formEl   = document.getElementById('game-optin-form');
+    const codeWrap = document.getElementById('game-iw-code-wrap');
+    const codeEl   = document.getElementById('game-iw-code');
+    const continueBtn = document.getElementById('game-iw-continue-btn');
+    if (formEl) {
+      const demoMsg = document.createElement('div');
+      demoMsg.style.cssText = 'background:rgba(103,194,58,0.15);border:1px solid #67C23A;border-radius:8px;padding:12px 16px;font-size:13px;color:#95D475;text-align:center;margin:8px 0;';
+      demoMsg.innerHTML = '\u2705 <strong>DEMO:</strong> Daten w\u00fcrden hier gespeichert';
+      formEl.insertBefore(demoMsg, formEl.firstChild);
+      formEl.querySelector('button[type="submit"]') && (formEl.querySelector('button[type="submit"]').style.display = 'none');
+    }
+    if (codeEl)   codeEl.textContent = 'TEST';
+    if (codeWrap) codeWrap.classList.remove('hidden');
+    if (continueBtn) continueBtn.classList.remove('hidden');
+    if (submitBtn) { submitBtn.disabled = false; }
+    return;
+  }
+
   try {
     const ps  = session.pendingScore || {};
     const ev3 = window.LEAP_EVENT;
@@ -3077,6 +3106,31 @@ function handleOptinSubmit(e) {
 }
 
 async function _doOptinSubmit(playerData, submitBtn, errorEl) {
+  // ── Demo Mode: fake success, no Supabase write ─────────────────
+  if (demoMode) {
+    session.submitted      = true;
+    session.instantWinCode = 'TEST';
+    const ctaCard  = document.getElementById('end-cta-card');
+    const endReveal = document.getElementById('end-reveal');
+    if (ctaCard) ctaCard.style.display = 'none';
+    if (endReveal) {
+      endReveal.classList.remove('hidden');
+      const demoMsg = document.createElement('div');
+      demoMsg.style.cssText = 'background:rgba(103,194,58,0.15);border:1px solid #67C23A;border-radius:8px;padding:12px 16px;font-size:13px;color:#95D475;text-align:center;margin:0 0 16px;';
+      demoMsg.innerHTML = '\u2705 <strong>DEMO:</strong> Daten w\u00fcrden hier gespeichert &nbsp;·&nbsp; Fake-Code: <strong>TEST</strong>';
+      endReveal.insertBefore(demoMsg, endReveal.firstChild);
+    }
+    // Fill score summary
+    var rHits  = document.getElementById('res-hits');   if (rHits)  rHits.textContent  = String(state.hits);
+    var rCombo = document.getElementById('res-combo');  if (rCombo) rCombo.textContent = '\u00d7' + state.maxCombo;
+    var rEn    = document.getElementById('res-energy'); if (rEn)    rEn.textContent   = Math.round(state.energy) + '%';
+    var rWaves = document.getElementById('res-waves');  if (rWaves) rWaves.textContent = String(state.wavesCleared);
+    var rScore = document.getElementById('res-score');  if (rScore) rScore.textContent = state.score.toLocaleString('de-DE');
+    if (submitBtn) { submitBtn.disabled = false; }
+    buildLeaderboard();
+    return;
+  }
+
   try {
     // If LEAP_EVENT was not loaded (e.g. startup error), try fetching it now.
     if (!window.LEAP_EVENT) {
@@ -3206,6 +3260,31 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 async function buildLeaderboard() {
   const container = document.getElementById('lb-entries');
   if (!container) return;
+
+  // ── Demo Mode: show hardcoded fake entries ────────────────────────
+  if (demoMode) {
+    var demoEntries = [
+      { name: 'M. Mustermann', city: 'M\u00fcnchen', score: 4250, level: 4 },
+      { name: 'L. Schmidt',    city: 'Berlin',    score: 3800, level: 3 },
+      { name: 'K. M\u00fcller', city: 'Hamburg',   score: 2990, level: 2 },
+    ];
+    container.innerHTML = '';
+    demoEntries.forEach(function(entry, idx) {
+      var rank = idx + 1;
+      var el = document.createElement('div');
+      el.className = 'lb-entry';
+      var rankIcon  = rank <= 3 ? ['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49'][rank - 1] : rank;
+      var rankClass = rank <= 3 ? ['top1','top2','top3'][rank - 1] : '';
+      var cityStr   = entry.city ? ' <span style="color:var(--muted);font-size:11px">' + entry.city + '</span>' : '';
+      el.innerHTML =
+        '<span class="lb-rank ' + rankClass + '">' + rankIcon + '</span>' +
+        '<span class="lb-name">' + entry.name + cityStr +
+          ' <span style="background:#E53935;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">DEMO</span></span>' +
+        '<span class="lb-score">' + entry.score.toLocaleString('de-DE') + '</span>';
+      container.appendChild(el);
+    });
+    return;
+  }
 
   let ev = window.LEAP_EVENT;
   if (!ev) {
@@ -3780,6 +3859,61 @@ function stopConfetti() {
 // INIT ON LOAD
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
+  // ── Demo Mode Detection ────────────────────────────────────────
+  (function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('demo') === '1') {
+      demoMode = true;
+      console.info('[LEAP] Demo-Modus aktiv. Kein echter Supabase-Write.');
+
+      // DEMO badge im Game-Screen (oben links, roter Hintergrund)
+      var badge = document.createElement('div');
+      badge.id = 'demo-hud-badge';
+      badge.textContent = 'DEMO';
+      badge.style.cssText = [
+        'position:absolute',
+        'top:8px',
+        'left:8px',
+        'background:#E53935',
+        'color:#fff',
+        'font-size:10px',
+        'font-weight:800',
+        'letter-spacing:2px',
+        'padding:3px 8px',
+        'border-radius:4px',
+        'z-index:250',
+        'pointer-events:none',
+        'font-family:inherit',
+      ].join(';');
+      var screenGame = document.getElementById('screen-game');
+      if (screenGame) screenGame.appendChild(badge);
+
+      // DEMO-MODUS Banner auf Start-Screen (unten zentriert)
+      var startBanner = document.createElement('div');
+      startBanner.id = 'demo-start-banner';
+      startBanner.textContent = '\uD83C\uDFAE DEMO-MODUS AKTIV';
+      startBanner.style.cssText = [
+        'position:absolute',
+        'bottom:76px',
+        'left:50%',
+        'transform:translateX(-50%)',
+        'background:#E53935',
+        'color:#fff',
+        'font-size:11px',
+        'font-weight:800',
+        'letter-spacing:2px',
+        'padding:5px 16px',
+        'border-radius:20px',
+        'z-index:250',
+        'pointer-events:none',
+        'white-space:nowrap',
+        'font-family:inherit',
+      ].join(';');
+      var screenStart = document.getElementById('screen-start');
+      if (screenStart) screenStart.appendChild(startBanner);
+    }
+  })();
+
   // Sync sound buttons with persisted state
   syncSoundButtons();
 
