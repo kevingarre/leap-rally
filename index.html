@@ -9,7 +9,7 @@
   <meta name="description" content="LEAPMOTOR TT CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Ghost-Car überholen. Event Activation Mini-Game.">
   <title>LEAPMOTOR TT CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260714z13">
+  <link rel="stylesheet" href="css/style.css?v=20260714z14">
 </head>
 <body>
 <div id="app">
@@ -295,11 +295,13 @@
         <p class="iwo-sub">Du hast das Ghost-Car überholt! Dein Score: <strong id="iwo-score">0</strong> Punkte</p>
         <p class="iwo-warning">Gib jetzt deine Daten ein, um deinen Gewinn sofort abzuholen &ndash; oder spiel weiter und hol ihn am Spielende ab.</p>
         <div class="iwo-actions">
-          <button class="btn btn-primary glow-btn" id="iwo-enter-data-btn">
-            📋 Daten eingeben &amp; Gewinn sichern
+          <button class="iwo-btn iwo-btn-claim" id="iwo-enter-data-btn">
+            <span class="iwo-btn-title">GEWINN JETZT ABHOLEN</span>
+            <span class="iwo-btn-sub">Daten eingeben · Gewinn-Code sofort erhalten</span>
           </button>
-          <button class="btn btn-outline iwo-skip" id="iwo-skip-btn">
-            ▶ WEITERSPIELEN &amp; HIGHSCORE KNACKEN
+          <button class="iwo-btn iwo-btn-play" id="iwo-skip-btn">
+            <span class="iwo-btn-title">WEITERSPIELEN</span>
+            <span class="iwo-btn-sub">Gewinn am Ende abholen · Chance auf Highscore</span>
           </button>
         </div>
       </div>
@@ -636,8 +638,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714z13"></script>
-<script src="js/api.js?v=20260714z13"></script>
-<script src="js/app.js?v=20260714z13"></script>
+<script src="js/supabase-config.js?v=20260714z14"></script>
+<script src="js/api.js?v=20260714z14"></script>
+<script src="js/app.js?v=20260714z14"></script>
 </body>
 </html>
