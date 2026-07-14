@@ -219,6 +219,10 @@ function resetGameState() {
   levelOverlay  = { active: false, timer: 0, level: 1, label: '' };
   screenShakeTimer = 0;
   screenShakeAmt   = 0;
+  // Overtake drama reset
+  slowMoActive  = false;
+  slowMoTimer   = 0;
+  overtakeFlash = 0;
 
   // Reset HUD
   setEl('hit-count',   '0');
@@ -662,8 +666,23 @@ function beginGameLoop() {
 function gameFrame(timestamp) {
   if (!state.gameActive || state.gamepaused) return;
 
-  const dt = Math.min((timestamp - state.lastFrameTime) / 1000, 0.05);
+  const rawDt = Math.min((timestamp - state.lastFrameTime) / 1000, 0.05);
   state.lastFrameTime = timestamp;
+
+  // Slow-motion during overtake drama
+  let dt = rawDt;
+  if (slowMoActive) {
+    slowMoTimer -= rawDt;
+    if (slowMoTimer <= 0) {
+      slowMoActive = false;
+      slowMoTimer  = 0;
+    } else {
+      // Ease: start very slow, ramp back to normal over the duration
+      const progress = 1 - (slowMoTimer / SLOWMO_DURATION);
+      const factor   = SLOWMO_SPEED + (1 - SLOWMO_SPEED) * Math.pow(progress, 2.5);
+      dt = rawDt * factor;
+    }
+  }
 
   update(dt);
   render();
@@ -709,9 +728,10 @@ function update(dt) {
   updateParticles(dt);
   updateFloatTexts(dt);
 
-  if (ballMissFlash > 0) ballMissFlash = Math.max(0, ballMissFlash - dt * 2.5);
-  if (newWaveFlash  > 0) newWaveFlash  = Math.max(0, newWaveFlash  - dt * 1.5);
-  if (hintAlpha     > 0) hintAlpha     = Math.max(0, hintAlpha     - dt * 0.4);
+  if (ballMissFlash  > 0) ballMissFlash  = Math.max(0, ballMissFlash  - dt * 2.5);
+  if (newWaveFlash   > 0) newWaveFlash   = Math.max(0, newWaveFlash   - dt * 1.0); // slower fade for overtake flash
+  if (hintAlpha      > 0) hintAlpha      = Math.max(0, hintAlpha      - dt * 0.4);
+  if (overtakeFlash  > 0) overtakeFlash  = Math.max(0, overtakeFlash  - dt);
 }
 
 function updateBall(dt) {
@@ -985,7 +1005,9 @@ function render() {
     ctx.fillRect(0, 0, cw, ch);
   }
   if (newWaveFlash > 0) {
-    ctx.fillStyle = `rgba(103,194,58,${newWaveFlash * 0.18})`;
+    // During overtake drama newWaveFlash can be >1 → clamp alpha at 0.55
+    const flashAlpha = Math.min(newWaveFlash * 0.22, 0.55);
+    ctx.fillStyle = `rgba(103,194,58,${flashAlpha})`;
     ctx.fillRect(0, 0, cw, ch);
   }
 
@@ -997,6 +1019,7 @@ function render() {
   renderFloatTexts();
   if (hintAlpha > 0) renderHint();
   if (levelOverlay.active) renderLevelOverlay();
+  if (overtakeFlash > 0) renderOvertakeBanner();
 
   ctx.restore();
 }
@@ -1292,6 +1315,62 @@ function renderLevelOverlay() {
   ctx.restore();
 }
 
+function renderOvertakeBanner() {
+  if (overtakeFlash <= 0) return;
+
+  // Total duration is SLOWMO_DURATION + 0.8, fade in first 0.2s, hold, fade out last 0.5s
+  const totalDur = SLOWMO_DURATION + 0.8;
+  const elapsed  = totalDur - overtakeFlash;
+  let alpha;
+  if (elapsed < 0.18) {
+    alpha = elapsed / 0.18;
+  } else if (overtakeFlash < 0.5) {
+    alpha = overtakeFlash / 0.5;
+  } else {
+    alpha = 1;
+  }
+  alpha = Math.max(0, Math.min(1, alpha));
+
+  // Scale: slight zoom-in effect
+  const scale = 1.0 + 0.08 * Math.sin(elapsed * Math.PI / totalDur);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(cw / 2, ch * 0.5);
+  ctx.scale(scale, scale);
+  ctx.translate(-cw / 2, -ch * 0.5);
+
+  // Semi-transparent dark bar
+  const barH = ch * 0.18;
+  const barY = ch * 0.5 - barH / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(0, barY, cw, barH);
+
+  // Green top/bottom edge lines
+  ctx.fillStyle = '#67C23A';
+  ctx.fillRect(0, barY, cw, 3);
+  ctx.fillRect(0, barY + barH - 3, cw, 3);
+
+  // Main OVERTAKE text
+  const fs1 = Math.max(28, Math.round(cw * 0.13));
+  ctx.fillStyle   = '#67C23A';
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = 30;
+  ctx.font        = `900 ${fs1}px 'Montserrat', sans-serif`;
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('OVERTAKE!', cw / 2, ch * 0.5 - barH * 0.08);
+
+  // Sub-label
+  const fs2 = Math.max(11, Math.round(cw * 0.048));
+  ctx.shadowBlur  = 8;
+  ctx.fillStyle   = 'rgba(255,255,255,0.90)';
+  ctx.font        = `700 ${fs2}px 'Montserrat', sans-serif`;
+  ctx.fillText('🏁 GHOST CAR ÜBERHOLT!', cw / 2, ch * 0.5 + barH * 0.30);
+
+  ctx.restore();
+}
+
 // ═══════════════════════════════════════════════════════════
 // UI DOM UPDATES
 // ═══════════════════════════════════════════════════════════
@@ -1418,30 +1497,125 @@ function flashFullCharge() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SOFORT-GEWINN-PAUSE-FLOW (Umbau 2)
+// OVERTAKE-MOMENT + SOFORT-GEWINN-PAUSE-FLOW (Umbau 2)
 // ═══════════════════════════════════════════════════════════
+
+// Slow-motion state
+let slowMoActive  = false;
+let slowMoTimer   = 0;
+let slowMoFactor  = 1.0; // multiplied into dt
+const SLOWMO_DURATION = 0.9;  // seconds of slow-motion
+const SLOWMO_SPEED    = 0.18; // dt multiplier during slomo (5× slower)
+
+// Big OVERTAKE text flash
+let overtakeFlash = 0; // countdown in seconds
+
 function triggerGhostOvertake() {
   state.ghostOvertaken = true;
 
-  if (state.instantWinTriggered) return; // only once per game
+  // Only full drama + instant-win check once per game
+  if (state.instantWinTriggered) return;
 
+  // --- DRAMA: Gänsehaut-Moment ---
+  startOvertakeDrama();
+
+  // Check instant-win threshold AFTER drama
   const ev = window.LEAP_EVENT;
   if (!ev) return;
 
   const scoreThreshold = ev.instant_win_score || 1500;
   const ghostReq       = ev.instant_win_ghost_req !== false;
-
-  // Calculate approximate current score
-  const approxScore = computeCurrentScore();
+  const approxScore    = computeCurrentScore();
 
   if (approxScore >= scoreThreshold && (!ghostReq || state.ghostOvertaken)) {
     state.instantWinTriggered = true;
-    // Small delay so boost overlay shows first, then pause
+    // Wait for drama to finish, THEN pause for instant-win form
+    const dramaMs = SLOWMO_DURATION * 1000 + 600; // slomo + brief hold
     setTimeout(() => {
       if (!state.gameActive) return;
       pauseForInstantWin();
-    }, 800);
+    }, dramaMs);
   }
+}
+
+function startOvertakeDrama() {
+  // 1. Slow-motion
+  slowMoActive = true;
+  slowMoTimer  = SLOWMO_DURATION;
+
+  // 2. Big screen shake
+  triggerScreenShake(14, 0.6);
+
+  // 3. Massive green screen flash
+  newWaveFlash = 1.8; // reuse wave-flash channel with big value for green
+
+  // 4. Particle burst from ghost car position
+  const ghostEl = document.getElementById('ghost-car');
+  if (ghostEl && canvas) {
+    const rect  = canvas.getBoundingClientRect();
+    const gRect = ghostEl.getBoundingClientRect();
+    const gx = (gRect.left + gRect.width / 2 - rect.left) * (cw / (rect.width || cw));
+    const gy = ch * 0.88; // track is near bottom of canvas
+    spawnOvertakeBurst(gx, gy);
+  } else {
+    spawnOvertakeBurst(cw / 2, ch * 0.88);
+  }
+
+  // 5. Big OVERTAKE! float text — staged
+  overtakeFlash = SLOWMO_DURATION + 0.8;
+  spawnFloatText(cw / 2, ch * 0.22, '🏁 OVERTAKE!',    '#67C23A');
+  setTimeout(() => spawnFloatText(cw / 2, ch * 0.35, '⚡ GHOST ÜBERHOLT!', '#FFFFFF'), 180);
+
+  // 6. Triumph WebAudio tone
+  playOvertakeTone();
+}
+
+function spawnOvertakeBurst(x, y) {
+  // Big burst: more particles, outward at high speed
+  const colors = ['#67C23A', '#95D475', '#FFFFFF', '#FFB800', '#67C23A'];
+  for (let i = 0; i < 40; i++) {
+    const angle = (Math.PI * 2 * i / 40) + Math.random() * 0.5;
+    const spd   = 90 + Math.random() * 280;
+    const color = colors[i % colors.length];
+    particles.push({
+      x, y,
+      vx:      Math.cos(angle) * spd,
+      vy:      Math.sin(angle) * spd - 120,
+      life:    0.7 + Math.random() * 0.5,
+      maxLife: 1.2,
+      color,
+      size:    3 + Math.random() * 6,
+    });
+  }
+}
+
+function playOvertakeTone() {
+  const ac = getAudioCtx();
+  if (!ac) return;
+  // Rising triumphant arpeggio: A4 → E5 → A5 → C#6 (energetic)
+  const sequence = [
+    { freq: 440,  t: 0.00, dur: 0.35, gain: 0.28, type: 'triangle' },
+    { freq: 659,  t: 0.10, dur: 0.35, gain: 0.26, type: 'triangle' },
+    { freq: 880,  t: 0.20, dur: 0.45, gain: 0.30, type: 'triangle' },
+    { freq: 1109, t: 0.32, dur: 0.60, gain: 0.24, type: 'triangle' },
+    // Sub-bass punch on beat
+    { freq: 80,   t: 0.00, dur: 0.25, gain: 0.35, type: 'sine'     },
+  ];
+  sequence.forEach(({ freq, t, dur, gain, type }) => {
+    try {
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime + t);
+      env.gain.setValueAtTime(0,    ac.currentTime + t);
+      env.gain.linearRampToValueAtTime(gain, ac.currentTime + t + 0.04);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + dur);
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.start(ac.currentTime + t);
+      osc.stop(ac.currentTime + t + dur + 0.05);
+    } catch(e) {}
+  });
 }
 
 function computeCurrentScore() {
@@ -2104,7 +2278,7 @@ function buildShareText() {
 Score:    ${state.score.toLocaleString('de-DE')} Punkte
 Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
 Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
-Level:    ${state.maxLevelReached} (${lvlLabel})${state.ghostOvertaken ? ' · 🚗 Ghost überholt!' : ''}
+Level:    ${state.maxLevelReached} (${lvlLabel})${state.ghostOvertaken ? ' · 🏁 OVERTAKE!' : ''}
 
 Kannst du meinen Leapmotor-Score schlagen?
 #LeapMotor #TTChallenge #Tischtennis #EMobility`;
