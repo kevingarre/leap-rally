@@ -24,13 +24,13 @@ const BLOCK_SIDE_PAD = 8;  // px from sides
 // Energy reward per block row (row 0 = top; row N-1 = nearest paddle = highest reward)
 const BLOCK_ROW_ENERGY_BASE = [2, 3, 4, 5];
 const BLOCK_COLORS = [
-  '#39FF14', // green  – row 0 (top)
-  '#00C8FF', // cyan   – row 1
+  '#67C23A', // leap-green  – row 0 (top)
+  '#95D475', // leap-green-soft – row 1
   '#FFB800', // amber  – row 2
-  '#FF5500', // orange – row 3 (bottom of block zone)
+  '#FFFFFF', // white – row 3 (bottom of block zone)
 ];
-const TURBO_BLOCK_COLOR = '#FF5500'; // Leapmotor orange
-const CAR_BLOCK_COLOR   = '#00C8FF'; // cyan highlight
+const TURBO_BLOCK_COLOR = '#67C23A'; // Leapmotor green
+const CAR_BLOCK_COLOR   = '#95D475'; // leap-green-soft highlight
 
 // Ball physics (fractions of canvas height per second)
 const BALL_BASE_SPEED  = 0.38;  // Level 1: noticeably slower than before
@@ -412,11 +412,11 @@ function tryLevelUp(reason) {
   // Update HUD
   updateLevelHUD();
 
-  spawnFloatText(cw / 2, ch * 0.35, `⚡ LEVEL ${state.level}!`, state.level >= 4 ? '#FF5500' : '#39FF14');
+  spawnFloatText(cw / 2, ch * 0.35, `⚡ LEVEL ${state.level}!`, '#67C23A');
 
   // Level 4: enable multi-ball spawning on next full charge
   if (state.level === 4) {
-    spawnFloatText(cw / 2, ch * 0.45, '🔴 MULTI-BALL BEREIT', '#FF5500');
+    spawnFloatText(cw / 2, ch * 0.45, '🔴 MULTI-BALL BEREIT', '#FF4D51');
   }
 
   return true;
@@ -497,7 +497,7 @@ function respawnBlocks() {
 
   newWaveFlash = 0.8;
   initBlocks();
-  spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#39FF14');
+  spawnFloatText(cw / 2, ch / 2, `⚡ WELLE ${state.wavesCleared + 1}!`, '#67C23A');
 
   // Wave clear triggers a level up if not at max
   tryLevelUp('wave');
@@ -524,7 +524,7 @@ function spawnBall2() {
   state.multiBallActive = true;
   state.multiBallTimer  = MULTIBALL_DURATION;
 
-  spawnFloatText(cw / 2, ch * 0.3, '🔴 MULTI-BALL!', '#FF5500');
+  spawnFloatText(cw / 2, ch * 0.3, '🔴 MULTI-BALL!', '#FF4D51');
   playTone(660, 'square', 0.18, 0.25);
   triggerScreenShake(5, 0.3);
 }
@@ -1002,7 +1002,7 @@ function render() {
     ctx.fillRect(0, 0, cw, ch);
   }
   if (newWaveFlash > 0) {
-    ctx.fillStyle = `rgba(57,255,20,${newWaveFlash * 0.18})`;
+    ctx.fillStyle = `rgba(103,194,58,${newWaveFlash * 0.18})`;
     ctx.fillRect(0, 0, cw, ch);
   }
 
@@ -1086,12 +1086,12 @@ function renderPaddle() {
   const handleY = headCy + headH * 0.35;
 
   ctx.save();
-  ctx.shadowColor = '#FF6A2A';
+  ctx.shadowColor = 'rgba(103,194,58,0.7)';
   ctx.shadowBlur  = 16;
 
   const hg = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
-  hg.addColorStop(0, '#D6B38A');
-  hg.addColorStop(1, '#8D5A2B');
+  hg.addColorStop(0, '#303133');
+  hg.addColorStop(1, '#1A1A1A');
   roundRect(ctx, handleX, handleY, handleW, handleH, handleW / 3);
   ctx.fillStyle = hg;
   ctx.fill();
@@ -1099,18 +1099,18 @@ function renderPaddle() {
   ctx.beginPath();
   ctx.ellipse(cx, headCy, headW / 2, headH / 2, 0, 0, Math.PI * 2);
   const g = ctx.createLinearGradient(cx, headCy - headH / 2, cx, headCy + headH / 2);
-  g.addColorStop(0, '#FF8A55');
-  g.addColorStop(1, '#C82300');
+  g.addColorStop(0, '#FFFFFF');
+  g.addColorStop(1, '#B3B3B3');
   ctx.fillStyle = g;
   ctx.fill();
 
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.strokeStyle = 'rgba(103,194,58,0.7)';
   ctx.stroke();
 
   ctx.beginPath();
   ctx.ellipse(cx - headW * 0.12, headCy - headH * 0.1, headW * 0.22, headH * 0.18, -0.2, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.26)';
+  ctx.fillStyle = 'rgba(255,255,255,0.30)';
   ctx.fill();
 
   ctx.restore();
@@ -1147,8 +1147,8 @@ function renderBall() {
 function renderBall2() {
   if (!ball2.active) return;
   ctx.save();
-  // Multi-ball: red/orange tint to distinguish from main ball
-  ctx.shadowColor = '#FF5500';
+  // Multi-ball: green-soft tint to distinguish from main ball
+  ctx.shadowColor = '#67C23A';
   ctx.shadowBlur  = 22;
 
   const g2 = ctx.createRadialGradient(
@@ -1156,8 +1156,8 @@ function renderBall2() {
     ball2.x, ball2.y, ball2.r
   );
   g2.addColorStop(0,   '#FFFFFF');
-  g2.addColorStop(0.4, '#FF9900');
-  g2.addColorStop(1,   '#CC3300');
+  g2.addColorStop(0.4, '#95D475');
+  g2.addColorStop(1,   '#529B2E');
 
   ctx.beginPath();
   ctx.arc(ball2.x, ball2.y, ball2.r, 0, Math.PI * 2);
@@ -1166,7 +1166,7 @@ function renderBall2() {
 
   // Timer ring around ball2
   const timerFrac = state.multiBallTimer / MULTIBALL_DURATION;
-  ctx.strokeStyle = `rgba(255,85,0,${0.4 + timerFrac * 0.5})`;
+  ctx.strokeStyle = `rgba(103,194,58,${0.4 + timerFrac * 0.5})`;
   ctx.lineWidth   = 2;
   ctx.beginPath();
   ctx.arc(ball2.x, ball2.y, ball2.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * timerFrac);
@@ -1199,7 +1199,7 @@ function renderFloatTexts() {
     ctx.fillStyle    = t.color;
     ctx.shadowColor  = t.color;
     ctx.shadowBlur   = 10;
-    ctx.font         = `700 ${fontSize}px 'Orbitron', monospace`;
+    ctx.font         = `800 ${fontSize}px 'Montserrat', sans-serif`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(t.text, t.x, t.y);
@@ -1213,7 +1213,7 @@ function renderHint() {
   ctx.save();
   ctx.globalAlpha  = hintAlpha * 0.7;
   ctx.fillStyle    = '#FFFFFF';
-  ctx.font         = `600 ${fontSize}px 'Inter', sans-serif`;
+  ctx.font         = `600 ${fontSize}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('← Schläger bewegen · 🚗 Ziele treffen →', cw / 2, hintY);
@@ -1237,8 +1237,8 @@ function renderLevelOverlay() {
 
   const scale = 1 + (1 - progress) * 0.4; // zoom in effect
   const lvl   = levelOverlay.level;
-  const colors = ['', '#39FF14', '#00C8FF', '#FFB800', '#FF5500'];
-  const color  = colors[Math.min(lvl, 4)] || '#FF5500';
+  const colors = ['', '#67C23A', '#95D475', '#FFFFFF', '#67C23A'];
+  const color  = colors[Math.min(lvl, 4)] || '#67C23A';
   const labels = ['', 'WARM-UP', 'CHARGE', 'BOOST', 'OVERTAKE'];
   const label  = labels[Math.min(lvl, 4)] || '';
 
@@ -1253,7 +1253,7 @@ function renderLevelOverlay() {
   const pillH = ch * 0.22;
   const pillX = cw / 2 - pillW / 2;
   const pillY = ch / 2 - pillH / 2;
-  ctx.fillStyle = 'rgba(10,10,26,0.78)';
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
   roundRect(ctx, pillX, pillY, pillW, pillH, 16);
   ctx.fill();
 
@@ -1267,7 +1267,7 @@ function renderLevelOverlay() {
   ctx.fillStyle    = color;
   ctx.shadowColor  = color;
   ctx.shadowBlur   = 28;
-  ctx.font         = `900 ${fs1}px 'Orbitron', monospace`;
+  ctx.font         = `900 ${fs1}px 'Montserrat', sans-serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(`LEVEL ${lvl}`, cw / 2, ch / 2 - pillH * 0.12);
@@ -1276,7 +1276,7 @@ function renderLevelOverlay() {
   const fs2 = Math.max(10, Math.round(cw * 0.05));
   ctx.shadowBlur   = 10;
   ctx.fillStyle    = 'rgba(255,255,255,0.85)';
-  ctx.font         = `700 ${fs2}px 'Orbitron', monospace`;
+  ctx.font         = `700 ${fs2}px 'Montserrat', sans-serif`;
   ctx.fillText(label, cw / 2, ch / 2 + pillH * 0.28);
 
   ctx.restore();
@@ -1318,7 +1318,7 @@ function updateEnergyUI() {
   } else {
     if (pct > 60) {
       fill.style.background =
-        `linear-gradient(90deg, var(--orange), var(--blue) ${pct}%, var(--green))`;
+        `linear-gradient(90deg, var(--leap-green-deep), var(--leap-green) ${pct}%, var(--leap-green-soft))`;
     }
     if (spark) {
       const trackW = fill.parentElement.offsetWidth;
@@ -1342,7 +1342,7 @@ function updateCarUI() {
   const carEl = document.getElementById('game-car');
   if (carEl) {
     const glow = Math.round(pct * 28);
-    carEl.style.filter = `drop-shadow(0 2px ${glow}px rgba(255,85,0,${pct * 0.8}))`;
+    carEl.style.filter = `drop-shadow(0 2px ${glow}px rgba(103,194,58,${pct * 0.8}))`;
   }
   const exhaust = document.getElementById('car-exhaust');
   if (exhaust) {
@@ -1355,7 +1355,7 @@ function flashFullCharge() {
   state.score += FULL_CHARGE_BONUS_SCORE;
   state.fullChargeBonuses++;
   newWaveFlash = Math.max(newWaveFlash, 0.6);
-  spawnFloatText(cw / 2, ch * 0.40, `⚡ TURBO-BOOST +${FULL_CHARGE_BONUS_SCORE}`, '#39FF14');
+  spawnFloatText(cw / 2, ch * 0.40, `⚡ TURBO-BOOST +${FULL_CHARGE_BONUS_SCORE}`, '#67C23A');
 
   const currentSpeed = Math.hypot(ball.vx, ball.vy) || state.ballSpeedPx;
   const turboSpeed = Math.min(currentSpeed * 1.18, BALL_MAX_SPEED * ch);
@@ -1909,7 +1909,7 @@ function drawCarBlock(bx, by, bw, bh) {
 
   const wr = hh * 0.36;
   ctx.globalAlpha = 0.65;
-  ctx.fillStyle   = 'rgba(10,10,28,0.85)';
+  ctx.fillStyle   = 'rgba(0,0,0,0.88)';
   ctx.beginPath(); ctx.arc(cx - half * 0.58, bodyTop + bodyH, wr, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + half * 0.58, bodyTop + bodyH, wr, 0, Math.PI * 2); ctx.fill();
 

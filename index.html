@@ -5,13 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0A0A1A">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="LEAP CHARGE – Tischtennis Breakout, Leapmotor aufladen, Turbo-Boost freischalten. Event Activation Mini-Game.">
   <title>LEAP CHARGE – Tischtennis × E-Drive</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20260714d">
+  <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
+  <link rel="stylesheet" href="css/style.css?v=20260714e">
 </head>
 <body>
 <div id="app">
@@ -24,7 +22,7 @@
 
     <div class="brand-bar">
       <div class="brand-logo-wrap">
-        <span class="brand-name">LEAP<span>MOTOR</span></span>
+        <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="brand-logo-img">
         <span class="brand-line">|</span>
         <span class="brand-tag">EVENT ACTIVATION</span>
       </div>
@@ -49,29 +47,29 @@
             <!-- Leapmotor-inspired SUV/Crossover silhouette (hero) -->
             <svg viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="64" height="36" aria-hidden="true">
               <!-- Body -->
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FF5500"/>
+              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FFFFFF"/>
               <!-- Wheels -->
-              <circle cx="14" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="14" cy="27" r="3.5" fill="#252540" stroke="#3A3A5C" stroke-width="0.8"/>
-              <circle cx="14" cy="27" r="1.2" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="3.5" fill="#252540" stroke="#3A3A5C" stroke-width="0.8"/>
-              <circle cx="50" cy="27" r="1.2" fill="#0F0F1E"/>
+              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="14" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
+              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
+              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="50" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
+              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
               <!-- Glass/cabin -->
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0D1E35" opacity="0.92"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(0,200,255,0.28)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(0,200,255,0.18)"/>
+              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
+              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.22)"/>
+              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.14)"/>
               <!-- Door line -->
               <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
-              <!-- Front LED bar (Leapmotor signature) -->
-              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#00C8FF"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(57,255,20,0.85)"/>
+              <!-- Front LED bar (Leapmotor signature – green) -->
+              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#67C23A"/>
+              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(103,194,58,0.85)"/>
               <!-- Rear tail light -->
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF1515"/>
+              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF4D51"/>
               <!-- Body highlight -->
-              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.2)" stroke-width="1.3" fill="none"/>
+              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.25)" stroke-width="1.3" fill="none"/>
               <!-- Roof rail -->
-              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(255,255,255,0.3)"/>
+              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(0,0,0,0.35)"/>
             </svg>
           </div>
           <div class="car-charge-ring"></div>
@@ -109,7 +107,7 @@
 
     <div class="rules-body">
       <div class="rules-trophy">🏆</div>
-      <h2 class="rules-headline">Tischtennis<br><span class="text-orange">× Leapmotor</span></h2>
+      <h2 class="rules-headline">Tischtennis<br><span class="text-orange">× LEAP CHARGE</span></h2>
       <p class="rules-intro">
         Jeder zerstörte Block erzeugt Strom.<br>
         Lade deinen Leapmotor auf – und schreib einen neuen Highscore!
@@ -120,7 +118,7 @@
           <div class="step-icon">👆</div>
           <div class="step-content">
             <strong>SCHLÄGER STEUERN</strong>
-            <p>Ziehe den orangefarbenen Schläger unten mit dem Finger nach links/rechts</p>
+            <p>Ziehe den Schläger unten mit dem Finger nach links/rechts</p>
           </div>
         </div>
         <div class="rule-step">
@@ -201,41 +199,41 @@
           <div class="car-emoji" id="game-car">
             <!-- Normal: Leapmotor SUV/Crossover silhouette -->
             <svg class="car-svg car-svg-normal" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FF5500"/>
-              <circle cx="14" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="14" cy="27" r="3.5" fill="#252540" stroke="#3A3A5C" stroke-width="0.8"/>
-              <circle cx="14" cy="27" r="1.2" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="3.5" fill="#252540" stroke="#3A3A5C" stroke-width="0.8"/>
-              <circle cx="50" cy="27" r="1.2" fill="#0F0F1E"/>
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0D1E35" opacity="0.92"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(0,200,255,0.28)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(0,200,255,0.18)"/>
+              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FFFFFF"/>
+              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="14" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
+              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
+              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="50" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
+              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
+              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
+              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.22)"/>
+              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.14)"/>
               <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
-              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#00C8FF"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(57,255,20,0.85)"/>
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF1515"/>
-              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.18)" stroke-width="1.3" fill="none"/>
-              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(255,255,255,0.28)"/>
+              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#67C23A"/>
+              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(103,194,58,0.85)"/>
+              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF4D51"/>
+              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.20)" stroke-width="1.3" fill="none"/>
+              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(0,0,0,0.30)"/>
             </svg>
             <!-- Boost mode: green race variant -->
             <svg class="car-svg car-svg-boost" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#39FF14"/>
+              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#67C23A"/>
               <!-- Racing centre stripe -->
-              <path d="M 22 6 L 42 6 L 42 23 L 22 23 Z" fill="rgba(255,255,255,0.1)"/>
-              <circle cx="14" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="14" cy="27" r="3.5" fill="#1a2a1a" stroke="#39FF14" stroke-width="1.2"/>
-              <circle cx="14" cy="27" r="1.2" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="6.5" fill="#0F0F1E"/>
-              <circle cx="50" cy="27" r="3.5" fill="#1a2a1a" stroke="#39FF14" stroke-width="1.2"/>
-              <circle cx="50" cy="27" r="1.2" fill="#0F0F1E"/>
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0D1E35" opacity="0.92"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(57,255,20,0.32)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(57,255,20,0.22)"/>
+              <path d="M 22 6 L 42 6 L 42 23 L 22 23 Z" fill="rgba(255,255,255,0.08)"/>
+              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="14" cy="27" r="3.5" fill="#0F200F" stroke="#67C23A" stroke-width="1.2"/>
+              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
+              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
+              <circle cx="50" cy="27" r="3.5" fill="#0F200F" stroke="#67C23A" stroke-width="1.2"/>
+              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
+              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
+              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.32)"/>
+              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.22)"/>
               <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
               <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#FFFFFF"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="#39FF14"/>
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#39FF14"/>
+              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="#67C23A"/>
+              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#67C23A"/>
               <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.32)" stroke-width="1.5" fill="none"/>
               <!-- Roof fin (race detail) -->
               <rect x="29" y="4.5" width="7" height="1.5" rx="0.75" fill="rgba(255,255,255,0.5)"/>
@@ -298,6 +296,7 @@
     <div class="screen-bg bg-end"></div>
 
     <div class="end-header">
+      <img src="assets/brand/leapmotor-logo.svg" alt="Leapmotor" class="end-logo">
       <div class="end-trophy-wrap">
         <div class="end-trophy" id="end-trophy">🏆</div>
         <div class="trophy-ring-outer"></div>
@@ -497,8 +496,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714d"></script>
-<script src="js/api.js?v=20260714d"></script>
-<script src="js/app.js?v=20260714d"></script>
+<script src="js/supabase-config.js?v=20260714e"></script>
+<script src="js/api.js?v=20260714e"></script>
+<script src="js/app.js?v=20260714e"></script>
 </body>
 </html>
