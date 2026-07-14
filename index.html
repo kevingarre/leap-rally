@@ -9,7 +9,7 @@
   <meta name="description" content="LEAPMOTOR TT CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Ghost-Car überholen. Event Activation Mini-Game.">
   <title>LEAPMOTOR TT CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260714l">
+  <link rel="stylesheet" href="css/style.css?v=20260714m">
 </head>
 <body>
 <div id="app">
@@ -174,44 +174,69 @@
       <div class="car-track">
         <div class="car-progress" id="car-progress">
           <div class="car-emoji" id="game-car">
-            <!-- Normal: Leapmotor SVG -->
-            <svg class="car-svg car-svg-normal" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#FFFFFF"/>
-              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="14" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
-              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
-              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="50" cy="27" r="3.5" fill="#1A1A1A" stroke="#303133" stroke-width="0.8"/>
-              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.22)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.14)"/>
-              <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
-              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#67C23A"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="rgba(103,194,58,0.85)"/>
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#FF4D51"/>
-              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.20)" stroke-width="1.3" fill="none"/>
-              <rect x="22" y="6" width="22" height="1.1" rx="0.55" fill="rgba(0,0,0,0.30)"/>
+            <!-- Normal: Leapmotor SUV Silhouette (CI: white body, #67C23A accent, modern SUV) -->
+            <svg class="car-svg car-svg-normal" viewBox="0 0 72 42" xmlns="http://www.w3.org/2000/svg" width="48" height="28" aria-hidden="true">
+              <!-- Body -->
+              <path d="M 4 28 L 4 20 Q 5 11 10 10 L 16 8 L 54 8 Q 59 8 63 12 L 67 19 Q 69 20 69 24 L 69 28 Z" fill="#FFFFFF"/>
+              <!-- Roof cabin (more upright SUV profile) -->
+              <path d="M 20 8 L 23 1 Q 25 0 48 0 Q 50 0 52 2 L 54 8 Z" fill="#FFFFFF"/>
+              <!-- Windscreen dark tint -->
+              <path d="M 22 8 L 25 2 L 49 2 L 51 8 Z" fill="#0A1A0A" opacity="0.82"/>
+              <!-- Green underbody glow stripe (Leapmotor signature) -->
+              <rect x="6" y="24" width="61" height="3.5" rx="1.5" fill="#67C23A" opacity="0.92"/>
+              <!-- Rear window -->
+              <path d="M 15 8 L 21 8 L 20 2 L 17 2 Z" fill="#0A1A0A" opacity="0.70"/>
+              <!-- Rear lights (red) -->
+              <rect x="4" y="13" width="4" height="7" rx="1.8" fill="#FF4D51" opacity="0.90"/>
+              <!-- Front DRL strip (green glow) -->
+              <rect x="62" y="13" width="6" height="3" rx="1.5" fill="#67C23A"/>
+              <rect x="63" y="16.5" width="5" height="2" rx="1" fill="rgba(103,194,58,0.75)"/>
+              <!-- B-pillar -->
+              <line x1="37" y1="0" x2="37" y2="8" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+              <!-- Wheels -->
+              <circle cx="15" cy="32" r="7.5" fill="#111111"/>
+              <circle cx="15" cy="32" r="4.2" fill="#1A1A1A" stroke="#CCCCCC" stroke-width="1"/>
+              <circle cx="15" cy="32" r="1.5" fill="#333"/>
+              <circle cx="57" cy="32" r="7.5" fill="#111111"/>
+              <circle cx="57" cy="32" r="4.2" fill="#1A1A1A" stroke="#CCCCCC" stroke-width="1"/>
+              <circle cx="57" cy="32" r="1.5" fill="#333"/>
+              <!-- Leapmotor green shine highlight on roof -->
+              <path d="M 24 2 Q 36 0 48 2" stroke="rgba(103,194,58,0.45)" stroke-width="1.2" fill="none"/>
+              <!-- Body side crease line -->
+              <path d="M 10 20 Q 36 18 66 21" stroke="rgba(255,255,255,0.22)" stroke-width="1.1" fill="none"/>
             </svg>
-            <!-- Boost mode -->
-            <svg class="car-svg car-svg-boost" viewBox="0 0 64 36" xmlns="http://www.w3.org/2000/svg" width="44" height="26" aria-hidden="true">
-              <path d="M 5 23 L 5 17 Q 6 9 11 8 L 17 6 L 45 6 Q 49 6 52 8 L 57 15 Q 61 16 61 20 L 61 23 Z" fill="#67C23A"/>
-              <path d="M 22 6 L 42 6 L 42 23 L 22 23 Z" fill="rgba(255,255,255,0.08)"/>
-              <circle cx="14" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="14" cy="27" r="3.5" fill="#0F200F" stroke="#67C23A" stroke-width="1.2"/>
-              <circle cx="14" cy="27" r="1.2" fill="#000000"/>
-              <circle cx="50" cy="27" r="6.5" fill="#000000"/>
-              <circle cx="50" cy="27" r="3.5" fill="#0F200F" stroke="#67C23A" stroke-width="1.2"/>
-              <circle cx="50" cy="27" r="1.2" fill="#000000"/>
-              <path d="M 19 21 L 22 8 L 44 8 L 49 21 Z" fill="#0A1A0A" opacity="0.85"/>
-              <path d="M 44 8 L 49 21 L 47 21 L 43 9 Z" fill="rgba(103,194,58,0.32)"/>
-              <path d="M 22 8 L 19 21 L 21 21 L 24 9 Z" fill="rgba(103,194,58,0.22)"/>
-              <line x1="34" y1="8" x2="34" y2="21" stroke="rgba(0,0,0,0.3)" stroke-width="0.9"/>
-              <rect x="57.5" y="12.5" width="4.5" height="2.5" rx="1.2" fill="#FFFFFF"/>
-              <rect x="58" y="15.5" width="3.5" height="1.2" rx="0.6" fill="#67C23A"/>
-              <rect x="4" y="13" width="3" height="6" rx="1.5" fill="#67C23A"/>
-              <path d="M 11 16 Q 34 14 57 17" stroke="rgba(255,255,255,0.32)" stroke-width="1.5" fill="none"/>
-              <rect x="29" y="4.5" width="7" height="1.5" rx="0.75" fill="rgba(255,255,255,0.5)"/>
+            <!-- Boost mode: green body, bright green glow everywhere -->
+            <svg class="car-svg car-svg-boost" viewBox="0 0 72 42" xmlns="http://www.w3.org/2000/svg" width="48" height="28" aria-hidden="true">
+              <!-- Body glowing green -->
+              <path d="M 4 28 L 4 20 Q 5 11 10 10 L 16 8 L 54 8 Q 59 8 63 12 L 67 19 Q 69 20 69 24 L 69 28 Z" fill="#67C23A"/>
+              <!-- Roof -->
+              <path d="M 20 8 L 23 1 Q 25 0 48 0 Q 50 0 52 2 L 54 8 Z" fill="#67C23A"/>
+              <!-- Windscreen -->
+              <path d="M 22 8 L 25 2 L 49 2 L 51 8 Z" fill="#0A2A0A" opacity="0.88"/>
+              <!-- Underbody full-glow stripe -->
+              <rect x="4" y="23.5" width="64" height="4.5" rx="2" fill="#FFFFFF" opacity="0.55"/>
+              <!-- Rear window -->
+              <path d="M 15 8 L 21 8 L 20 2 L 17 2 Z" fill="#0A2A0A" opacity="0.70"/>
+              <!-- Rear lights (green in boost) -->
+              <rect x="4" y="13" width="4" height="7" rx="1.8" fill="#67C23A"/>
+              <!-- Front DRL bright white -->
+              <rect x="62" y="13" width="6" height="3" rx="1.5" fill="#FFFFFF"/>
+              <rect x="63" y="16.5" width="5" height="2" rx="1" fill="rgba(255,255,255,0.85)"/>
+              <!-- B-pillar -->
+              <line x1="37" y1="0" x2="37" y2="8" stroke="rgba(0,0,0,0.20)" stroke-width="1"/>
+              <!-- Wheels glowing -->
+              <circle cx="15" cy="32" r="7.5" fill="#111111"/>
+              <circle cx="15" cy="32" r="4.2" fill="#0F2A0F" stroke="#67C23A" stroke-width="1.4"/>
+              <circle cx="15" cy="32" r="1.5" fill="#111"/>
+              <circle cx="57" cy="32" r="7.5" fill="#111111"/>
+              <circle cx="57" cy="32" r="4.2" fill="#0F2A0F" stroke="#67C23A" stroke-width="1.4"/>
+              <circle cx="57" cy="32" r="1.5" fill="#111"/>
+              <!-- Bright roof highlight -->
+              <path d="M 24 2 Q 36 0 48 2" stroke="rgba(255,255,255,0.65)" stroke-width="1.5" fill="none"/>
+              <!-- Speed streak lines -->
+              <path d="M 4 18 L 0 18" stroke="rgba(255,255,255,0.7)" stroke-width="1.8"/>
+              <path d="M 4 21 L -2 21" stroke="rgba(255,255,255,0.5)" stroke-width="1.2"/>
+              <path d="M 4 24 L 1 24" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
             </svg>
           </div>
           <div class="car-exhaust" id="car-exhaust">
@@ -585,16 +610,22 @@
   </div>
 </div>
 
-<!-- COUNTDOWN OVERLAY -->
+<!-- COUNTDOWN OVERLAY (MK64-style race start) -->
 <div id="countdown-overlay" class="modal-overlay hidden">
   <div class="countdown-box">
+    <!-- Traffic-light dots: red=3, amber=2, green=1 -->
+    <div class="countdown-lights" id="countdown-lights">
+      <div class="countdown-light" id="cld-0"></div>
+      <div class="countdown-light" id="cld-1"></div>
+      <div class="countdown-light" id="cld-2"></div>
+    </div>
     <div class="countdown-number" id="countdown-num">3</div>
-    <div class="countdown-text">Bereit?</div>
+    <div class="countdown-text" id="countdown-text">Bereit?</div>
   </div>
 </div>
 
-<script src="js/supabase-config.js?v=20260714l"></script>
-<script src="js/api.js?v=20260714l"></script>
-<script src="js/app.js?v=20260714l"></script>
+<script src="js/supabase-config.js?v=20260714m"></script>
+<script src="js/api.js?v=20260714m"></script>
+<script src="js/app.js?v=20260714m"></script>
 </body>
 </html>

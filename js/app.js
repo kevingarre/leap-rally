@@ -15,6 +15,15 @@ const FULL_CHARGE_BONUS_SCORE = 400;
 const CAR_TARGET_BONUS_SCORE  = 140;
 const CAR_TARGET_BONUS_ENERGY = 3;
 
+// ── Per-model vehicle bonuses (score awarded on car-block hit) ─────────────────
+// Adjust these values here; displayed in float-text after each hit.
+const VEHICLE_BONUS = {
+  t03: { score: 100, label: 'T03'          },
+  b05: { score: 150, label: 'B05 TURBO'    },
+  b10: { score: 200, label: 'B10'          },
+  c10: { score: 300, label: 'C10 JACKPOT!' },
+};
+
 // Block grid
 const BLOCK_GAP      = 5;   // px between blocks
 const BLOCK_TOP_PAD  = 18;  // px from top of canvas
@@ -427,8 +436,9 @@ function resetGameState() {
   const numEl = document.getElementById('countdown-num');
   if (numEl) {
     numEl.textContent  = '3';
-    numEl.style.color  = 'var(--orange)';
-    numEl.style.filter = 'drop-shadow(0 0 30px var(--orange))';
+    numEl.style.color  = '#FF4D51';
+    numEl.style.filter = 'drop-shadow(0 0 30px #FF4D51)';
+    numEl.classList.remove('countdown-go');
   }
 
   // Hide instant-win overlay if visible
@@ -439,15 +449,43 @@ function resetGameState() {
 function runCountdown() {
   const overlay  = document.getElementById('countdown-overlay');
   const numEl    = document.getElementById('countdown-num');
+  const textEl   = document.getElementById('countdown-text');
+  const lights   = [0, 1, 2].map(function(n) { return document.getElementById('cld-' + n); });
   const countArr = ['3', '2', '1', 'GO!'];
+  // Traffic-light classes: step 0='3'→red, 1='2'→amber, 2='1'→green
+  const lightClasses = ['active-red', 'active-amber', 'active-green'];
   let   i        = 0;
+
+  // Helper: update traffic lights for step index (0-based)
+  function updateLights(step) {
+    lights.forEach(function(el, idx) {
+      if (!el) return;
+      el.className = 'countdown-light';
+      if (idx <= step && step < 3) el.classList.add(lightClasses[idx]);
+    });
+  }
 
   overlay.classList.remove('hidden');
   numEl.textContent  = countArr[0];
-  numEl.style.color  = 'var(--orange)';
-  numEl.style.filter = 'drop-shadow(0 0 30px var(--orange))';
+  numEl.style.color  = '#FF4D51';
+  numEl.style.filter = 'drop-shadow(0 0 30px #FF4D51)';
+  numEl.classList.remove('countdown-go');
+  if (textEl) textEl.textContent = 'ACHTUNG…';
+  updateLights(0);
 
-  const tick = setInterval(() => {
+  // Ensure AudioContext is running (user gesture = "Spielen"-button click)
+  const ac0 = getAudioCtx();
+  if (ac0 && ac0.state === 'suspended') {
+    try { ac0.resume(); } catch(e) {}
+  }
+
+  // Start background music immediately at countdown begin
+  startBgMusic();
+
+  // Play first countdown blip for '3'
+  playCountdownBlip(0);
+
+  const tick = setInterval(function() {
     i++;
     if (i >= countArr.length) {
       clearInterval(tick);
@@ -455,16 +493,37 @@ function runCountdown() {
       initCanvas();
       beginGameLoop();
     } else {
+      // Restart the pop animation
       numEl.style.animation = 'none';
       void numEl.offsetHeight;
       numEl.style.animation  = '';
       numEl.textContent      = countArr[i];
+
       if (i === countArr.length - 1) {
-        numEl.style.color  = 'var(--green)';
-        numEl.style.filter = 'drop-shadow(0 0 30px var(--green))';
+        // GO! — Leapmotor green, big glow
+        numEl.style.color  = '#67C23A';
+        numEl.style.filter = 'drop-shadow(0 0 40px #67C23A) drop-shadow(0 0 80px #67C23A)';
+        numEl.classList.add('countdown-go');
+        if (textEl) textEl.textContent = '🏁 LOS!';
+        // Light all three green on GO
+        lights.forEach(function(el, idx) {
+          if (!el) return;
+          el.className = 'countdown-light active-green';
+        });
+      } else {
+        // 3, 2, 1 — traffic-light progression
+        const trafficColors = ['#FF4D51', '#FFB800', '#67C23A'];
+        numEl.style.color  = trafficColors[i];
+        numEl.style.filter = 'drop-shadow(0 0 30px ' + trafficColors[i] + ')';
+        numEl.classList.remove('countdown-go');
+        if (textEl) textEl.textContent = i === 2 ? 'BEREIT!' : 'ACHTUNG…';
+        updateLights(i);
       }
+
+      // Play blip for this step
+      playCountdownBlip(i);
     }
-  }, 650);
+  }, 900);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -829,8 +888,9 @@ function beginGameLoop() {
   // Launch ball immediately
   launchBall();
 
-  // Start background music
-  startBgMusic();
+  // Background music was already started at countdown; only start if not yet active
+  // (handles edge case where countdown was skipped or bgMusic stopped somehow)
+  if (!bgMusicActive) startBgMusic();
 
   state.rafId = requestAnimationFrame(gameFrame);
 }
@@ -1069,8 +1129,9 @@ function checkBlockCollisions(b) {
         energyGain = baseEnergy * 2 + 4;
         scoreGain  = Math.round((baseEnergy * 20 * state.combo + 180) * bonusMult);
       } else if (blk.carTarget) {
+        const vBonus = (blk.vehicleKey && VEHICLE_BONUS[blk.vehicleKey]) ? VEHICLE_BONUS[blk.vehicleKey] : { score: CAR_TARGET_BONUS_SCORE, label: 'CAR' };
         energyGain = baseEnergy + CAR_TARGET_BONUS_ENERGY;
-        scoreGain  = Math.round((baseEnergy * 10 * state.combo + CAR_TARGET_BONUS_SCORE) * bonusMult);
+        scoreGain  = Math.round((baseEnergy * 10 * state.combo + vBonus.score) * bonusMult);
       } else {
         energyGain = baseEnergy;
         scoreGain  = Math.round(baseEnergy * 10 * state.combo * bonusMult);
@@ -1097,9 +1158,23 @@ function checkBlockCollisions(b) {
       spawnParticles(blk.x + blk.w / 2, blk.y + blk.h / 2, blockColor);
 
       let label = state.combo > 1 ? `+${energyGain}⚡ ×${state.combo}🔥` : `+${energyGain}⚡`;
-      if (blk.isTurbo) label = `⚡ TURBO +${energyGain}`;
-      else if (blk.carTarget) label += ' · 🚗 BONUS';
-      spawnFloatText(blk.x + blk.w / 2, blk.y + blk.h / 2, label, blockColor);
+      if (blk.isTurbo) {
+        label = `⚡ TURBO +${energyGain}`;
+      } else if (blk.carTarget) {
+        const vBonus2 = (blk.vehicleKey && VEHICLE_BONUS[blk.vehicleKey]) ? VEHICLE_BONUS[blk.vehicleKey] : { score: CAR_TARGET_BONUS_SCORE, label: 'CAR' };
+        label = `⚡ ${vBonus2.label} +${vBonus2.score}!`;
+        spawnFloatText(blk.x + blk.w / 2, blk.y + blk.h / 2, label, '#67C23A');
+        // C10 special jackpot celebration
+        if (blk.vehicleKey === 'c10') {
+          spawnFloatText(cw / 2, ch * 0.30, '🎉 C10 JACKPOT!', '#67C23A');
+          triggerScreenShake(10, 0.55);
+          spawnOvertakeBurst(blk.x + blk.w / 2, blk.y + blk.h / 2);
+          playC10JackpotTone();
+        }
+        // Reset label so we don't duplicate the float text below
+        label = null;
+      }
+      if (label) spawnFloatText(blk.x + blk.w / 2, blk.y + blk.h / 2, label, blockColor);
 
       if (state.energy >= MAX_ENERGY && !state.fullChargeRewarded) {
         flashFullCharge();
@@ -1765,6 +1840,78 @@ function spawnOvertakeBurst(x, y) {
       size:    3 + Math.random() * 6,
     });
   }
+}
+
+// ─── Countdown blip tones (MK64-style, licence-free reimagining) ──────────────────
+// Steps 0,1,2 = '3','2','1' → short low blip (~440 Hz)
+// Step  3     = 'GO!'        → bright rising tone (~880 Hz, longer)
+function playCountdownBlip(step) {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  try {
+    if (step < 3) {
+      // Low short blip for 3, 2, 1
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, ac.currentTime);
+      osc.frequency.linearRampToValueAtTime(420, ac.currentTime + 0.12);
+      env.gain.setValueAtTime(0.22, ac.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime + 0.22);
+    } else {
+      // 'GO!' — bright rising two-note chime
+      [[880, 0.00, 0.20, 0.30], [1320, 0.12, 0.38, 0.28]].forEach(function([freq, t, dur, gain]) {
+        const osc = ac.createOscillator();
+        const env = ac.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, ac.currentTime + t);
+        osc.frequency.linearRampToValueAtTime(freq * 1.08, ac.currentTime + t + dur * 0.5);
+        env.gain.setValueAtTime(0, ac.currentTime + t);
+        env.gain.linearRampToValueAtTime(gain, ac.currentTime + t + 0.03);
+        env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + dur);
+        osc.connect(env);
+        env.connect(ac.destination);
+        osc.start(ac.currentTime + t);
+        osc.stop(ac.currentTime + t + dur + 0.05);
+      });
+    }
+  } catch(e) {}
+}
+
+function playC10JackpotTone() {
+  if (!soundEnabled) return;
+  const ac = getAudioCtx();
+  if (!ac) return;
+  // Joyful ascending arpeggio + bright chime for C10 jackpot hit
+  const seq = [
+    { freq: 523,  t: 0.00, dur: 0.18, gain: 0.28, type: 'triangle' },
+    { freq: 659,  t: 0.09, dur: 0.18, gain: 0.28, type: 'triangle' },
+    { freq: 784,  t: 0.18, dur: 0.22, gain: 0.30, type: 'triangle' },
+    { freq: 1047, t: 0.27, dur: 0.45, gain: 0.26, type: 'sine'     },
+    { freq: 1319, t: 0.36, dur: 0.55, gain: 0.22, type: 'sine'     },
+    // bass punch
+    { freq: 65,   t: 0.00, dur: 0.18, gain: 0.32, type: 'sine'     },
+  ];
+  seq.forEach(function({ freq, t, dur, gain, type }) {
+    try {
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime + t);
+      env.gain.setValueAtTime(0,    ac.currentTime + t);
+      env.gain.linearRampToValueAtTime(gain, ac.currentTime + t + 0.03);
+      env.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + dur);
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.start(ac.currentTime + t);
+      osc.stop(ac.currentTime + t + dur + 0.05);
+    } catch(e) {}
+  });
 }
 
 function playOvertakeTone() {
@@ -2567,52 +2714,172 @@ function generateClaimCode() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// VEHICLE SPRITE PRELOAD
+// VEHICLE SPRITE — Canvas-drawn vector silhouettes
+// PNG assets no longer used; all 4 models drawn via Canvas paths.
 // ═══════════════════════════════════════════════════════════
-const VEHICLE_KEYS  = ['t03', 'b05', 'b10', 'c10'];
-const vehicleSprites = {}; // key -> HTMLImageElement (ready when .loaded=true)
+const VEHICLE_KEYS = ['t03', 'b05', 'b10', 'c10'];
 
-function preloadVehicleSprites() {
-  VEHICLE_KEYS.forEach(function(key) {
-    const img = new Image();
-    img.loaded = false;
-    img.onload  = function() { img.loaded = true; };
-    img.onerror = function() { img.loaded = false; };
-    img.src = 'assets/vehicles/' + key + '.png';
-    vehicleSprites[key] = img;
-  });
-}
+// ─── Vehicle shape parameters (unitless, scaled to fit block) ───────────────
+// Each entry describes the silhouette proportions:
+//   bodyAspect : width/height of the main body (higher = wider/longer)
+//   roofFrac   : roof width as fraction of body width
+//   roofHeight : roof height as fraction of body height
+//   roofOffsetX: horizontal offset of roof centre from body centre (fraction of body w)
+//   wheelSzFrac: wheel radius as fraction of body height
+const VEHICLE_SHAPES = {
+  t03: { bodyAspect: 1.55, roofFrac: 0.52, roofHeight: 0.52, roofOffsetX: -0.05, wheelSzFrac: 0.34, label: 'T03'  },
+  b05: { bodyAspect: 1.70, roofFrac: 0.50, roofHeight: 0.45, roofOffsetX: -0.03, wheelSzFrac: 0.36, label: 'B05'  },
+  b10: { bodyAspect: 1.88, roofFrac: 0.52, roofHeight: 0.42, roofOffsetX:  0.00, wheelSzFrac: 0.37, label: 'B10'  },
+  c10: { bodyAspect: 2.05, roofFrac: 0.54, roofHeight: 0.40, roofOffsetX:  0.02, wheelSzFrac: 0.38, label: 'C10'  },
+};
 
+/**
+ * Draw a parameterised Leapmotor-style car silhouette on the canvas block.
+ * White body with #67C23A accent, black wheels. Minimalist flat look.
+ * Model label drawn as small badge at bottom-centre.
+ *
+ * @param {number} bx      Block x (CSS px)
+ * @param {number} by      Block y (CSS px)
+ * @param {number} bw      Block width
+ * @param {number} bh      Block height
+ * @param {string} spriteKey  One of VEHICLE_KEYS
+ */
 function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
-  const img = vehicleSprites[spriteKey];
-  if (!img || !img.loaded) {
-    drawCarBlock(bx, by, bw, bh);
-    return;
-  }
-  // Contain the sprite inside the block bounds with proportional padding.
-  // Canvas is already DPR-scaled (ctx.scale(dpr,dpr) in resizeCanvas),
-  // so bx/by/bw/bh are CSS-pixel coords — no extra DPR correction needed here.
-  const pad    = Math.max(2, Math.round(Math.min(bw, bh) * 0.08)); // 8% of smaller dim
-  const maxW   = bw - pad * 2;
-  const maxH   = bh - pad * 2;
-  const ratio  = img.naturalWidth / (img.naturalHeight || 1);
-  let dw, dh;
-  if (maxW / maxH > ratio) {
-    // height-constrained
-    dh = maxH;
-    dw = dh * ratio;
+  const shape = VEHICLE_SHAPES[spriteKey] || VEHICLE_SHAPES.b05;
+
+  // ── Contain silhouette in block with aspect ~shape.bodyAspect : 1 ──────────
+  const pad   = Math.max(2, Math.round(Math.min(bw, bh) * 0.07));
+  const maxW  = bw - pad * 2;
+  const maxH  = bh - pad * 2 - Math.max(6, bh * 0.22); // reserve room for label
+
+  // target size
+  let carW, carH;
+  if (maxW / maxH > shape.bodyAspect) {
+    carH = maxH;
+    carW = carH * shape.bodyAspect;
   } else {
-    // width-constrained
-    dw = maxW;
-    dh = dw / ratio;
+    carW = maxW;
+    carH = carW / shape.bodyAspect;
   }
-  const dx = bx + pad + (maxW - dw) / 2;
-  const dy = by + pad + (maxH - dh) / 2;
+
+  const cx  = bx + bw / 2;
+  const carY = by + pad + (maxH - carH) / 2; // vertically centred in reserved area
+
+  // ── Geometry ────────────────────────────────────────────────────────────────
+  const bodyLeft  = cx - carW / 2;
+  const bodyTop   = carY + carH * 0.38;   // body fills lower ~62% of carH
+  const bodyH     = carH * 0.58;
+  const bodyRight = bodyLeft + carW;
+  const bodyBot   = bodyTop + bodyH;
+
+  const roofW     = carW * shape.roofFrac;
+  const roofH     = bodyH * shape.roofHeight;
+  const roofCX    = cx + carW * shape.roofOffsetX;
+  const roofLeft  = roofCX - roofW / 2;
+  const roofRight = roofCX + roofW / 2;
+  const roofTop   = bodyTop - roofH;
+
+  const wR = bodyH * shape.wheelSzFrac;  // wheel radius
+  const wY = bodyBot;                     // wheel centre y
+  const wLX = bodyLeft  + carW * 0.22;   // left wheel x
+  const wRX = bodyRight - carW * 0.22;   // right wheel x
+
   ctx.save();
-  ctx.imageSmoothingEnabled  = true;
-  ctx.imageSmoothingQuality  = 'high';
+
+  // ── 1. Body (white) ─────────────────────────────────────────────────────────
+  ctx.fillStyle  = '#FFFFFF';
+  ctx.globalAlpha = 0.95;
+  ctx.shadowColor = 'rgba(255,255,255,0.3)';
+  ctx.shadowBlur  = 3;
+
+  // Main body rectangle with rounded ends
+  roundRect(ctx, bodyLeft, bodyTop, carW, bodyH - wR * 0.4, 3);
+  ctx.fill();
+
+  // ── 2. Roof cabin ───────────────────────────────────────────────────────────
+  ctx.beginPath();
+  ctx.moveTo(roofLeft  + roofW * 0.10, bodyTop);
+  ctx.lineTo(roofLeft  + roofW * 0.18, roofTop + roofH * 0.15);
+  ctx.quadraticCurveTo(roofLeft + roofW * 0.22, roofTop, roofLeft + roofW * 0.30, roofTop);
+  ctx.lineTo(roofRight - roofW * 0.30, roofTop);
+  ctx.quadraticCurveTo(roofRight - roofW * 0.22, roofTop, roofRight - roofW * 0.18, roofTop + roofH * 0.15);
+  ctx.lineTo(roofRight - roofW * 0.10, bodyTop);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── 3. Green accent stripe along bottom of body ─────────────────────────────
+  ctx.shadowBlur = 0;
+  ctx.fillStyle  = '#67C23A';
   ctx.globalAlpha = 0.92;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  const stripeH = Math.max(2, bodyH * 0.14);
+  roundRect(ctx, bodyLeft + 2, bodyBot - wR * 0.4 - stripeH, carW - 4, stripeH, 1);
+  ctx.fill();
+
+  // ── 4. Windscreen (dark tint) ────────────────────────────────────────────────
+  ctx.fillStyle  = 'rgba(10,30,10,0.78)';
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  const wsL = roofLeft  + roofW * 0.15;
+  const wsR = roofRight - roofW * 0.15;
+  const wsT = roofTop   + roofH * 0.22;
+  const wsB = bodyTop;
+  ctx.moveTo(wsL + (wsR - wsL) * 0.08, wsT);
+  ctx.lineTo(wsR - (wsR - wsL) * 0.08, wsT);
+  ctx.lineTo(wsR - (wsR - wsL) * 0.04, wsB);
+  ctx.lineTo(wsL + (wsR - wsL) * 0.04, wsB);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── 5. Green headlight strip (right side = front) ───────────────────────────
+  ctx.fillStyle  = '#67C23A';
+  ctx.globalAlpha = 0.90;
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = 5;
+  const hlY = bodyTop + bodyH * 0.22;
+  const hlH = Math.max(2, bodyH * 0.12);
+  roundRect(ctx, bodyRight - carW * 0.10, hlY, carW * 0.10, hlH, 1);
+  ctx.fill();
+
+  // ── 6. Rear light (left side) — red ─────────────────────────────────────────
+  ctx.fillStyle  = 'rgba(255,60,60,0.75)';
+  ctx.shadowColor = 'rgba(255,60,60,0.6)';
+  ctx.shadowBlur  = 4;
+  roundRect(ctx, bodyLeft, hlY, carW * 0.07, hlH, 1);
+  ctx.fill();
+
+  // ── 7. Wheels ────────────────────────────────────────────────────────────────
+  ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 1.0;
+  [wLX, wRX].forEach(function(wx) {
+    // outer tyre
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(wx, wY, wR, 0, Math.PI * 2);
+    ctx.fill();
+    // rim highlight
+    ctx.strokeStyle = '#CCCCCC';
+    ctx.lineWidth   = Math.max(0.8, wR * 0.22);
+    ctx.beginPath();
+    ctx.arc(wx, wY, wR * 0.55, 0, Math.PI * 2);
+    ctx.stroke();
+    // hub
+    ctx.fillStyle = '#444';
+    ctx.beginPath();
+    ctx.arc(wx, wY, wR * 0.20, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // ── 8. Model label badge at bottom-centre of block ──────────────────────────
+  ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 1.0;
+  const labelFontSz = Math.max(7, Math.round(bh * 0.22));
+  const labelY = by + bh - Math.max(4, bh * 0.10) - 1;
+  ctx.fillStyle    = '#FFFFFF';
+  ctx.font         = `800 ${labelFontSz}px 'Montserrat', sans-serif`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(shape.label, cx, labelY);
+
   ctx.restore();
 }
 
@@ -2622,9 +2889,6 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
 document.addEventListener('DOMContentLoaded', function() {
   // Sync sound buttons with persisted state
   syncSoundButtons();
-
-  // Preload vehicle sprites
-  preloadVehicleSprites();
 
   // Resume AudioContext on first user interaction (autoplay policy)
   function resumeAudioOnce() {

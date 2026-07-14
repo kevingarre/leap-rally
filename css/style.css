@@ -1364,32 +1364,75 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .modal-actions .btn { flex: 1; font-size: 14px; padding: 14px; }
 
 /* Countdown */
+/* ══════════════════════════════════════════════════════
+   COUNTDOWN — MK64-style race-start
+══════════════════════════════════════════════════════ */
 .countdown-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  /* semi-dark pill background for readability */
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 24px;
+  padding: 28px 48px 24px;
+  border: 2px solid rgba(103, 194, 58, 0.30);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.60);
 }
 .countdown-number {
   font-family: var(--font-display);
-  font-size: 96px;
+  font-size: 112px;
   font-weight: 900;
   color: var(--leap-green);
   filter: drop-shadow(0 0 30px var(--leap-green));
-  animation: cd-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: cd-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  line-height: 1;
+}
+/* GO! variant: larger + glow pulse */
+.countdown-number.countdown-go {
+  font-size: 128px;
+  animation: cd-go-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             cd-go-glow 0.55s ease-out 0.3s forwards;
 }
 @keyframes cd-pop {
-  0%   { transform: scale(0.4); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0%   { transform: scale(0.3) rotate(-4deg); opacity: 0; }
+  60%  { transform: scale(1.10) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.00); opacity: 1; }
+}
+@keyframes cd-go-pop {
+  0%   { transform: scale(0.2) rotate(-6deg); opacity: 0; }
+  60%  { transform: scale(1.18) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.00); opacity: 1; }
+}
+@keyframes cd-go-glow {
+  0%   { filter: drop-shadow(0 0 40px #67C23A) drop-shadow(0 0 80px #67C23A); }
+  100% { filter: drop-shadow(0 0 20px #67C23A) drop-shadow(0 0 40px #67C23A); }
 }
 .countdown-text {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 5px;
-  color: var(--leap-grey);
+  letter-spacing: 6px;
+  color: rgba(255,255,255,0.65);
   text-transform: uppercase;
 }
+/* Traffic-light dots row */
+.countdown-lights {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.countdown-light {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(80,80,80,0.5);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.countdown-light.active-red    { background: #FF4D51; box-shadow: 0 0 10px #FF4D51; }
+.countdown-light.active-amber  { background: #FFB800; box-shadow: 0 0 10px #FFB800; }
+.countdown-light.active-green  { background: #67C23A; box-shadow: 0 0 10px #67C23A; }
 
 /* ══════════════════════════════════════════════════════════
    UTILITY
