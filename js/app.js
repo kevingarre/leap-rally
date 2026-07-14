@@ -1182,6 +1182,11 @@ function checkBlockCollisions(b) {
         state.pierceActive = false;
       }
 
+      // STREAK: increment on every block hit (any ball).
+      state.combo = Math.min(state.combo + 1, 8);
+      if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+      updateComboUI();
+      if (state.combo >= 4) triggerScreenShake(4, 0.2);
       if (blk.hitsLeft > 0) {
         // Block still alive (first hit of multi-hit block)
         const overlapX = b.r - Math.abs(dx);
@@ -1204,15 +1209,6 @@ function checkBlockCollisions(b) {
 
       blk.alive = false;
       aliveCount--;
-
-      // STREAK: increment combo on every block destroy (cap 8).
-      // Increment BEFORE score/energy calc so this hit already benefits.
-      if (b === ball) {
-        state.combo = Math.min(state.combo + 1, 8);
-        if (state.combo > state.maxCombo) state.maxCombo = state.combo;
-        updateComboUI();
-        if (state.combo >= 4) triggerScreenShake(4, 0.2);
-      }
 
       const overlapX = b.r - Math.abs(dx);
       const overlapY = b.r - Math.abs(dy);
