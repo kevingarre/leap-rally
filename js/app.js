@@ -1561,11 +1561,17 @@ function renderBlocks() {
       ctx.strokeStyle = b.hitsLeft >= 2 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
       roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
       ctx.stroke();
-      // Draw vehicle sprite (or fallback icon)
+      // Vehicle label only — no car graphic
       if (b.vehicleKey) {
-        drawVehicleSprite(b.x, b.y, b.w, b.h, b.vehicleKey);
-      } else {
-        drawCarBlock(b.x, b.y, b.w, b.h);
+        const lsz = Math.max(8, Math.round(b.h * 0.38));
+        ctx.fillStyle    = 'rgba(255,255,255,0.92)';
+        ctx.font         = `900 ${lsz}px 'Montserrat',sans-serif`;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor  = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur   = 4;
+        ctx.fillText(b.vehicleKey.toUpperCase(), b.x + b.w / 2, b.y + b.h / 2);
+        ctx.shadowBlur = 0;
       }
 
       if (b.hitsLeft >= 2) {
