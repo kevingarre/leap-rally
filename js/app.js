@@ -1046,8 +1046,11 @@ function update(dt) {
     updateBall(dt);
   }
 
-  // Extra balls: iterate backwards so splice(idx,1) is safe
+  // Extra balls: iterate backwards so splice(idx,1) is safe.
+  // Guard: _i >= extraBalls.length catches the case where respawnBlocks() /
+  // deactivateBall2() cleared the array mid-loop (e.g. C10 jackpot on last block).
   for (let _i = extraBalls.length - 1; _i >= 0; _i--) {
+    if (_i >= extraBalls.length) continue;
     updateExtraBall(extraBalls[_i], _i, dt);
   }
 
