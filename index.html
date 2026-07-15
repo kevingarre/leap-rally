@@ -14,6 +14,16 @@
   <link rel="stylesheet" href="css/style.css?v=20260715u">
 </head>
 <body>
+
+<!-- Landscape QR-Panels (nur sichtbar im iPad/Tablet Querformat) -->
+<div class="landscape-qr-panel left" aria-hidden="true">
+  <img class="lqr-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+  <img class="lqr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR Code">
+  <div class="lqr-cta">⚡ Auf dem Handy spielen!</div>
+  <div class="lqr-sub">QR-Code scannen<br>kein Download</div>
+  <div class="lqr-arrow">➡️</div>
+</div>
+
 <div id="app">
 
   <!-- ═══════════════════════════════════════════════
@@ -691,5 +701,15 @@
 <script src="js/supabase-config.js?v=20260715t"></script>
 <script src="js/api.js?v=20260715t"></script>
 <script src="js/app.js?v=20260715t"></script>
+
+<!-- Landscape QR-Panel rechts -->
+<div class="landscape-qr-panel right" aria-hidden="true">
+  <img class="lqr-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+  <img class="lqr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR Code">
+  <div class="lqr-cta">⚡ Auf dem Handy spielen!</div>
+  <div class="lqr-sub">QR-Code scannen<br>kein Download</div>
+  <div class="lqr-arrow">⬅️</div>
+</div>
+
 </body>
 </html>
