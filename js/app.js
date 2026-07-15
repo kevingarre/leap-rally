@@ -1241,9 +1241,7 @@ function doBouncePaddle(b) {
   b.y = paddle.y - b.r - 1;
 
   if (b === ball) {
-    // Paddle contact resets the block-streak (STREAK = consecutive block hits).
-    state.combo = 1;
-    updateComboUI();
+    // Combo does NOT reset on paddle contact — only on ball loss.
     playPaddleBounceTone();
   }
 
