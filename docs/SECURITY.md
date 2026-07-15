@@ -22,3 +22,23 @@
 
 PostgREST-Standard: Anon-Key ist öffentlich (wie Supabase-Anon-Key).
 RLS verhindert Zugriff auf geschützte Tabellen.
+
+## HTTP Basic Auth (zweite Schutzschicht für Staff-Seiten)
+
+`/staff.html` und `/wins.html` sind zusätzlich mit HTTP Basic Auth geschützt.
+
+- **User:** `staff`
+- **Passwort:** in Apple Keychain → `leap-staff-http-auth`
+
+Brute-Force-Aufwand: 5 Req/Min → alle 10.000 PINs dauern theoretisch >83 Stunden.
+
+## Rate Limiting
+
+- Spiel-API (Scores, Events): 30 Req/s pro IP
+- Staff-RPCs (Export, Analytics, Archive): **5 Req/Min pro IP** (Brute-Force-Schutz)
+
+## PostgREST
+
+- Läuft als `postgrest-svc` (System-User, kein Login, kein Home)
+- OpenAPI-Schema geblockt (404 auf /rest/v1/)
+- Config-Datei: chmod 640, Gruppe postgrest-svc
