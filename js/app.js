@@ -3578,7 +3578,7 @@ function restartGame() {
 // ═══════════════════════════════════════════════════════════
 // SOCIAL SHARING (WhatsApp + Native Share)
 // ═══════════════════════════════════════════════════════════
-var SHARE_GAME_URL = 'https://kevingarre.github.io/leap-rally/';
+var SHARE_GAME_URL = 'https://leapmotor.tt.kevingarre.de/';
 
 function showShareActions() {
   var wrap = document.getElementById('share-actions-wrap');
