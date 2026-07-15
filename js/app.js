@@ -4299,7 +4299,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const img = new Image();
     img.onload  = function() { img.loaded = true; }; // sprite ready, next frame picks it up
     img.onerror = function() { img.loaded = false; };
-    img.src = 'assets/vehicles/' + key + '.png';
+    img.src = 'assets/vehicles/' + key + '.png?v=20260715l';
     vehicleSprites[key] = img;
   });
 
