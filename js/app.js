@@ -1539,9 +1539,8 @@ function renderBlocks() {
     ctx.shadowBlur  = b.isTurbo ? 14 : 7;
     roundRect(ctx, b.x, b.y, b.w, b.h, 4);
 
-    // Vehicle blocks: dark fill so PNG sprites render cleanly with screen blend
     const alphaFill = (b.carTarget && b.hitsLeft <= 1 && b.hitsLeft < 2) ? 0.55 : 0.82;
-    ctx.fillStyle = b.carTarget ? 'rgba(8, 12, 20, 0.92)' : hexToRgba(color, alphaFill);
+    ctx.fillStyle = hexToRgba(color, alphaFill);
     ctx.fill();
 
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
@@ -3784,7 +3783,7 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Block fill is already dark (rgba(8,12,20,0.92)) — screen blend removes PNG black bg cleanly
+    // Screen blend on colored block — removes PNG black bg, car body stays visible
     const pad = Math.round(Math.min(bw, bh) * 0.05);
     const drawW = bw - pad * 2;
     const drawH = bh - pad * 2;
