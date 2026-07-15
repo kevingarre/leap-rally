@@ -279,6 +279,36 @@
       .tv-entry.rank-1 .tv-score { font-size: 30px; }
       .tv-entry { padding: 10px 16px; border-radius: 10px; gap: 12px; }
     }
+  
+    /* ── Car Strip ─────────────────────────────────────────── */
+    #tv-car-strip {
+      width: 100%;
+      height: 64px;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+      flex-shrink: 0;
+      margin: 6px 0;
+    }
+    .tv-car {
+      position: absolute;
+      height: 52px;
+      top: 50%;
+      transform: translateY(-50%) scaleX(-1);
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: brightness(1.1) drop-shadow(0 0 10px rgba(103,194,58,0.5));
+      animation: tv-drive linear infinite;
+    }
+    .tv-car-1 { animation-duration: 7s;   animation-delay:  0s;   }
+    .tv-car-2 { animation-duration: 10s;  animation-delay: -3s;   }
+    .tv-car-3 { animation-duration: 8.5s; animation-delay: -5.5s; }
+    .tv-car-4 { animation-duration: 12s;  animation-delay: -1.5s; }
+    @keyframes tv-drive {
+      from { left: 110%; }
+      to   { left: -28%; }
+    }
+
   </style>
 </head>
 <body>
@@ -296,6 +326,14 @@
       <span style="color:var(--muted);font-size:0.55em;display:block;margin-top:4px;">— TOP 10 —</span>
     </div>
     <div id="tv-subtitle">Live Leaderboard</div>
+  </div>
+
+  <!-- Car Strip -->
+  <div id="tv-car-strip">
+    <img src="assets/vehicles/c10.png?v=20260715l" class="tv-car tv-car-1" alt="">
+    <img src="assets/vehicles/b10.png?v=20260715l" class="tv-car tv-car-2" alt="">
+    <img src="assets/vehicles/b05.png?v=20260715l" class="tv-car tv-car-3" alt="">
+    <img src="assets/vehicles/t03.png?v=20260715l" class="tv-car tv-car-4" alt="">
   </div>
 
   <!-- Leaderboard entries -->

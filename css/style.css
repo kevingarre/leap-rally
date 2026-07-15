@@ -2031,6 +2031,7 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   animation: attract-drive linear infinite;
   mix-blend-mode: screen;
   filter: brightness(1.1) drop-shadow(0 0 12px rgba(103, 194, 58, 0.5));
+  transform: translateY(-50%) scaleX(-1); /* Autos fahren nach links, also gespiegelt */
 }
 .attract-car-1 { animation-duration: 6s;    animation-delay:  0s;   }
 .attract-car-2 { animation-duration: 8.5s;  animation-delay: -2.5s; }
