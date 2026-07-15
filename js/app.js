@@ -732,9 +732,10 @@ function tryLevelUp() {
   }
 
   // Level 3 reached = Level 2 cleared. Check for instant-win trigger.
-  // Don't rely solely on battery-full event — trigger directly here so the
-  // player always gets the overtake moment if conditions are met.
-  if (state.level === 3 && !state.instantWinTriggered) {
+  // Check for instant-win at every level >= 3.
+  // Battery full-charge triggers it early (at L3+), but high-scoring players
+  // who never fully charge the battery still get the overtake moment.
+  if (state.level >= 3 && !state.instantWinTriggered) {
     const overlayMs = Math.round(LEVEL_OVERLAY_DURATION * 1000) + 400;
     setTimeout(function() {
       if (!state.gameActive || state.instantWinTriggered) return;
