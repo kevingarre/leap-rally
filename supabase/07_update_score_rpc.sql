@@ -20,8 +20,7 @@ begin
   set
     score           = greatest(score, p_final_score),
     level_reached   = coalesce(p_level_reached, level_reached),
-    ghost_overtaken = coalesce(p_ghost_overtaken, ghost_overtaken),
-    updated_at      = now()
+    ghost_overtaken = coalesce(p_ghost_overtaken, ghost_overtaken)
   where id = p_score_id;
 end;
 $$;
