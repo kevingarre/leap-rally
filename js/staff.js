@@ -274,6 +274,7 @@ function loadActiveEvent() {
     var ev = rows[0];
     currentEventId   = ev.id;
     currentEventName = ev.name || '';
+    window._currentEvent = ev;
     renderEventCard(ev);
     loadEventStats(ev.id);
   }).catch(function (err) {
@@ -323,6 +324,9 @@ function renderEventCard(ev) {
         diffOptions +
       '</select>' +
     '</div>' +
+    '<button class="btn-action btn-edit" onclick="openEditEventForm()">' +
+      '✏️ Event bearbeiten' +
+    '</button>' +
     '<button class="btn-action" onclick="exportEventCSV(currentEventId, currentEventName, this)">' +
       '📥 Teilnehmerliste exportieren (CSV)' +
     '</button>' +
@@ -385,6 +389,51 @@ function changeDifficulty(diff) {
 // ══════════════════════════════════════════════════════════════
 // B: NEUES EVENT ANLEGEN
 // ══════════════════════════════════════════════════════════════
+function openEditEventForm() {
+  var ev = window._currentEvent || {};
+  var html =
+    '<div class="edit-event-overlay" id="edit-event-overlay" onclick="if(event.target===this)closeEditEventForm()">' +
+    '<div class="edit-event-modal">' +
+    '<h3>\u270f\ufe0f Event bearbeiten</h3>' +
+    '<label>Name<input id="eed-name" class="form-input" value="' + escHtml(ev.name||'') + '"></label>' +
+    '<label>Location<input id="eed-location" class="form-input" value="' + escHtml(ev.location||'') + '"></label>' +
+    '<label>Start<input id="eed-start" class="form-input" type="datetime-local" value="' + (ev.starts_at?ev.starts_at.slice(0,16):'') + '"></label>' +
+    '<label>Ende<input id="eed-end" class="form-input" type="datetime-local" value="' + (ev.ends_at?ev.ends_at.slice(0,16):'') + '"></label>' +
+    '<div id="eed-msg"></div>' +
+    '<div class="edit-event-actions">' +
+    '<button class="btn-action" onclick="saveEditEvent(this)">' + '\ud83d\udcbe Speichern</button>' +
+    '<button class="btn-action btn-secondary" onclick="closeEditEventForm()">Abbrechen</button>' +
+    '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function closeEditEventForm() {
+  var el = document.getElementById('edit-event-overlay');
+  if (el) el.remove();
+}
+function saveEditEvent(btn) {
+  var name     = document.getElementById('eed-name').value.trim();
+  var location = document.getElementById('eed-location').value.trim();
+  var start    = document.getElementById('eed-start').value;
+  var end      = document.getElementById('eed-end').value;
+  var msgEl    = document.getElementById('eed-msg');
+  if (!name || !location) { msgEl.innerHTML = '<span style="color:#f66">Name und Location sind Pflicht.</span>'; return; }
+  btn.disabled = true; btn.textContent = '\u23f3';
+  callRpc('update_event_details', {
+    p_event_id:  currentEventId,
+    p_name:      name,
+    p_location:  location,
+    p_starts_at: start ? new Date(start).toISOString() : null,
+    p_ends_at:   end   ? new Date(end).toISOString()   : null,
+    p_staff_pin: STAFF_PIN,
+  }).then(function() {
+    closeEditEventForm();
+    loadActiveEvent();
+  }).catch(function(e) {
+    msgEl.innerHTML = '<span style="color:#f66">' + escHtml(e.message) + '</span>';
+    btn.disabled = false; btn.textContent = '\ud83d\udcbe Speichern';
+  });
+}
+
 function openNewEventForm() {
   var sec = document.getElementById('new-event-section');
   if (!sec) return;
