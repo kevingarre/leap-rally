@@ -874,7 +874,6 @@ function renderAnalytics(scores, players, cont) {
 
   if (players !== null) {
     var pCount   = players.length;
-    var convRate = total > 0 ? Math.round((pCount / total) * 100) : 0;
 
     var vCounts = {};
     var cCounts = {};
@@ -882,6 +881,13 @@ function renderAnalytics(scores, players, cont) {
       if (p.vehicle_interest) { vCounts[p.vehicle_interest] = (vCounts[p.vehicle_interest] || 0) + 1; }
       if (p.contact_intent)   { cCounts[p.contact_intent]   = (cCounts[p.contact_intent]   || 0) + 1; }
     });
+
+    var pfahrt     = cCounts['probefahrt'] || 0;
+    var angebot    = cCounts['angebot']    || 0;
+    var keinKontakt = cCounts['nein']      || 0;
+    var convCount  = pfahrt + angebot; // Probefahrt + Angebot = echte Conversions
+    var ohneDaten  = Math.max(0, total - pCount); // gespielt, nichts eingetragen
+    var convRate   = total > 0 ? Math.round((convCount / total) * 100) : 0;
 
     var topModel = '\u2013';
     var topCount = 0;
@@ -895,18 +901,16 @@ function renderAnalytics(scores, players, cont) {
     html += analyticsBox('Spieler', pCount);
     html += '</div>';
 
-    var pfahrt  = cCounts['probefahrt'] || 0;
-    var angebot = cCounts['angebot']    || 0;
-    var nein    = cCounts['nein']       || 0;
-
     html +=
       '<div class="analytics-contacts">' +
-        '<div class="ac-row"><span class="ac-label">Probefahrt</span>' +
+        '<div class="ac-row"><span class="ac-label">\u2714 Probefahrt</span>' +
           '<span class="ac-val ac-green">' + pfahrt + '</span></div>' +
-        '<div class="ac-row"><span class="ac-label">Angebot</span>' +
+        '<div class="ac-row"><span class="ac-label">\u2714 Angebot</span>' +
           '<span class="ac-val ac-green">' + angebot + '</span></div>' +
-        '<div class="ac-row"><span class="ac-label">Kein Kontakt</span>' +
-          '<span class="ac-val ac-muted">' + nein + '</span></div>' +
+        '<div class="ac-row"><span class="ac-label">\u2014 Kein Kontakt</span>' +
+          '<span class="ac-val ac-muted">' + keinKontakt + '</span></div>' +
+        '<div class="ac-row"><span class="ac-label">\u2014 Ohne Daten</span>' +
+          '<span class="ac-val ac-muted">' + ohneDaten + '</span></div>' +
       '</div>';
   } else {
     html += '<p class="analytics-note">Player-Daten nicht abrufbar (RLS aktiv). Score-Stats oben vollst\u00e4ndig.</p>';
