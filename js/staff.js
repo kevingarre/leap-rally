@@ -831,22 +831,47 @@ function loadAnalytics() {
   }
   cont.innerHTML = '<div class="msg-loading">\u23f3 Lade Analytics\u2026</div>';
 
-  var scoresP = supaFetch(
-    '/rest/v1/scores?event_id=eq.' + encodeURIComponent(currentEventId) +
-    '&select=score,play_duration_s,created_at'
-  );
-
-  // Players-fetch may be blocked by RLS (anon no SELECT) - catch gracefully
-  var playersP = supaFetch(
-    '/rest/v1/players?event_id=eq.' + encodeURIComponent(currentEventId) +
-    '&select=vehicle_interest,contact_intent'
-  ).catch(function() { return null; });
-
-  return Promise.all([scoresP, playersP]).then(function(results) {
-    renderAnalytics(results[0] || [], results[1], cont);
+  return callRpc('get_event_analytics', {
+    p_event_id:  currentEventId,
+    p_staff_pin: STAFF_PIN,
+  }).then(function(d) {
+    renderAnalyticsFromRpc(d || {}, cont);
   }).catch(function(err) {
     cont.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
   });
+}
+
+function renderAnalyticsFromRpc(d, cont) {
+  var total      = Number(d.total_scores  || 0);
+  var avgScore   = Number(d.avg_score     || 0);
+  var avgDur     = Number(d.avg_duration  || 0);
+  var pCount     = Number(d.player_count  || 0);
+  var convCount  = Number(d.conv_count    || 0);
+  var pfahrt     = Number(d.probefahrt    || 0);
+  var angebot    = Number(d.angebot       || 0);
+  var kein       = Number(d.kein_kontakt  || 0);
+  var ohneDaten  = Math.max(0, total - pCount);
+  var convRate   = total > 0 ? Math.round((convCount / total) * 100) : 0;
+  var topModel   = d.top_vehicle ? d.top_vehicle.toUpperCase() + (d.top_vehicle_count > 1 ? ' \u00d7' + d.top_vehicle_count : '') : '\u2013';
+
+  var html = '<div class="analytics-grid">';
+  html += analyticsBox('Runs', total);
+  html += analyticsBox('\xd8 Score', formatNum(avgScore));
+  html += analyticsBox('\xd8 Spielzeit', avgDur ? avgDur + 's' : '\u2013');
+  html += '</div>';
+  html += '<div class="analytics-grid" style="margin-top:8px;">';
+  html += analyticsBox('Conversion', convRate + '%');
+  html += analyticsBox('Top Modell', topModel);
+  html += analyticsBox('Spieler', pCount);
+  html += '</div>';
+  html +=
+    '<div class="analytics-contacts">' +
+      '<div class="ac-row"><span class="ac-label">\u2714 Probefahrt</span><span class="ac-val ac-green">' + pfahrt + '</span></div>' +
+      '<div class="ac-row"><span class="ac-label">\u2714 Angebot</span><span class="ac-val ac-green">' + angebot + '</span></div>' +
+      '<div class="ac-row"><span class="ac-label">\u2014 Kein Kontakt</span><span class="ac-val ac-muted">' + kein + '</span></div>' +
+      '<div class="ac-row"><span class="ac-label">\u2014 Ohne Daten</span><span class="ac-val ac-muted">' + ohneDaten + '</span></div>' +
+    '</div>';
+  cont.innerHTML = html;
 }
 
 function renderAnalytics(scores, players, cont) {
