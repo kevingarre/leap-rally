@@ -1199,9 +1199,11 @@ function updateExtraBall(b, idx, dt) {
   }
 
   if (b.y - b.r > ch) {
-    // Remove this extra ball — no life lost
+    // Remove this extra ball — no life lost, but streak always breaks on any ball loss
     extraBalls.splice(idx, 1);
     state.multiBallActive = extraBalls.length > 0;
+    state.combo = 1;
+    updateComboUI();
     if (extraBalls.length === 0) {
       spawnFloatText(cw / 2, ch * 0.5, 'MULTI-BALL VERLOREN', '#FF2020');
     }
