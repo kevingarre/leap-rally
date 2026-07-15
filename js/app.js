@@ -2583,7 +2583,7 @@ function pauseForInstantWin() {
     overlay.classList.remove('hidden');
     // Populate score preview
     const scoreEl = document.getElementById('iwo-score');
-    if (scoreEl) scoreEl.textContent = liveScore.toLocaleString('de-DE');
+    if (scoreEl) scoreEl.textContent = formatScore(liveScore);
     // Wire up the "Daten eingeben" button
     const btn = document.getElementById('iwo-enter-data-btn');
     if (btn) {
@@ -3184,7 +3184,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     var rCombo = document.getElementById('res-combo');  if (rCombo) rCombo.textContent = '\u00d7' + state.maxCombo;
     var rEn    = document.getElementById('res-energy'); if (rEn)    rEn.textContent   = Math.round(state.energy) + '%';
     var rWaves = document.getElementById('res-waves');  if (rWaves) rWaves.textContent = String(state.wavesCleared);
-    var rScore = document.getElementById('res-score');  if (rScore) rScore.textContent = state.score.toLocaleString('de-DE');
+    var rScore = document.getElementById('res-score');  if (rScore) rScore.textContent = formatScore(state.score);
     if (submitBtn) { submitBtn.disabled = false; }
     buildLeaderboard();
     showShareActions();
@@ -3205,7 +3205,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
       : (ps.event_id || (window.LEAP_EVENT && window.LEAP_EVENT.id) || null);
     const result = await submitEntry({
       event_id:         resolvedEventId2,
-      score:            ps.score,
+      score:            ps.score || state.score || 0,
       ghost_overtaken:  ps.ghost_overtaken,
       level_reached:    ps.level_reached,
       play_duration_s:  ps.play_duration_s,
@@ -3310,6 +3310,86 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     console.error('[LEAP] Opt-in submit failed:', err);
     submitBtn.disabled    = false;
     submitBtn.textContent = '✅ ABSENDEN';
+
+    // ── Offline Queue: bei Netzwerkfehler lokal sichern ──────────────
+    const isNetworkError = !navigator.onLine || (err.message && (
+      err.message.includes('Failed to fetch') ||
+      err.message.includes('NetworkError') ||
+      err.message.includes('network') ||
+      err.message.includes('offline')
+    ));
+    if (isNetworkError && !demoMode) {
+      // Alle Formular-Daten zusammenstellen und offline einreihen
+      const ps2  = session.pendingScore || {};
+      const ev4  = window.LEAP_EVENT;
+      const resolvedEvId3 = (ev4 && ev4.id) || ps2.event_id || null;
+      const offlineEntry = {
+        event_id:         resolvedEvId3,
+        score:            ps2.score || state.score || 0,
+        ghost_overtaken:  ps2.ghost_overtaken,
+        level_reached:    ps2.level_reached,
+        play_duration_s:  ps2.play_duration_s,
+        is_instant_win:   ps2.is_instant_win || state.instantWinPending || undefined,
+        contact_intent:   playerData.contact_intent,
+        vehicle_interest: playerData.vehicle_interest,
+        zip:              playerData.zip,
+        city:             playerData.city,
+        first_name:       playerData.first_name,
+        last_name:        playerData.last_name,
+        email:            playerData.email,
+        phone:            playerData.phone,
+        consent_stay:     playerData.consent_stay_in_touch,
+        consent_offers:   playerData.consent_better_offers,
+        consent_partners: playerData.consent_partners,
+        terms_accepted:   playerData.terms_accepted,
+        terms_version:    playerData.terms_version_at_entry,
+        entry_source:     playerData.entry_source || 'byod',
+      };
+      enqueueOfflineScore(offlineEntry);
+      showAppToast('⚡ Score lokal gespeichert – wird nachgesendet wenn wieder online');
+
+      // Als eingereicht markieren, damit Nutzer nicht nochmal submittet
+      session.submitted = true;
+
+      // Falls Instant-Win: Fallback-Code anzeigen
+      if (state.instantWinTriggered || state.instantWinPending) {
+        if (!session.instantWinCode) session.instantWinCode = generateClaimCode();
+        ['iw-code-wrap', 'game-iw-code-wrap'].forEach(function(wid) {
+          var wrap = document.getElementById(wid);
+          if (wrap) wrap.classList.remove('hidden');
+        });
+        setEl('iw-code',      session.instantWinCode);
+        setEl('game-iw-code', session.instantWinCode);
+        _showInstantWinIfNeeded(true);
+      }
+
+      // UI-Feedback: Erfolg kommunizieren, Fehler verbergen
+      submitBtn.textContent = '✅ Lokal gespeichert!';
+      submitBtn.disabled    = true;
+      errorEl.textContent   = '⚠️ Keine Verbindung — deine Daten wurden lokal gesichert und werden automatisch übertragen sobald die Verbindung wieder da ist.';
+      errorEl.classList.remove('hidden');
+      errorEl.style.background = 'rgba(103,194,58,0.12)';
+      errorEl.style.color      = '#95D475';
+      errorEl.style.border     = '1px solid rgba(103,194,58,0.3)';
+      errorEl.style.borderRadius = '6px';
+      errorEl.style.padding    = '8px 12px';
+
+      // Reveal-Sektion trotzdem zeigen
+      const ctaCard2 = document.getElementById('end-cta-card');
+      if (ctaCard2) ctaCard2.classList.add('hidden');
+      const revealDiv2 = document.getElementById('end-reveal');
+      if (revealDiv2) {
+        revealDiv2.classList.remove('hidden');
+        void revealDiv2.offsetWidth;
+        revealDiv2.classList.add('reveal-active');
+      }
+      animateCountUp('res-score', 0, state.score, 1200);
+      buildLeaderboard();
+      showShareActions();
+      return;
+    }
+
+    // Normaler Fehler (kein Netzwerkproblem)
     errorEl.textContent   = `⚠️ Speichern fehlgeschlagen. Bitte erneut versuchen. (${err.message || 'Netzwerkfehler'})`;
     errorEl.classList.remove('hidden');
   }
@@ -3341,7 +3421,7 @@ async function buildLeaderboard() {
         '<span class="lb-rank ' + rankClass + '">' + rankIcon + '</span>' +
         '<span class="lb-name">' + entry.name + cityStr +
           ' <span style="background:#E53935;color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700;">DEMO</span></span>' +
-        '<span class="lb-score">' + entry.score.toLocaleString('de-DE') + '</span>';
+        '<span class="lb-score">' + formatScore(entry.score) + '</span>';
       container.appendChild(el);
     });
     return;
@@ -3407,7 +3487,7 @@ async function buildLeaderboard() {
       el.innerHTML =
         `<span class="lb-rank ${rankClass}">${rankIcon}</span>` +
         `<span class="lb-name">${entry.name}${cityStr}${youBadge}</span>` +
-        `<span class="lb-score">${entry.score.toLocaleString('de-DE')}</span>`;
+        `<span class="lb-score">${formatScore(entry.score)}</span>`;
 
       container.appendChild(el);
 
@@ -3511,7 +3591,7 @@ function buildShareText() {
   const lvlLabel   = state.maxLevelReached >= 5 ? 'OVERTAKE' : (levelNames[state.maxLevelReached] || '');
   return `🏓⚡🚗 LEAPMOTOR TT CHALLENGE
 
-Score:    ${state.score.toLocaleString('de-DE')} Punkte
+Score:    ${formatScore(state.score)} Punkte
 Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
 Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
 Level:    ${state.maxLevelReached} (${lvlLabel})${state.ghostOvertaken ? ' · 🏁 OVERTAKE!' : ''}
@@ -3590,6 +3670,18 @@ function setEl(id, text) {
   if (el) el.textContent = text;
 }
 
+// ─── Score-Formatierung (zentraler Einstiegspunkt) ────────────────────────
+/**
+ * Formatiert einen numerischen Score für die Anzeige.
+ * Verwendet die deutsche Zahlenformatierung (Tausender-Punkt).
+ * Bsp.: 1234 → "1.234"
+ * @param {number} score
+ * @returns {string}
+ */
+function formatScore(score) {
+  return Number(score).toLocaleString('de-DE');
+}
+
 function animateCountUp(id, from, to, duration) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -3598,7 +3690,7 @@ function animateCountUp(id, from, to, duration) {
   (function step(now) {
     const p = Math.min((now - start) / duration, 1);
     const e = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(from + diff * e).toLocaleString('de-DE');
+    el.textContent = formatScore(Math.round(from + diff * e));
     if (p < 1) requestAnimationFrame(step);
   })(start);
 }
@@ -3956,6 +4048,128 @@ function stopConfetti() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// OFFLINE QUEUE — speichert Opt-in-Daten lokal bei fehlender
+// Verbindung und überträgt sie automatisch beim Reconnect.
+// ─── Offline-Queue public API ─────────────────────────────────────────────────────
+/** localStorage-Schlüssel für die Offline-Warteschlange. */
+const OFFLINE_QUEUE_KEY = 'leap_offline_queue';
+
+/** Fügt einen Score-Payload zur Offline-Warteschlange hinzu. */
+function enqueueOfflineScore(payload) {
+  OfflineQueue.push(payload);
+}
+
+/** Versucht alle gepufferten Offline-Scores zu übertragen (bei DOMContentLoaded + online-Event). */
+function flushOfflineQueue() {
+  OfflineQueue.flush();
+}
+
+/**
+ * Zeigt eine kurze Benachrichtigung (schwebend, oben zentriert) in der App an.
+ * @param {string} msg
+ * @param {boolean} [isWarning=false]
+ */
+function showAppToast(msg, isWarning) {
+  var existing = document.getElementById('app-toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.id = 'app-toast';
+  t.textContent = msg;
+  t.style.cssText = [
+    'position:fixed',
+    'top:18px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'background:' + (isWarning ? '#E53935' : '#67C23A'),
+    'color:#fff',
+    'font-size:13px',
+    'font-weight:600',
+    'padding:9px 20px',
+    'border-radius:24px',
+    'z-index:9999',
+    'pointer-events:none',
+    'box-shadow:0 2px 12px rgba(0,0,0,0.35)',
+    'transition:opacity 0.4s',
+    'opacity:1',
+  ].join(';');
+  document.body.appendChild(t);
+  setTimeout(function() {
+    t.style.opacity = '0';
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 450);
+  }, 3200);
+}
+
+// ═══════════════════════════════════════════════════════════
+const OfflineQueue = {
+  KEY: OFFLINE_QUEUE_KEY,
+
+  /** Fügt einen Entry zur Warteschlange hinzu. */
+  push(entry) {
+    const queue = this.getAll();
+    queue.push({
+      id:       Date.now(),
+      data:     entry,
+      ts:       new Date().toISOString(),
+      attempts: 0,
+    });
+    try { localStorage.setItem(this.KEY, JSON.stringify(queue)); } catch(e) {}
+  },
+
+  /** Gibt alle pending Entries zurück. */
+  getAll() {
+    try {
+      return JSON.parse(localStorage.getItem(this.KEY) || '[]');
+    } catch(e) { return []; }
+  },
+
+  /** Entfernt einen Entry anhand seiner ID. */
+  remove(id) {
+    const queue = this.getAll().filter(function(e) { return e.id !== id; });
+    try { localStorage.setItem(this.KEY, JSON.stringify(queue)); } catch(e) {}
+  },
+
+  /**
+   * Versucht alle pending Entries zu übertragen.
+   * Bei Erfolg: Entry wird entfernt.
+   * Bei Fehler: attempts++; nach 5 Fehlversuchen: verwerfen.
+   */
+  async flush() {
+    if (demoMode) return;  // im Demo-Modus nie flushen
+    const queue = this.getAll();
+    if (queue.length === 0) return;
+    console.info('[LEAP] OfflineQueue: versuche', queue.length, 'pending Eintrag/Einträge zu übertragen…');
+    for (const item of queue) {
+      try {
+        await submitEntry(item.data);
+        this.remove(item.id);
+        console.info('[LEAP] OfflineQueue: Eintrag', item.id, 'erfolgreich übertragen.');
+      } catch(e) {
+        item.attempts = (item.attempts || 0) + 1;
+        if (item.attempts >= 5) {
+          console.warn('[LEAP] OfflineQueue: Eintrag', item.id, 'nach 5 Versuchen verworfen.', e.message);
+          this.remove(item.id);
+        } else {
+          // Attempts-Zähler in localStorage aktualisieren
+          try {
+            const q2 = this.getAll().map(function(x) {
+              return x.id === item.id ? Object.assign({}, x, { attempts: item.attempts }) : x;
+            });
+            localStorage.setItem(this.KEY, JSON.stringify(q2));
+          } catch(e2) {}
+          console.warn('[LEAP] OfflineQueue: Eintrag', item.id, 'Versuch', item.attempts, 'fehlgeschlagen:', e.message);
+        }
+      }
+    }
+  },
+};
+
+// Auto-Flush bei Verbindungswiederherstellung
+window.addEventListener('online', function() {
+  console.info('[LEAP] Verbindung wiederhergestellt — OfflineQueue wird geleert.');
+  flushOfflineQueue();
+});
+
+// ═══════════════════════════════════════════════════════════
 // INIT ON LOAD
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
@@ -4013,6 +4227,12 @@ document.addEventListener('DOMContentLoaded', function() {
       if (screenStart) screenStart.appendChild(startBanner);
     }
   })();
+
+  // OfflineQueue: beim App-Start pending Einträge übertragen
+  // (kurze Verzögerung, damit API-Layer bereit ist)
+  if (!demoMode) {
+    setTimeout(flushOfflineQueue, 2000);
+  }
 
   // Sync sound buttons with persisted state
   syncSoundButtons();
