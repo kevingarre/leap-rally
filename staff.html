@@ -755,7 +755,9 @@
       color: #FF8080;
       border-color: rgba(255,77,81,0.4);
     }
-  </style>
+  
+    .wins-more-link { display:block; text-align:center; color:var(--lm-green); font-size:13px; font-weight:700; padding:10px; text-decoration:none; }
+</style>
 </head>
 <body>
 
@@ -908,10 +910,10 @@
       <div class="section-card">
         <div class="section-head">
           <span class="section-title">🎟 Gewinn-Codes</span>
-          <button class="btn-refresh" onclick="loadInstantWins()">↻ Aktualisieren</button>
+          <a class="btn-refresh" href="wins.html" target="_blank" style="text-decoration:none">📄 Alle öffnen</a>
         </div>
         <div id="wins-content">
-          <div class="msg-loading">⏳ Lade Gewinn-Codes…</div>
+          <div class="msg-loading">⏳ Lade…</div>
         </div>
       </div>
 
@@ -933,6 +935,6 @@
   <div id="staff-toast"></div>
 
   <script src="js/supabase-config.js"></script>
-  <script src="js/staff.js?v=20260715d"></script>
+  <script src="js/staff.js?v=20260715e"></script>
 </body>
 </html>

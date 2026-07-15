@@ -635,18 +635,20 @@ function loadInstantWins() {
       return;
     }
 
+    // Staff panel: nur letzte 5 anzeigen
+    var preview = list.slice(0, 5);
+    var hasMore = list.length > 5;
+
     var html =
       '<div class="table-scroll">' +
       '<table class="staff-table"><thead><tr>' +
         '<th>Code</th>' +
         '<th>Spieler</th>' +
         '<th>Score</th>' +
-        '<th>Zeitstempel</th>' +
         '<th>Status</th>' +
-        '<th>Einlösen</th>' +
       '</tr></thead><tbody>';
 
-    for (var i = 0; i < list.length; i++) {
+    for (var i = 0; i < preview.length; i++) {
       var row     = list[i];
       var code    = row.claim_code || '–';
       var fn      = row.first_name || '';
@@ -666,21 +668,18 @@ function loadInstantWins() {
           '</span>'
         : '<span class="badge badge-open">Offen</span>';
 
-      var actionCell = claimed
-        ? '<button class="btn-claim" disabled>✓ Erledigt</button>'
-        : '<button class="btn-claim" onclick="claimWin(\'' + escAttr(code) + '\',this)">Einlösen</button>';
-
       html +=
         '<tr>' +
           '<td class="cell-code">' + escHtml(code) + '</td>' +
           '<td>' + escHtml(pName) + '</td>' +
           '<td class="cell-score">' + formatNum(row.score) + '</td>' +
-          '<td>' + escHtml(ts) + '</td>' +
           '<td>' + statusCell + '</td>' +
-          '<td>' + actionCell + '</td>' +
         '</tr>';
     }
     html += '</tbody></table></div>';
+    if (hasMore) {
+      html += '<a href="wins.html" target="_blank" class="wins-more-link">📄 Alle ' + list.length + ' Codes anzeigen →</a>';
+    }
     cont.innerHTML = html;
   }).catch(function (err) {
     cont.innerHTML = '<div class="msg-error" style="margin:12px;">⚠️ Fehler: ' + escHtml(err.message) + '</div>';
