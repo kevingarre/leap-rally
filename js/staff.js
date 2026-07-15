@@ -326,6 +326,9 @@ function renderEventCard(ev) {
     '<button class="btn-action" onclick="exportEventCSV(currentEventId, currentEventName, this)">' +
       '📥 Teilnehmerliste exportieren (CSV)' +
     '</button>' +
+    '<button class="btn-action" onclick="autoBackupEvent(currentEventId, currentEventName, this)">' +
+      '💾 Backup als JSON' +
+    '</button>' +
     '<button class="btn-action" onclick="window.open(\'leaderboard.html\', \'_blank\')">' +
       '📺 TV-Leaderboard öffnen' +
     '</button>' +
@@ -547,9 +550,11 @@ function loadLeaderboard() {
         '</tr>';
     }
     html += '</tbody></table></div>';
-    html += '<div style="padding:8px 0 4px;">' +
+    html += '<div style="padding:8px 0 4px;display:flex;gap:8px;flex-wrap:wrap;">' +
       '<button class="btn-action" onclick="exportEventCSV(currentEventId, currentEventName, this)">' +
-      '📥 Alle Scores exportieren (CSV)</button></div>';
+      '📥 Alle Scores exportieren (CSV)</button>' +
+      '<button class="btn-action" onclick="autoBackupEvent(currentEventId, currentEventName, this)">' +
+      '💾 Backup als JSON</button></div>';
     cont.innerHTML = html;
   }).catch(function (err) {
     cont.innerHTML = '<div class="msg-error" style="margin:12px;">⚠️ Fehler: ' + escHtml(err.message) + '</div>';
@@ -1484,6 +1489,105 @@ function loadDbSetup() {
     if (pre04) pre04.textContent = MIGRATION_04_SQL;
     if (pre06) pre06.textContent = MIGRATION_06_SQL;
   });
+}
+
+// ════════════════════════════════════════════════════════════
+// F2: AUTO-BACKUP — JSON-Snapshot des aktiven Events
+// ════════════════════════════════════════════════════════════
+/**
+ * Sammelt aktuelle Event-Daten (Event-Info, Scores, Players, InstantWins)
+ * und speichert sie als JSON-Datei (Browser-Download).
+ * @param {string} eventId
+ * @param {string} eventName
+ * @param {HTMLElement} btn
+ */
+function autoBackupEvent(eventId, eventName, btn) {
+  if (!eventId) {
+    showToast('Kein aktives Event für Backup.', true);
+    return;
+  }
+  var origText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled    = true;
+    btn.textContent = '⏳ Backup wird erstellt…';
+  }
+
+  // Scores holen — immer möglich (keine RLS auf scores)
+  var scoresP = supaFetch(
+    '/rest/v1/scores?event_id=eq.' + encodeURIComponent(eventId) +
+    '&select=*&order=created_at.desc'
+  ).catch(function() { return []; });
+
+  // Players holen — graceful null bei RLS
+  var playersP = supaFetch(
+    '/rest/v1/players?event_id=eq.' + encodeURIComponent(eventId) +
+    '&select=*&order=created_at.desc'
+  ).catch(function() { return null; });
+
+  // Instant-Wins holen
+  var winsP = supaFetch(
+    '/rest/v1/instant_wins?event_id=eq.' + encodeURIComponent(eventId) +
+    '&select=*&order=created_at.desc'
+  ).catch(function() { return []; });
+
+  // Event-Info aus dem aktuell geladenen Supa-Fetch
+  var eventInfoP = supaFetch(
+    '/rest/v1/events?id=eq.' + encodeURIComponent(eventId) + '&select=*&limit=1'
+  ).catch(function() { return []; });
+
+  Promise.all([eventInfoP, scoresP, playersP, winsP])
+    .then(function(results) {
+      var eventInfo    = (results[0] && results[0][0]) || { id: eventId, name: eventName };
+      var scores       = results[1] || [];
+      var players      = results[2];   // null wenn RLS blockiert
+      var instantWins  = results[3] || [];
+
+      var snapshot = {
+        backup_ts:    new Date().toISOString(),
+        active_event: eventInfo,
+        counts: {
+          scores:       scores.length,
+          players:      players ? players.length : null,
+          instant_wins: instantWins.length,
+        },
+        scores,
+        players,       // null wenn RLS aktiv
+        instant_wins:  instantWins,
+      };
+
+      var json      = JSON.stringify(snapshot, null, 2);
+      var blob      = new Blob([json], { type: 'application/json;charset=utf-8;' });
+      var url       = URL.createObjectURL(blob);
+      var isoDate   = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      var safeName  = (eventName || 'Event').replace(/[^a-zA-Z0-9_\-\u00C0-\u024F]/g, '_');
+      var filename  = 'LeapBackup_' + safeName + '_' + isoDate + '.json';
+
+      var a        = document.createElement('a');
+      a.href       = url;
+      a.download   = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+
+      if (btn) {
+        btn.textContent = '✅ Backup gespeichert';
+        setTimeout(function() {
+          btn.disabled    = false;
+          btn.textContent = origText;
+        }, 3000);
+      }
+      showToast('✅ Backup: ' + scores.length + ' Scores, ' +
+        (players ? players.length + ' Spieler' : 'Players (RLS)') +
+        ', ' + instantWins.length + ' Instant-Wins gespeichert.');
+    })
+    .catch(function(err) {
+      showToast('⚠️ Backup fehlgeschlagen: ' + err.message, true);
+      if (btn) {
+        btn.disabled    = false;
+        btn.textContent = origText;
+      }
+    });
 }
 
 function copyToClipboard(text, btn) {
