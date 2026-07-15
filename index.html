@@ -63,7 +63,7 @@
       </button>
       <div class="lowfx-toggle">
         <label class="toggle-label">
-          <input type="checkbox" id="chk-lowfx" onchange="lowFXMode = this.checked; localStorage.setItem('leap_lowfx', this.checked ? '1' : '0')">
+          <input type="checkbox" id="chk-lowfx" onchange="lowFXMode = this.checked; this.checked ? localStorage.setItem('leap_lowfx','1') : localStorage.removeItem('leap_lowfx')">
           <span>Geringe Grafik-Effekte (ältere Geräte)</span>
         </label>
       </div>
