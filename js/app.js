@@ -1540,8 +1540,15 @@ function renderBlocks() {
     roundRect(ctx, b.x, b.y, b.w, b.h, 4);
 
     const alphaFill = (b.carTarget && b.hitsLeft <= 1 && b.hitsLeft < 2) ? 0.55 : 0.82;
-    ctx.fillStyle = hexToRgba(color, alphaFill);
+    ctx.fillStyle = b.carTarget ? 'rgba(10, 14, 24, 0.95)' : hexToRgba(color, alphaFill);
     ctx.fill();
+    // Vehicle block: subtle colored border so it's visually distinct
+    if (b.carTarget) {
+      ctx.strokeStyle = hexToRgba(color, 0.55);
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
+      ctx.stroke();
+    }
 
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, 3, 1.5);
