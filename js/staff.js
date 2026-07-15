@@ -677,9 +677,9 @@ function loadInstantWins() {
         '</tr>';
     }
     html += '</tbody></table></div>';
-    if (hasMore) {
-      html += '<a href="wins.html" target="_blank" class="wins-more-link">📄 Alle ' + list.length + ' Codes anzeigen →</a>';
-    }
+    html += '<a href="wins.html" target="_blank" class="wins-more-link">' +
+      (hasMore ? '📄 Alle ' + list.length + ' Codes anzeigen →' : '📄 Gewinn-Code Übersicht →') +
+    '</a>';
     cont.innerHTML = html;
   }).catch(function (err) {
     cont.innerHTML = '<div class="msg-error" style="margin:12px;">⚠️ Fehler: ' + escHtml(err.message) + '</div>';
