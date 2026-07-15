@@ -2020,6 +2020,7 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   height: 80px;
   position: relative;
   overflow: hidden;
+  background: #000;
 }
 .attract-car {
   position: absolute;
