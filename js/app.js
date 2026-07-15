@@ -3764,10 +3764,8 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-
-    // Dark block background (blends with black PNG background seamlessly)
-    ctx.fillStyle = '#0A0A0A';
-    ctx.fillRect(bx, by, bw, bh);
+    // No background fill — 'screen' blend makes black pixels transparent on dark canvas.
+    ctx.globalCompositeOperation = 'screen';
 
     // Contain PNG (1536×1024 = 1.5:1 aspect) with 6% inset padding
     const pad = Math.round(Math.min(bw, bh) * 0.06);
