@@ -237,19 +237,19 @@
     }
     #tv-footer-cars {
       flex: 1;
-      height: 64px;
+      height: 90px;
       position: relative;
       overflow: hidden;
       background: #000;
     }
     .tv-footer-car {
       position: absolute;
-      height: 50px;
+      height: 68px;
       top: 50%;
       transform: translateY(-50%) scaleX(-1);
       object-fit: contain;
       mix-blend-mode: screen;
-      filter: brightness(1.1) drop-shadow(0 0 8px rgba(103,194,58,0.5));
+      filter: brightness(1.1) drop-shadow(0 0 10px rgba(103,194,58,0.5));
       animation: tv-drive linear infinite;
     }
     #tv-footer-qr {
@@ -258,20 +258,20 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0;
+      gap: 4px;
       background: #000;
-      padding: 6px 12px;
-      height: 64px;
+      padding: 10px 18px;
+      height: 90px;
     }
-    #tv-footer-qr img { width: 44px; height: 44px; border-radius: 4px; }
+    #tv-footer-qr img { width: 68px; height: 68px; border-radius: 6px; }
     #tv-footer-cta {
-      font-size: 8px;
+      font-size: 10px;
       font-weight: 900;
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
       color: var(--green);
       text-transform: uppercase;
-      margin-top: 2px;
       text-align: center;
+      white-space: nowrap;
     }
     #tv-event-name {
       font-size: 13px;
@@ -308,17 +308,6 @@
       .tv-score { font-size: 26px; min-width: 110px; }
       .tv-entry.rank-1 .tv-score { font-size: 30px; }
       .tv-entry { padding: 10px 16px; border-radius: 10px; gap: 12px; }
-    }
-  
-    /* ── Car Strip ─────────────────────────────────────────── */
-    #tv-car-strip {
-      width: 100%;
-      height: 64px;
-      position: relative;
-      overflow: hidden;
-      background: #000;
-      flex-shrink: 0;
-      margin: 6px 0;
     }
     .tv-car {
       position: absolute;
@@ -357,15 +346,6 @@
     </div>
     <div id="tv-subtitle">Live Leaderboard</div>
   </div>
-
-  <!-- Car Strip -->
-  <div id="tv-car-strip">
-    <img src="assets/vehicles/c10.png?v=20260715l" class="tv-car tv-car-1" alt="">
-    <img src="assets/vehicles/b10.png?v=20260715l" class="tv-car tv-car-2" alt="">
-    <img src="assets/vehicles/b05.png?v=20260715l" class="tv-car tv-car-3" alt="">
-    <img src="assets/vehicles/t03.png?v=20260715l" class="tv-car tv-car-4" alt="">
-  </div>
-
   <!-- Leaderboard entries -->
   <div id="tv-lb-wrap">
     <!-- filled by JS -->
