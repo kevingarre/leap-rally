@@ -879,9 +879,21 @@
             </div>
 
             <div class="form-group">
+              <label class="form-label" for="nef-difficulty">Schwierigkeit</label>
+              <select id="nef-difficulty" class="form-input" onchange="(function(){
+                var map={easy:1000,normal:1500,hard:2200};
+                document.getElementById('nef-threshold').value=map[this.value]||1500;
+              }).call(this)">
+                <option value="normal" selected>Normal (Standard)</option>
+                <option value="easy">Easy — für Familien/Kinder</option>
+                <option value="hard">Hard — für Profis</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label" for="nef-threshold">Score-Schwelle für Sofort-Gewinn</label>
               <input type="number" id="nef-threshold" class="form-input"
                      value="1500" min="100" max="99999">
+              <small style="color:rgba(255,255,255,0.4);font-size:11px">Wird automatisch aus Schwierigkeit gesetzt — bei Bedarf manuell überschreiben</small>
             </div>
 
             <div class="checkbox-row">

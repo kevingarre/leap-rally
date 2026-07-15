@@ -482,7 +482,9 @@ function handleNewEvent(e) {
   var location  = document.getElementById('nef-location').value.trim();
   var startVal  = document.getElementById('nef-start').value;
   var endVal    = document.getElementById('nef-end').value;
-  var threshold = parseInt(document.getElementById('nef-threshold').value, 10) || 1500;
+  var difficultyEl = document.getElementById('nef-difficulty');
+  var difficulty = difficultyEl ? difficultyEl.value : 'normal';
+  var threshold = parseInt(document.getElementById('nef-threshold').value, 10) || {easy:1000,normal:1500,hard:2200}[difficulty] || 1500;
   var ghostReq  = document.getElementById('nef-ghost').checked;
 
   if (!name) {
@@ -512,6 +514,7 @@ function handleNewEvent(e) {
     p_starts_at:         startsAt,
     p_ends_at:           endsAt,
     p_instant_win_score: threshold,
+    p_difficulty:        difficulty,
     p_ghost_req:         ghostReq,
     p_staff_pin:         STAFF_PIN,
   }).then(function (result) {
@@ -528,6 +531,7 @@ function handleNewEvent(e) {
     document.getElementById('nef-location').value  = '';
     document.getElementById('nef-start').value     = '';
     document.getElementById('nef-end').value       = '';
+    if (document.getElementById('nef-difficulty')) document.getElementById('nef-difficulty').value = 'normal';
     document.getElementById('nef-threshold').value = '1500';
     document.getElementById('nef-ghost').checked   = true;
 
