@@ -89,7 +89,11 @@
 <div id="main">
   <div class="page-header">
     <div class="page-title">🎟 Gewinn-Codes</div>
-    <a href="staff.html" class="back-link">← Staff Panel</a>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="refresh-timer" style="font-size:11px;color:rgba(255,255,255,0.4)">↻ in 30s</span>
+      <button onclick="manualRefresh()" style="background:rgba(103,194,58,0.15);border:1px solid rgba(103,194,58,0.35);border-radius:8px;color:#67C23A;font-size:12px;font-weight:800;padding:7px 14px;cursor:pointer;font-family:var(--font)">↻ Aktualisieren</button>
+      <a href="staff.html" class="back-link">← Staff Panel</a>
+    </div>
   </div>
   <div id="summary-bar" class="summary-bar">⏳ Lade…</div>
   <div class="filter-row">
@@ -159,6 +163,7 @@ function loadWins() {
     var total   = allWins.length;
     var claimed = allWins.filter(function(w){ return !!w.claimed_at; }).length;
     var open    = total - claimed;
+    refreshCountdown = 30;
     document.getElementById('summary-bar').innerHTML =
       '<strong>' + total + '</strong> Gesamt &nbsp;·&nbsp; ' +
       '<strong style="color:#FFB800">' + open + '</strong> Offen &nbsp;·&nbsp; ' +
