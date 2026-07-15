@@ -228,6 +228,28 @@ async function initLeapEvent() {
 }
 
 /**
+ * Update a score row after "keep playing" — only ever increases the score.
+ * Requires migration 07_update_score_rpc.sql to be applied in Supabase.
+ * @param {string} scoreId        – UUID of the existing score row
+ * @param {number} finalScore     – final (higher) score
+ * @param {number} [levelReached] – optional updated max level
+ * @param {boolean} [ghostOvertaken] – optional updated ghost flag
+ * @returns {Promise<void>}
+ */
+async function updateFinalScore(scoreId, finalScore, levelReached, ghostOvertaken) {
+  const body = {
+    p_score_id:       scoreId,
+    p_final_score:    finalScore,
+  };
+  if (levelReached   != null) body.p_level_reached    = levelReached;
+  if (ghostOvertaken != null) body.p_ghost_overtaken  = ghostOvertaken;
+  await _supaFetch('/rest/v1/rpc/update_final_score', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/**
  * Generate a zero-padded 4-digit claim code string, e.g. "0042".
  */
 function generateClaimCode() {

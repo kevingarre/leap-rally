@@ -3000,8 +3000,19 @@ function endGame() {
     };
     // event_id must always be present for RPC signature match
   } else {
-    // Update score to final value
+    // Update score to final value (player kept playing after instant-win)
     session.pendingScore.score = state.score;
+    // Push updated score to DB if we have a score_id (non-blocking)
+    if (session.scoreId) {
+      updateFinalScore(
+        session.scoreId,
+        state.score,
+        state.maxLevelReached,
+        state.ghostOvertaken
+      ).catch(function(e) {
+        console.warn('[LEAP] updateFinalScore failed (non-critical):', e.message);
+      });
+    }
   }
 
   if (isInstantWin && !session.instantWinCode) {
