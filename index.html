@@ -61,13 +61,12 @@
       <button class="btn btn-primary glow-btn" id="btn-start" onclick="showScreen('screen-rules')">
         START GAME <span class="btn-icon">→</span>
       </button>
-    </div>
-
-    <div class="lowfx-toggle">
-      <label class="toggle-label">
-        <input type="checkbox" id="chk-lowfx" onchange="lowFXMode = this.checked; localStorage.setItem('leap_lowfx', this.checked ? '1' : '0')">
-        <span>Geringe Grafik-Effekte (ältere Geräte)</span>
-      </label>
+      <div class="lowfx-toggle">
+        <label class="toggle-label">
+          <input type="checkbox" id="chk-lowfx" onchange="lowFXMode = this.checked; localStorage.setItem('leap_lowfx', this.checked ? '1' : '0')">
+          <span>Geringe Grafik-Effekte (ältere Geräte)</span>
+        </label>
+      </div>
     </div>
 
     <button class="sound-toggle-btn" onclick="toggleSound()" aria-label="Sound an" title="Sound ein/aus">🔊</button>
