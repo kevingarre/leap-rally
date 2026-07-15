@@ -1052,8 +1052,8 @@ var MIGRATION_06_SQL = `-- ═════════════════�
 --   Grant to anon → aufrufbar per anon key vom Staff-Panel.
 --
 -- PIN ÄNDERN:
---   In allen 4 Funktionen den String '1234' durch neuen PIN ersetzen.
---   Suche nach:  IF p_staff_pin <> '1234' THEN
+--   In allen 4 Funktionen den String '2882' durch neuen PIN ersetzen.
+--   Suche nach:  IF p_staff_pin <> '2882' THEN
 -- ═══════════════════════════════════════════════════════════
 
 
@@ -1085,7 +1085,7 @@ DECLARE
   v_new_id     uuid;
 BEGIN
   -- ── PIN prüfen ──────────────────────────────────────────────
-  IF p_staff_pin <> '1234' THEN
+  IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'invalid_pin';
   END IF;
 
@@ -1173,7 +1173,7 @@ SET search_path = public
 AS $$
 BEGIN
   -- ── PIN prüfen ──────────────────────────────────────────────
-  IF p_staff_pin <> '1234' THEN
+  IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'invalid_pin';
   END IF;
 
@@ -1216,7 +1216,7 @@ DECLARE
   v_row_id uuid;
 BEGIN
   -- ── PIN prüfen ──────────────────────────────────────────────
-  IF p_staff_pin <> '1234' THEN
+  IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'invalid_pin';
   END IF;
 
@@ -1261,7 +1261,7 @@ SET search_path = public
 AS $$
 BEGIN
   -- ── PIN prüfen ──────────────────────────────────────────────
-  IF p_staff_pin <> '1234' THEN
+  IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'invalid_pin';
   END IF;
 
@@ -1314,7 +1314,7 @@ DECLARE
   v_exists boolean;
 BEGIN
   -- ── PIN prüfen ──────────────────────────────────────────────
-  IF p_staff_pin <> '1234' THEN
+  IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'invalid_pin';
   END IF;
 

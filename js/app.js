@@ -3301,7 +3301,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
               p_player_id:  _playerId || null,
               p_score_id:   _scoreId,
               p_claim_code: _code,
-              p_staff_pin:  '1234',  // matches STAFF_PIN in staff.js
+              p_staff_pin:  '2882',  // matches STAFF_PIN in staff.js
             }),
           }).catch(function(e) {
             console.warn('[LEAP] record_fallback_win (best-effort) failed:', e.message);
