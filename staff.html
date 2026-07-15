@@ -917,7 +917,18 @@
         </div>
       </div>
 
-      <!-- ══ E: DB-SETUP HELPER ═══════════════════════════════ -->
+      <!-- ══ E: ARCHIV / ALLE EVENTS ═══════════════════════════ -->
+      <div class="section-card">
+        <div class="section-head">
+          <span class="section-title">🗄 Alle Events & Archiv</span>
+          <button class="btn-refresh" onclick="loadAllEvents()">↻</button>
+        </div>
+        <div id="all-events-content">
+          <div class="msg-loading">⏳ Lade…</div>
+        </div>
+      </div>
+
+      <!-- ══ F: DB-SETUP HELPER ═══════════════════════════════ -->
       <div class="section-card" id="db-setup-section" style="display:none;">
         <div class="section-head">
           <span class="section-title">⚙ DB-Migrations-Status</span>
@@ -935,6 +946,6 @@
   <div id="staff-toast"></div>
 
   <script src="js/supabase-config.js"></script>
-  <script src="js/staff.js?v=20260715h"></script>
+  <script src="js/staff.js?v=20260715r"></script>
 </body>
 </html>

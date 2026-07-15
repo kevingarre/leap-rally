@@ -241,6 +241,7 @@ function callRpc(funcName, body) {
 // ══════════════════════════════════════════════════════════════
 function loadDashboard() {
   loadActiveEvent().then(function () {
+    loadAllEvents();
     return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics()]);
   }).catch(function (err) {
     console.error('[Staff] loadDashboard error:', err);
@@ -684,6 +685,41 @@ function loadInstantWins() {
   }).catch(function (err) {
     cont.innerHTML = '<div class="msg-error" style="margin:12px;">⚠️ Fehler: ' + escHtml(err.message) + '</div>';
   });
+}
+
+// ════════════════════════════════════════════════════════════
+// ARCHIV — ALLE EVENTS
+// ════════════════════════════════════════════════════════════
+function loadAllEvents() {
+  var cont = document.getElementById('all-events-content');
+  if (!cont) return;
+  cont.innerHTML = '<div class="msg-loading">⏳ Lade…</div>';
+  callRpc('get_all_events_staff', { p_staff_pin: STAFF_PIN })
+    .then(function(list) {
+      if (!list || !list.length) { cont.innerHTML = '<div class="msg-empty">Keine Events gefunden.</div>'; return; }
+      var html = '<div class="table-scroll"><table class="staff-table"><thead><tr>' +
+        '<th>Event</th><th>Ort</th><th>Datum</th><th>Spieler</th><th>Runs</th><th>Status</th><th>Export</th>' +
+        '</tr></thead><tbody>';
+      list.forEach(function(ev) {
+        var date = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('de-DE') : '–';
+        var status = ev.is_active
+          ? '<span class="badge badge-open" style="background:rgba(103,194,58,0.15);color:#67C23A">● Aktiv</span>'
+          : '<span class="badge badge-claimed">✓ Beendet</span>';
+        html += '<tr>' +
+          '<td><strong>' + escHtml(ev.name) + '</strong></td>' +
+          '<td>' + escHtml(ev.location || '–') + '</td>' +
+          '<td>' + date + '</td>' +
+          '<td>' + (ev.player_count || 0) + '</td>' +
+          '<td>' + (ev.score_count || 0) + '</td>' +
+          '<td>' + status + '</td>' +
+          '<td><button class="btn-claim" onclick="exportEventCSV(\'' + escAttr(ev.id) + '\',\'' + escAttr(ev.name) + '\',this)">↓ CSV</button></td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      cont.innerHTML = html;
+    }).catch(function(e) {
+      cont.innerHTML = '<div class="msg-error">⚠️ ' + escHtml(e.message) + '</div>';
+    });
 }
 
 function claimWin(code, btn) {
