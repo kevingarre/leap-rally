@@ -59,9 +59,94 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      padding: 28px 40px 20px;
+      padding: 0;
       gap: 0;
       position: relative;
+    }
+    /* 3-Spalten-Hauptbereich */
+    #tv-main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+      overflow: hidden;
+    }
+    /* QR-Seitenstreifen links & rechts */
+    .tv-qr-panel {
+      width: 230px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 20px 18px;
+      background: linear-gradient(180deg,
+        rgba(103,194,58,0.07) 0%,
+        rgba(103,194,58,0.02) 100%);
+      border-right: 1px solid rgba(103,194,58,0.14);
+    }
+    .tv-qr-panel.right {
+      border-right: none;
+      border-left: 1px solid rgba(103,194,58,0.14);
+    }
+    .tv-qr-panel .panel-logo {
+      height: 26px;
+      filter: brightness(0) invert(1);
+      opacity: 0.65;
+    }
+    .tv-qr-panel .panel-qr {
+      width: 175px;
+      height: 175px;
+      border-radius: 14px;
+      box-shadow: 0 0 0 2px rgba(103,194,58,0.25);
+      animation: qr-glow 3s ease-in-out infinite;
+    }
+    @keyframes qr-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(103,194,58,0.20), 0 0 0 2px rgba(103,194,58,0.20); }
+      50%       { box-shadow: 0 0 50px rgba(103,194,58,0.50), 0 0 0 2px rgba(103,194,58,0.40); }
+    }
+    .tv-qr-panel .panel-cta {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .tv-qr-panel .panel-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+    .tv-qr-panel .panel-arrow {
+      font-size: 32px;
+      animation: arrow-l 1.3s ease-in-out infinite;
+    }
+    .tv-qr-panel.right .panel-arrow {
+      animation: arrow-r 1.3s ease-in-out infinite;
+    }
+    @keyframes arrow-l {
+      0%, 100% { transform: translateX(0);  opacity: 0.6; }
+      50%       { transform: translateX(7px); opacity: 1; }
+    }
+    @keyframes arrow-r {
+      0%, 100% { transform: translateX(0);   opacity: 0.6; }
+      50%       { transform: translateX(-7px); opacity: 1; }
+    }
+    /* Leaderboard-Mittelspalte */
+    #tv-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 32px;
+      min-width: 0;
+      overflow: hidden;
     }
 
     /* ── Header ─────────────────────────────────────────────── */
@@ -70,7 +155,8 @@
       flex-direction: column;
       align-items: center;
       gap: 10px;
-      margin-bottom: 24px;
+      padding: 24px 40px 20px;
+      margin-bottom: 0;
       flex-shrink: 0;
     }
     #tv-logo {
@@ -229,11 +315,8 @@
     #tv-footer {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       flex-shrink: 0;
-      margin-top: 0;
-      padding-top: 0;
-      gap: 0;
+      height: 90px;
     }
     #tv-footer-cars {
       flex: 1;
@@ -252,27 +335,9 @@
       filter: brightness(1.1) drop-shadow(0 0 10px rgba(103,194,58,0.5));
       animation: tv-drive linear infinite;
     }
-    #tv-footer-qr {
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      background: #000;
-      padding: 10px 18px;
-      height: 90px;
-    }
-    #tv-footer-qr img { width: 68px; height: 68px; border-radius: 6px; }
-    #tv-footer-cta {
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      color: var(--green);
-      text-transform: uppercase;
-      text-align: center;
-      white-space: nowrap;
-    }
+    /* Footer-QR ausgeblendet — QR jetzt in Seitenstreifen */
+    #tv-footer-qr { display: none; }
+    #tv-footer-cta { display: none; }
     #tv-event-name {
       font-size: 13px;
       font-weight: 700;
@@ -299,9 +364,15 @@
 
     /* ── Responsive: iPad / smaller screens ─────────────────── */
     @media (max-width: 900px) {
-      #tv-wrapper { padding: 16px 20px 14px; }
+      #tv-header { padding: 14px 16px 12px; }
       #tv-logo { height: 32px; }
       #tv-title { font-size: 20px; letter-spacing: 2px; }
+      .tv-qr-panel { width: 160px; padding: 14px 12px; gap: 12px; }
+      .tv-qr-panel .panel-qr { width: 120px; height: 120px; }
+      .tv-qr-panel .panel-cta { font-size: 10px; }
+      .tv-qr-panel .panel-sub { font-size: 9px; }
+      .tv-qr-panel .panel-arrow { font-size: 22px; }
+      #tv-center { padding: 0 16px; }
       .tv-rank  { font-size: 26px; min-width: 50px; }
       .tv-name  { font-size: 20px; }
       .tv-city  { font-size: 13px; }
@@ -346,20 +417,47 @@
     </div>
     <div id="tv-subtitle">Live Leaderboard</div>
   </div>
-  <!-- Leaderboard entries -->
-  <div id="tv-lb-wrap">
-    <!-- filled by JS -->
-  </div>
 
-  <!-- Empty state -->
-  <div id="tv-empty">
-    <div id="tv-empty-icon">⚡</div>
-    <div id="tv-empty-title">Sei der Erste!</div>
-    <div id="tv-empty-sub">Jetzt spielen und einen Platz sichern</div>
-    <div id="tv-empty-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR Code" style="width:140px;height:140px;border-radius:12px;"><div style="font-size:13px;margin-top:8px;letter-spacing:2px;color:rgba(255,255,255,0.5)">JETZT SPIELEN</div></div>
-  </div>
+  <!-- 3-Spalten-Hauptbereich -->
+  <div id="tv-main">
 
-  <!-- Footer -->
+    <!-- Linker QR-Streifen -->
+    <div class="tv-qr-panel left">
+      <img class="panel-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+      <img class="panel-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR Code spielen">
+      <div class="panel-cta">⚡ Jetzt spielen<br>&amp; gewinnen!</div>
+      <div class="panel-sub">QR-Code scannen<br>kein Download nötig</div>
+      <div class="panel-arrow">➡️</div>
+    </div>
+
+    <!-- Mitte: Leaderboard -->
+    <div id="tv-center">
+      <!-- Leaderboard entries -->
+      <div id="tv-lb-wrap">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="tv-empty">
+        <div id="tv-empty-icon">⚡</div>
+        <div id="tv-empty-title">Sei der Erste!</div>
+        <div id="tv-empty-sub">Jetzt spielen und einen Platz sichern</div>
+        <div id="tv-empty-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR Code" style="width:140px;height:140px;border-radius:12px;"><div style="font-size:13px;margin-top:8px;letter-spacing:2px;color:rgba(255,255,255,0.5)">JETZT SPIELEN</div></div>
+      </div>
+    </div>
+
+    <!-- Rechter QR-Streifen -->
+    <div class="tv-qr-panel right">
+      <img class="panel-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+      <img class="panel-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR Code spielen">
+      <div class="panel-cta">⚡ Jetzt spielen<br>&amp; gewinnen!</div>
+      <div class="panel-sub">QR-Code scannen<br>kein Download nötig</div>
+      <div class="panel-arrow">⬅️</div>
+    </div>
+
+  </div><!-- /#tv-main -->
+
+  <!-- Footer (Autostreifen) -->
   <div id="tv-footer">
     <div id="tv-footer-cars">
       <img src="assets/vehicles/c10.png?v=20260715l" class="tv-footer-car" style="animation-duration:7s;animation-delay:0s" alt="">
