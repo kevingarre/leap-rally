@@ -147,7 +147,7 @@ const BONUS_LEVEL_SPEED_MULT = 1.08; // per bonus wave
 const BONUS_LEVEL_MAX_SPEED_MULT = 3.0;
 
 // Multi-ball duration (Level 4)
-const MULTIBALL_DURATION = 3.0;
+const MULTIBALL_DURATION = 5.0;
 const MAX_EXTRA_BALLS    = 2;    // max extra balls beyond the main ball (total: 1 + 2 = 3)
 
 // FX
@@ -249,6 +249,7 @@ let state = {
   multiBallTimer:  0,
   // Vehicle Power-Ups
   pierceActive:    false,
+  pierceCount:     0,
   speedBoostTimer: 0,
   paddleBoostTimer: 0,
   paddleBaseW:     0,
@@ -448,6 +449,7 @@ function resetGameState() {
     multiBallActive:  false,
     multiBallTimer:   0,
     pierceActive:     false,
+    pierceCount:      0,
     speedBoostTimer:  0,
     paddleBoostTimer: 0,
     paddleBaseW:      0,
@@ -1156,6 +1158,7 @@ function updateBall(dt) {
       state.multiBallActive = extraBalls.length > 0;
       // Clear power-up effects that were on the lost main ball
       state.pierceActive    = false;
+      state.pierceCount     = 0;
       state.speedBoostTimer = 0;
       // Streak resets when main ball is lost (even if extra ball rescues)
       state.combo = 1;
@@ -1278,7 +1281,8 @@ function checkBlockCollisions(b) {
       const wasPiercing = (state.pierceActive && b === ball);
       if (wasPiercing) {
         blk.hitsLeft  = 0;
-        state.pierceActive = false;
+        state.pierceCount--;
+        state.pierceActive = state.pierceCount > 0;
         // Lightning burst at impact point
         spawnLightningArcs(blk.x + blk.w/2, blk.y + blk.h/2, 6, true);
       }
@@ -2487,7 +2491,8 @@ function activateVehiclePowerUp(key, blkX, blkY) {
 
   switch (key) {
     case 't03': {
-      // ELEKTRO-BALL: next block hit pierces without deflecting
+      // ELEKTRO-BALL: next 2 block hits pierce without deflecting
+      state.pierceCount = 2;
       state.pierceActive = true;
       spawnFloatText(blkX, blkY - 20, '\u26A1 ELEKTRO-BALL!', '#FFD700');
       spawnLightningArcs(blkX, blkY, 8, true);
@@ -2507,7 +2512,7 @@ function activateVehiclePowerUp(key, blkX, blkY) {
         spawnFireBurst(blkX, blkY);
         state.ballSpeedPx = Math.min(state.ballSpeedPx * 1.3, GAME_CFG.ballMaxSpeed * ch);
       }
-      state.speedBoostTimer = 4.0;
+      state.speedBoostTimer = 7.0;
       spawnFloatText(blkX, blkY - 20, '\uD83D\uDD25 SPEED BOOST!', '#FF8C00');
       playSpeedBoostTone();
       break;
@@ -2522,7 +2527,7 @@ function activateVehiclePowerUp(key, blkX, blkY) {
         paddle.w   = newW;
         paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x));
       }
-      state.paddleBoostTimer = 4.0;
+      state.paddleBoostTimer = 7.0;
       spawnFloatText(blkX, blkY - 20, '\u2194\uFE0F PADDLE BOOST!', '#67C23A');
       playPaddleBoostTone();
       break;
