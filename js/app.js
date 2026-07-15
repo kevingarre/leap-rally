@@ -3783,11 +3783,11 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Screen blend on colored block — removes PNG black bg, car body stays visible
+    // Transparent PNG — draw normally on block color
     const pad = Math.round(Math.min(bw, bh) * 0.05);
     const drawW = bw - pad * 2;
     const drawH = bh - pad * 2;
-    const imgAspect = 1536 / 1024;
+    const imgAspect = 300 / 200; // 1.5:1
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
       renderH = drawH; renderW = renderH * imgAspect;
@@ -3796,9 +3796,7 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     }
     const renderX = bx + (bw - renderW) / 2;
     const renderY = by + (bh - renderH) / 2;
-    ctx.globalCompositeOperation = 'screen';
     ctx.drawImage(img, renderX, renderY, renderW, renderH);
-    ctx.globalCompositeOperation = 'source-over';
 
     // Model label at bottom-centre
     const labelFontSz = Math.max(7, Math.round(bh * 0.20));
