@@ -228,12 +228,50 @@
     /* ── Footer ─────────────────────────────────────────────── */
     #tv-footer {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding-top: 14px;
-      border-top: 1px solid var(--border);
+      justify-content: space-between;
       flex-shrink: 0;
-      margin-top: 12px;
+      margin-top: 0;
+      padding-top: 0;
+      gap: 0;
+    }
+    #tv-footer-cars {
+      flex: 1;
+      height: 64px;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+    }
+    .tv-footer-car {
+      position: absolute;
+      height: 50px;
+      top: 50%;
+      transform: translateY(-50%) scaleX(-1);
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: brightness(1.1) drop-shadow(0 0 8px rgba(103,194,58,0.5));
+      animation: tv-drive linear infinite;
+    }
+    #tv-footer-qr {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      background: #000;
+      padding: 6px 12px;
+      height: 64px;
+    }
+    #tv-footer-qr img { width: 44px; height: 44px; border-radius: 4px; }
+    #tv-footer-cta {
+      font-size: 8px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-top: 2px;
+      text-align: center;
     }
     #tv-event-name {
       font-size: 13px;
@@ -241,16 +279,8 @@
       color: var(--muted);
       letter-spacing: 2px;
     }
-    #tv-refresh-info {
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-    #tv-last-update {
-      font-size: 12px;
-      color: rgba(103,194,58,0.70);
-      font-weight: 700;
-    }
+    #tv-refresh-info { display: none; }
+    #tv-last-update { display: none; }
 
     /* ── Demo Badge ─────────────────────────────────────────── */
     #tv-demo-badge {
@@ -351,9 +381,19 @@
 
   <!-- Footer -->
   <div id="tv-footer">
-    <span id="tv-event-name">LEAPMOTOR TT CHALLENGE</span>
+    <div id="tv-footer-cars">
+      <img src="assets/vehicles/c10.png?v=20260715l" class="tv-footer-car" style="animation-duration:7s;animation-delay:0s" alt="">
+      <img src="assets/vehicles/b10.png?v=20260715l" class="tv-footer-car" style="animation-duration:10s;animation-delay:-3.5s" alt="">
+      <img src="assets/vehicles/b05.png?v=20260715l" class="tv-footer-car" style="animation-duration:8.5s;animation-delay:-6s" alt="">
+      <img src="assets/vehicles/t03.png?v=20260715l" class="tv-footer-car" style="animation-duration:12s;animation-delay:-1.5s" alt="">
+    </div>
+    <div id="tv-footer-qr">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR">
+      <div id="tv-footer-cta">⚡ Jetzt spielen & gewinnen!</div>
+    </div>
+    <span id="tv-event-name" style="display:none">LEAPMOTOR TT CHALLENGE</span>
     <span id="tv-refresh-info">Auto-Refresh alle 30 Sek.</span>
-    <span id="tv-last-update">–</span><div style="display:flex;flex-direction:column;align-items:center;gap:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fkevingarre.github.io%2Fleap-rally%2F&format=png&qzone=2" alt="QR Code" style="width:72px;height:72px;border-radius:6px;"><span style="font-size:9px;letter-spacing:1.5px;color:rgba(255,255,255,0.4)">SPIELEN</span></div>
+    <span id="tv-last-update">–</span>
   </div>
 </div>
 
