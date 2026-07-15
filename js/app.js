@@ -698,8 +698,16 @@ function tryLevelUp() {
   // Update paddle width, keep horizontally centred (index clamped for L5+)
   const frac = LEVEL_PADDLE_FRAC[lvlIdx];
   const newW = Math.max(PADDLE_MIN_PX, Math.round(cw * frac));
-  paddle.x   = paddle.x + paddle.w / 2 - newW / 2;
-  paddle.w   = newW;
+  if (state.paddleBoostTimer > 0 && state.paddleBaseW > 0) {
+    // B10 boost is active: update base width to new level's size, maintain boost ratio
+    state.paddleBaseW = newW;
+    const boostedW = Math.min(Math.round(newW * 1.4), Math.round(cw * 0.6));
+    paddle.x = paddle.x + paddle.w / 2 - boostedW / 2;
+    paddle.w = boostedW;
+  } else {
+    paddle.x = paddle.x + paddle.w / 2 - newW / 2;
+    paddle.w = newW;
+  }
   paddle.x   = Math.max(0, Math.min(cw - paddle.w, paddle.x));
   paddle.targetX = paddle.x;
 
@@ -1274,6 +1282,7 @@ function onBallMiss() {
 
 function checkBlockCollisions(b) {
   let aliveCount = 0;
+  let pendingPowerUp = null; // defer until after level check so respawnBlocks() fires first
 
   for (let i = 0; i < blocks.length; i++) {
     const blk = blocks[i];
@@ -1404,9 +1413,10 @@ function checkBlockCollisions(b) {
         state.fullChargeRewarded = true;  // guard flag: cleared inside flashFullCharge after reset
       }
 
-      // Vehicle Power-Up activation (einmalig pro finalem Treffer)
+      // Capture power-up for deferred activation — must fire AFTER level check so that
+      // respawnBlocks() / deactivateBall2() run first (C10 multi-ball would be cleared otherwise).
       if (blk.carTarget && blk.vehicleKey) {
-        activateVehiclePowerUp(blk.vehicleKey, blk.x + blk.w / 2, blk.y + blk.h / 2);
+        pendingPowerUp = { key: blk.vehicleKey, x: blk.x + blk.w / 2, y: blk.y + blk.h / 2 };
       }
 
       break;
@@ -1416,6 +1426,10 @@ function checkBlockCollisions(b) {
   // Level advance only when ALL blocks are truly gone (both balls can trigger this).
   // Using blocks.some() avoids false positives from stale local aliveCount.
   if (!blocks.some(function(blk) { return blk.alive; })) respawnBlocks();
+
+  // Fire vehicle power-up AFTER potential level advance — ensures C10 multi-ball
+  // spawns into the new level and is not immediately cleared by deactivateBall2().
+  if (pendingPowerUp) activateVehiclePowerUp(pendingPowerUp.key, pendingPowerUp.x, pendingPowerUp.y);
 }
 
 // ═══════════════════════════════════════════════════════════
