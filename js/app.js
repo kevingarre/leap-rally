@@ -14,6 +14,13 @@
 let demoMode = false;
 
 // ═══════════════════════════════════════════════════════════
+// LOW-FX MODE — Toggle on start screen for weaker devices
+// Disables: screen shake, lightning arcs, fire bursts
+// Persisted in localStorage key 'leap_lowfx'
+// ═══════════════════════════════════════════════════════════
+let lowFXMode = false;
+
+// ═══════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════
 const MAX_LIVES          = 3;
@@ -972,6 +979,7 @@ function playLevelUpTone(level) {
 // SCREEN SHAKE
 // ═══════════════════════════════════════════════════════════
 function triggerScreenShake(amt, duration) {
+  if (lowFXMode) return;
   screenShakeAmt   = amt;
   screenShakeTimer = duration;
 }
@@ -1700,6 +1708,7 @@ function renderBall2() { if (extraBalls.length > 0) renderExtraBall(extraBalls[0
 
 // ── LIGHTNING ARC SYSTEM (T03 Elektro-Ball) ────────────────
 function spawnLightningArcs(x, y, count, big) {
+  if (lowFXMode) return;
   if (lightningArcs.length > 12) return; // cap
   const num = big ? (count || 6) : (count || 3);
   for (let i = 0; i < num; i++) {
@@ -1767,6 +1776,7 @@ function spawnFireTrail(x, y) {
 }
 
 function spawnFireBurst(x, y) {
+  if (lowFXMode) return;
   if (particles.length > 60) return;
   const colors = ['#FF6B00','#FF9E3D','#FFD700','#FF4500','#FFFFFF'];
   for (let i = 0; i < 18; i++) {
@@ -4237,6 +4247,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // (kurze Verzögerung, damit API-Layer bereit ist)
   if (!demoMode) {
     setTimeout(flushOfflineQueue, 2000);
+  }
+
+  // Restore Low-FX mode from localStorage
+  const savedLowFX = localStorage.getItem('leap_lowfx');
+  if (savedLowFX === '1') {
+    lowFXMode = true;
+    const chk = document.getElementById('chk-lowfx');
+    if (chk) chk.checked = true;
   }
 
   // Sync sound buttons with persisted state

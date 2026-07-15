@@ -403,6 +403,21 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   padding: 0 24px 4px;
 }
 .start-cta .btn { width: 100%; max-width: 320px; font-size: 18px; padding: 20px; }
+.start-cta-headline {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--leap-green);
+  text-shadow: 0 0 12px rgba(103,194,58,0.6);
+  text-align: center;
+  margin: 0;
+  animation: pulseGlow 2s ease-in-out infinite alternate;
+}
+@keyframes pulseGlow {
+  from { text-shadow: 0 0 8px rgba(103,194,58,0.4); }
+  to   { text-shadow: 0 0 18px rgba(103,194,58,0.9), 0 0 4px rgba(149,212,117,0.5); }
+}
 .start-hint {
   font-size: 12px;
   color: var(--leap-grey);
@@ -577,6 +592,17 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
 .level-badge.level-2 { background: var(--leap-green-soft); box-shadow: 0 2px 12px rgba(149,212,117,0.4); color: #000; }
 .level-badge.level-3 { background: var(--leap-white);      box-shadow: 0 2px 12px rgba(255,255,255,0.3); color: #000; }
 .level-badge.level-4 { background: var(--leap-green);      box-shadow: 0 2px 16px rgba(103,194,58,0.6); transform: scale(1.06); }
+/* Level 5+ — orange/rot, maximaler Glow (verhindert visuelle Bugs bei langen Runden) */
+.level-badge.level-5 { background: #FF8C00; color: #fff; box-shadow: 0 2px 18px rgba(255,140,0,0.7);   transform: scale(1.08); }
+.level-badge.level-6 { background: #E53935; color: #fff; box-shadow: 0 2px 20px rgba(229,57,53,0.75);  transform: scale(1.10); }
+.level-badge.level-7 { background: #C62828; color: #fff; box-shadow: 0 2px 22px rgba(198,40,40,0.8),  0 0 8px rgba(255,80,0,0.5); transform: scale(1.12); }
+.level-badge.level-8,
+.level-badge.level-9,
+.level-badge.level-10 { background: linear-gradient(135deg,#E53935,#FF8C00); color:#fff; box-shadow: 0 2px 24px rgba(229,57,53,0.85), 0 0 12px rgba(255,140,0,0.5); transform: scale(1.14); animation: levelPulse 1s ease-in-out infinite alternate; }
+@keyframes levelPulse {
+  from { box-shadow: 0 2px 24px rgba(229,57,53,0.85), 0 0 12px rgba(255,140,0,0.5); }
+  to   { box-shadow: 0 2px 32px rgba(229,57,53,1.0),  0 0 20px rgba(255,140,0,0.8); }
+}
 
 .game-hud {
   position: relative;
@@ -2098,3 +2124,22 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   transition: background 0.2s;
 }
 .share-btn-native:active { background: rgba(103, 194, 58, 0.20); }
+
+/* ── LOW-FX TOGGLE (Start Screen) ─────────────────────── */
+.lowfx-toggle {
+  margin-top: 12px;
+  text-align: center;
+}
+.lowfx-toggle .toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+}
+.lowfx-toggle input[type="checkbox"] {
+  accent-color: #67C23A;
+  width: 16px;
+  height: 16px;
+}

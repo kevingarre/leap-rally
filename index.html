@@ -63,6 +63,13 @@
       </button>
     </div>
 
+    <div class="lowfx-toggle">
+      <label class="toggle-label">
+        <input type="checkbox" id="chk-lowfx" onchange="lowFXMode = this.checked; localStorage.setItem('leap_lowfx', this.checked ? '1' : '0')">
+        <span>Geringe Grafik-Effekte (ältere Geräte)</span>
+      </label>
+    </div>
+
     <button class="sound-toggle-btn" onclick="toggleSound()" aria-label="Sound an" title="Sound ein/aus">🔊</button>
 
     <div class="scan-line"></div>
