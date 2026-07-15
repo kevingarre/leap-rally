@@ -3777,9 +3777,9 @@ const VEHICLE_SHAPES = {
 function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
   const cx  = bx + bw / 2;
 
-  // ── PNG path: use real KI-render when loaded ────────────────────────────
+  // ── PNG path disabled — vector silhouettes look cleaner on colored blocks ──
   const img = vehicleSprites[spriteKey];
-  if (img && img.loaded) {
+  if (false && img && img.loaded) {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
