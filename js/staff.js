@@ -11,7 +11,7 @@
 'use strict';
 
 // ── Konstante PIN (leicht änderbar) ──────────────────────────
-var STAFF_PIN = '1234';
+var STAFF_PIN = '2882';
 
 // ── Konfigurierbare Spiel-URL (leicht aenderbar) ──────────────
 var GAME_URL = 'https://kevingarre.github.io/leap-rally/';
