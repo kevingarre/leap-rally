@@ -2186,9 +2186,11 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
     overflow: hidden;
   }
   #app {
-    width: min(56dvh, 460px);
+    /* Nimmt den verfügbaren Platz zwischen den Panels — max Portrait-Ratio */
+    flex: 1;
+    max-width: 92dvh;
     height: 100dvh;
-    flex-shrink: 0;
+    flex-shrink: 1;
     position: relative;
     order: 2;
   }
@@ -2199,8 +2201,9 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
     align-items: center;
     justify-content: center;
     gap: 16px;
-    flex: 1;
-    padding: 20px 16px;
+    width: clamp(150px, 17vw, 210px);
+    flex-shrink: 0;
+    padding: 20px 14px;
     background: linear-gradient(180deg,
       rgba(103,194,58,0.07) 0%,
       rgba(103,194,58,0.02) 100%);
