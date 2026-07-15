@@ -1539,8 +1539,9 @@ function renderBlocks() {
     ctx.shadowBlur  = b.isTurbo ? 14 : 7;
     roundRect(ctx, b.x, b.y, b.w, b.h, 4);
 
+    // Vehicle blocks: dark fill so PNG sprites render cleanly with screen blend
     const alphaFill = (b.carTarget && b.hitsLeft <= 1 && b.hitsLeft < 2) ? 0.55 : 0.82;
-    ctx.fillStyle = hexToRgba(color, alphaFill);
+    ctx.fillStyle = b.carTarget ? 'rgba(8, 12, 20, 0.92)' : hexToRgba(color, alphaFill);
     ctx.fill();
 
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
@@ -1561,17 +1562,9 @@ function renderBlocks() {
       ctx.strokeStyle = b.hitsLeft >= 2 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
       roundRect(ctx, b.x + 1, b.y + 1, b.w - 2, b.h - 2, 4);
       ctx.stroke();
-      // Vehicle label only — no car graphic
+      // PNG sprite with screen blend on dark block background
       if (b.vehicleKey) {
-        const lsz = Math.max(8, Math.round(b.h * 0.38));
-        ctx.fillStyle    = 'rgba(255,255,255,0.92)';
-        ctx.font         = `900 ${lsz}px 'Montserrat',sans-serif`;
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor  = 'rgba(0,0,0,0.6)';
-        ctx.shadowBlur   = 4;
-        ctx.fillText(b.vehicleKey.toUpperCase(), b.x + b.w / 2, b.y + b.h / 2);
-        ctx.shadowBlur = 0;
+        drawVehicleSprite(b.x, b.y, b.w, b.h, b.vehicleKey);
       }
 
       if (b.hitsLeft >= 2) {
@@ -3784,34 +3777,27 @@ const VEHICLE_SHAPES = {
 function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
   const cx  = bx + bw / 2;
 
-  // ── PNG path disabled — vector silhouettes look cleaner on colored blocks ──
+  // ── PNG path ───────────────────────────────────────────────────
   const img = vehicleSprites[spriteKey];
-  if (false && img && img.loaded) {
+  if (img && img.loaded) {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Dark inset behind car so PNG renders cleanly on any block color
-    const inset = Math.round(Math.min(bw, bh) * 0.06);
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
-    roundRect(ctx, bx + inset, by + inset, bw - inset * 2, bh - inset * 2, 3);
-    ctx.fill();
-
-    // Contain PNG (1536×1024 = 1.5:1 aspect) inside inset area
-    const drawW = bw - inset * 2;
-    const drawH = bh - inset * 2;
-    const imgAspect = 1536 / 1024; // 1.5
+    // Block fill is already dark (rgba(8,12,20,0.92)) — screen blend removes PNG black bg cleanly
+    const pad = Math.round(Math.min(bw, bh) * 0.05);
+    const drawW = bw - pad * 2;
+    const drawH = bh - pad * 2;
+    const imgAspect = 1536 / 1024;
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
-      renderH = drawH;
-      renderW = renderH * imgAspect;
+      renderH = drawH; renderW = renderH * imgAspect;
     } else {
-      renderW = drawW;
-      renderH = renderW / imgAspect;
+      renderW = drawW; renderH = renderW / imgAspect;
     }
     const renderX = bx + (bw - renderW) / 2;
     const renderY = by + (bh - renderH) / 2;
-    ctx.globalCompositeOperation = 'screen'; // removes black bg of PNG against dark inset
+    ctx.globalCompositeOperation = 'screen';
     ctx.drawImage(img, renderX, renderY, renderW, renderH);
     ctx.globalCompositeOperation = 'source-over';
 
