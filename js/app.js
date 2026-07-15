@@ -3783,13 +3783,16 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    // No background fill — 'screen' blend makes black pixels transparent on dark canvas.
-    ctx.globalCompositeOperation = 'screen';
 
-    // Contain PNG (1536×1024 = 1.5:1 aspect) with 6% inset padding
-    const pad = Math.round(Math.min(bw, bh) * 0.06);
-    const drawW = bw - pad * 2;
-    const drawH = bh - pad * 2;
+    // Dark inset behind car so PNG renders cleanly on any block color
+    const inset = Math.round(Math.min(bw, bh) * 0.06);
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    roundRect(ctx, bx + inset, by + inset, bw - inset * 2, bh - inset * 2, 3);
+    ctx.fill();
+
+    // Contain PNG (1536×1024 = 1.5:1 aspect) inside inset area
+    const drawW = bw - inset * 2;
+    const drawH = bh - inset * 2;
     const imgAspect = 1536 / 1024; // 1.5
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
@@ -3801,12 +3804,9 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     }
     const renderX = bx + (bw - renderW) / 2;
     const renderY = by + (bh - renderH) / 2;
+    ctx.globalCompositeOperation = 'screen'; // removes black bg of PNG against dark inset
     ctx.drawImage(img, renderX, renderY, renderW, renderH);
-
-    // Green border around block
-    ctx.strokeStyle = '#67C23A';
-    ctx.lineWidth   = 2;
-    ctx.strokeRect(bx + 1, by + 1, bw - 2, bh - 2);
+    ctx.globalCompositeOperation = 'source-over';
 
     // Model label at bottom-centre
     const labelFontSz = Math.max(7, Math.round(bh * 0.20));
