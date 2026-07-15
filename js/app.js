@@ -2112,6 +2112,8 @@ function flashFullCharge() {
     if (ghostEl2) {
       ghostEl2.classList.add('ghost-overtaken');
       setTimeout(() => {
+        // Kein Reset wenn es ein echter Win-Overtake war — Ghost bleibt weg
+        if (state.instantWinTriggered) return;
         ghostEl2.classList.remove('ghost-overtaken');
         ghostEl2.classList.add('ghost-reset');
         state.ghostTrackPos  = 0.20;
