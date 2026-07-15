@@ -4209,6 +4209,28 @@ window.addEventListener('online', function() {
 });
 
 // ═══════════════════════════════════════════════════════════
+// ORIENTATION / RESIZE — Canvas neu berechnen bei Drehung
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('resize', function() {
+  if (canvas) {
+    resizeCanvas();
+    // Paddle + Ball neu positionieren damit sie nicht ausserhalb landen
+    initPaddle();
+    if (!ballLaunched) resetBallToPaddle();
+  }
+});
+window.addEventListener('orientationchange', function() {
+  // kurzer Delay damit das Browser-Layout sich settelt
+  setTimeout(function() {
+    if (canvas) {
+      resizeCanvas();
+      initPaddle();
+      if (!ballLaunched) resetBallToPaddle();
+    }
+  }, 200);
+});
+
+// ═══════════════════════════════════════════════════════════
 // INIT ON LOAD
 // ═══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {

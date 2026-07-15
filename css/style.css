@@ -743,10 +743,15 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   pointer-events: none;
 }
 .ghost-car.ghost-overtaken {
-  opacity: 0.10;
+  opacity: 0;
   filter: grayscale(1) brightness(0.2);
-  transform: translateY(-50%) scale(0.75);
-  animation: ghost-shake 0.35s ease-in-out;
+  transform: translateY(-50%) scale(0.6);
+  animation: ghost-shake 0.35s ease-in-out, ghost-fadeout 0.5s ease-in 0.3s forwards;
+  pointer-events: none;
+}
+@keyframes ghost-fadeout {
+  0%   { opacity: 0.10; }
+  100% { opacity: 0; }
 }
 .ghost-car.ghost-reset {
   opacity: 0.35;
@@ -2160,3 +2165,31 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
 .edit-event-actions { display: flex; gap: 10px; }
 .edit-event-actions .btn-action { flex: 1; }
 .btn-secondary { background: rgba(255,255,255,0.08) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   iPad / Tablet LANDSCAPE MODE
+   Letterbox: game bleibt Portrait, zentriert mit schwarzen Rändern
+   ══════════════════════════════════════════════════════════ */
+@media (orientation: landscape) and (min-width: 600px) {
+  body {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    background: #000;
+  }
+  #app {
+    /* Portrait-Spalte: Höhe = 100dvh, Breite = schmalste passende Portrait-Breite */
+    width: min(52dvh, 440px);
+    height: 100dvh;
+    flex-shrink: 0;
+    position: relative;
+  }
+  /* Schwarze Seitenstreifen mit Branding */
+  body::before,
+  body::after {
+    content: '';
+    flex: 1;
+    background: #000;
+    display: block;
+  }
+}
