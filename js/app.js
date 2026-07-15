@@ -332,6 +332,7 @@ const BG_BEAT_S  = 0.22;  // seconds per step
 const BG_GAIN    = 0.07;  // master gain (very quiet)
 
 function startBgMusic() {
+  return; // Hintergrundmusik deaktiviert — nur Sound-Effekte
   if (bgMusicActive || !soundEnabled) return;
   const ac = getAudioCtx();
   if (!ac) return;
