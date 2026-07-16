@@ -3501,7 +3501,7 @@ async function buildLeaderboard() {
 
     const entries = rows.map(function(r) {
       return {
-        name:  ((r.first_name || '').charAt(0) + '. ' + (r.last_name || '')).trim(),
+        name:  (r.first_name || '').trim() || '–', // DSGVO: nur Vorname
         city:  r.city || '',
         score: r.best_score,
         level: r.max_level,

@@ -477,8 +477,8 @@
   </div>
 </div>
 
-<script src="js/supabase-config.js"></script>
-<script src="js/api.js"></script>
+<script src="js/supabase-config.js?v=20260716b"></script>
+<script src="js/api.js?v=20260716b"></script>
 <script>
 'use strict';
 
@@ -587,9 +587,8 @@ function renderLeaderboard(rows) {
     var rankDisplay = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank;
 
     var firstName = (row.first_name || row.name || '').split(' ')[0] || '';
-    var lastName  = row.last_name  || (row.name  ? row.name.split(' ').slice(1).join(' ') : '');
-    // Support both real DB shape and demo shape
-    var displayName = row.name || ((firstName + (lastName ? ' ' + lastName.charAt(0) + '.' : '')).trim() || '–');
+    // DSGVO: nur Vorname anzeigen
+    var displayName = firstName || '–';
     var city  = row.city || '';
     var score = row.best_score !== undefined ? row.best_score : 0;
     var level = row.max_level  !== undefined ? row.max_level  : 1;
