@@ -39,8 +39,9 @@ declare
   v_win_score  integer;
   v_win_ghost  boolean;
   v_is_win     boolean := false;
-  v_code       text := null;
+  v_code       text    := null;
   v_try        integer := 0;
+  v_returning  boolean := false;
 begin
   -- Terms sind Pflicht
   if p_terms_accepted is not true then
@@ -56,24 +57,37 @@ begin
     raise exception 'event_not_found';
   end if;
 
-  -- Sofort-Gewinn bestimmen (serverseitig, nicht manipulierbar)
-  v_is_win := p_score >= v_win_score
-              and (case when v_win_ghost then p_ghost_overtaken else true end);
+  -- Email-Dedup: gleiche Mail → bestehenden Spieler verwenden, kein neuer Win-Code
+  if p_email is not null then
+    select id into v_player_id
+      from players
+      where email = p_email and event_id = p_event_id
+      limit 1;
+  end if;
 
-  -- Player anlegen
-  insert into players (
-    event_id, contact_intent, vehicle_interest, zip, city,
-    first_name, last_name, email, phone,
-    consent_stay_in_touch, consent_better_offers, consent_partners,
-    terms_accepted, terms_version_at_entry, privacy_accepted_at, entry_source
-  ) values (
-    p_event_id, p_contact_intent, p_vehicle_interest, p_zip, p_city,
-    p_first_name, p_last_name, p_email, p_phone,
-    coalesce(p_consent_stay,false), coalesce(p_consent_offers,false), coalesce(p_consent_partners,false),
-    true, p_terms_version, now(), coalesce(p_entry_source,'byod')
-  ) returning id into v_player_id;
+  if v_player_id is not null then
+    -- Bekannter Spieler: kein neuer Win-Code
+    v_returning := true;
+    v_is_win    := false;
+  else
+    -- Neuer Spieler anlegen
+    v_is_win := p_score >= v_win_score
+                and (case when v_win_ghost then p_ghost_overtaken else true end);
 
-  -- Score anlegen
+    insert into players (
+      event_id, contact_intent, vehicle_interest, zip, city,
+      first_name, last_name, email, phone,
+      consent_stay_in_touch, consent_better_offers, consent_partners,
+      terms_accepted, terms_version_at_entry, privacy_accepted_at, entry_source
+    ) values (
+      p_event_id, p_contact_intent, p_vehicle_interest, p_zip, p_city,
+      p_first_name, p_last_name, p_email, p_phone,
+      coalesce(p_consent_stay,false), coalesce(p_consent_offers,false), coalesce(p_consent_partners,false),
+      true, p_terms_version, now(), coalesce(p_entry_source,'byod')
+    ) returning id into v_player_id;
+  end if;
+
+  -- Score immer speichern (auch bei Rückkehrern)
   insert into scores (
     event_id, player_id, score, ghost_overtaken, level_reached, play_duration_s, is_instant_win
   ) values (
@@ -81,7 +95,7 @@ begin
     coalesce(p_level_reached,1), p_play_duration_s, v_is_win
   ) returning id into v_score_id;
 
-  -- Instant-Win mit eindeutigem 4-stelligen Code (Retry bei Kollision)
+  -- Win-Code nur für neue Spieler
   if v_is_win then
     loop
       v_try := v_try + 1;
@@ -97,10 +111,11 @@ begin
   end if;
 
   return json_build_object(
-    'player_id', v_player_id,
-    'score_id',  v_score_id,
+    'player_id',      v_player_id,
+    'score_id',       v_score_id,
     'is_instant_win', v_is_win,
-    'claim_code', v_code
+    'claim_code',     v_code,
+    'is_returning',   v_returning
   );
 end;
 $$;
