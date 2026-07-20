@@ -1964,11 +1964,11 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   pointer-events: none;
 }
 .game-topbar-logo {
-  height: 32px;
+  height: 48px;
   width: auto;
-  max-height: 32px;
+  max-height: 48px;
   filter: invert(1) brightness(2);
-  opacity: 0.9;
+  opacity: 0.95;
   display: block;
 }
 

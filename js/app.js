@@ -60,7 +60,9 @@ const BALL_MAX_SPEED   = 1.40;  // raised from 1.15 — cap fuer Level 4 + Bonus
 const BALL_WAVE_ACCEL  = 1.06;
 const BALL_MIN_VY_FRAC = 0.30;
 
-// Leapmotor symbol — drawn directly on canvas (no file dependency)
+// Leapmotor symbol image — echtes Logo aus assets, overlaid auf Ball + Blöcke
+const leapSymbolImg = new Image();
+leapSymbolImg.src = 'assets/brand/leapmotor-symbol.svg';
 const vehicleSpriteBounds = {};
 
 function getOpaqueImageBounds(img) {
@@ -831,7 +833,7 @@ function initBlocks() {
   const cols    = cfg.cols;
   const usableW = cw - BLOCK_SIDE_PAD * 2;
   const blockW  = (usableW - BLOCK_GAP * (cols - 1)) / cols;
-  const blockH  = Math.max(14, Math.round(ch * 0.055));
+  const blockH  = Math.max(20, Math.round(ch * 0.075));
 
   const totalBlocks  = rows * cols;
   const turboIndices = new Set();
@@ -1636,49 +1638,55 @@ function renderPaddle() {
   const y = paddle.y;
   const w = paddle.w;
   const h = Math.max(12, paddle.h);
-  const r = h / 2;  // vollständig abgerundete Enden
+  const r = h / 2;  // abgerundete Enden
+  const cx = x + w / 2;
 
   ctx.save();
 
-  // Glow — Leapmotor-Grün bei Boost, sonst gedämpft
-  ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 36 : 14;
+  // ── Griff (Handle) unter der Mitte — macht es zum Tischtennis-Schläger ──
+  const handleW = Math.max(14, h * 1.3);
+  const handleH = Math.max(12, h * 1.6);
+  const handleX = cx - handleW / 2;
+  const handleY = y + h - 2;
+  const handleGrad = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
+  handleGrad.addColorStop(0,    '#8B5A34');
+  handleGrad.addColorStop(0.5,  '#6B4226');
+  handleGrad.addColorStop(1,    '#4A2D18');
+  roundRect(ctx, handleX, handleY, handleW, handleH, 3);
+  ctx.fillStyle = handleGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
 
-  // Outer green border
+  // ── Blade (Schlagfläche) — rote Gummi-Seite ──
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 32 : 12;
   roundRect(ctx, x, y, w, h, r);
-  ctx.strokeStyle = state.paddleBoostTimer > 0 ? '#67C23A' : 'rgba(103,194,58,0.80)';
+  const bodyGrad = ctx.createLinearGradient(x, y, x, y + h);
+  bodyGrad.addColorStop(0,    '#D64A39');
+  bodyGrad.addColorStop(0.5,  '#A3201B');
+  bodyGrad.addColorStop(1,    '#6E1512');
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Grüner Leapmotor-Rand
+  roundRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = state.paddleBoostTimer > 0 ? '#67C23A' : 'rgba(103,194,58,0.85)';
   ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3 : 2;
   ctx.stroke();
 
-  ctx.shadowBlur = 0;
-
-  // Main body: TT-Gummi-Rot (Tischtennis-Schläger Rubber-Seite)
-  roundRect(ctx, x, y, w, h, r);
-  const bodyGrad = ctx.createLinearGradient(x, y, x, y + h);
-  bodyGrad.addColorStop(0,    '#C0392B');
-  bodyGrad.addColorStop(0.45, '#922B21');
-  bodyGrad.addColorStop(1,    '#641E16');
-  ctx.fillStyle = bodyGrad;
-  ctx.fill();
-
-  // Mittellinie (Tischtennis-Charakteristik)
+  // Weißer Glanzstreifen oben (Gummi-Textur)
   ctx.save();
   roundRect(ctx, x, y, w, h, r);
   ctx.clip();
-  ctx.fillStyle = 'rgba(255,255,255,0.12)';
-  ctx.fillRect(x + w * 0.5 - 0.5, y + 2, 1, h - 4);
-  ctx.restore();
-
-  // Weißer Glanzstreifen oben
-  ctx.save();
-  roundRect(ctx, x, y, w, h, r);
-  ctx.clip();
-  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
-  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.22)');
-  sheenGrad.addColorStop(0.6, 'rgba(255,255,255,0.05)');
+  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.55);
+  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.28)');
+  sheenGrad.addColorStop(0.6, 'rgba(255,255,255,0.06)');
   sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
   ctx.fillStyle = sheenGrad;
-  ctx.fillRect(x, y, w, h * 0.5);
+  ctx.fillRect(x, y, w, h * 0.55);
   ctx.restore();
 
   ctx.restore();
@@ -1736,30 +1744,13 @@ function renderBall() {
     ctx.lineWidth   = 1;
     ctx.stroke();
 
-    // Leapmotor L-arrow symbol direkt auf Canvas (kein SVG-Loading)
-    // Zwei Balken: vertikaler + horizontaler mit Pfeilspitze
-    const s  = ball.r * 0.52;  // Symbolbreite/-höhe Hälfte
-    const sw = Math.max(1.5, ball.r * 0.22); // Strichbreite
-    const cx2 = ball.x, cy2 = ball.y;
-    ctx.save();
-    ctx.strokeStyle = '#67C23A';
-    ctx.lineWidth   = sw;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    // Vertikaler Balken (links)
-    ctx.beginPath();
-    ctx.moveTo(cx2 - s * 0.35, cy2 - s * 0.75);
-    ctx.lineTo(cx2 - s * 0.35, cy2 + s * 0.35);
-    // Horizontaler Balken (unten)
-    ctx.lineTo(cx2 + s * 0.75, cy2 + s * 0.35);
-    ctx.stroke();
-    // Pfeilspitze rechts
-    ctx.beginPath();
-    ctx.moveTo(cx2 + s * 0.55, cy2 + s * 0.1);
-    ctx.lineTo(cx2 + s * 0.75, cy2 + s * 0.35);
-    ctx.lineTo(cx2 + s * 0.55, cy2 + s * 0.6);
-    ctx.stroke();
-    ctx.restore();
+    // Echtes Leapmotor-Symbol zentriert (aspect-korrekt, kein Verzerren)
+    if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
+      const aspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight; // ~0.88
+      const symH = ball.r * 1.15;
+      const symW = symH * aspect;
+      ctx.drawImage(leapSymbolImg, ball.x - symW / 2, ball.y - symH / 2, symW, symH);
+    }
   }
 
   ctx.restore();
@@ -3865,12 +3856,16 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
       w: img.naturalWidth,
       h: img.naturalHeight,
     };
-    const labelReserve = Math.max(4, bh * 0.18); // label at bottom
-    const padX = 1;
-    const padTop = 1;
-    const padBottom = 1;
-    const drawW = bw - padX * 2;
-    const drawH = bh - padTop - padBottom - labelReserve;
+    // ── 3-Zonen-Layout: Name LINKS · Auto MITTE · Leapmotor-Symbol RECHTS ──
+    const nameZoneW = bw * 0.30;   // links: Bezeichnung
+    const symZoneW  = bw * 0.22;   // rechts: Leapmotor-Symbol
+    const carZoneX  = bx + nameZoneW;
+    const carZoneW  = bw - nameZoneW - symZoneW;
+    const pad = 2;
+
+    // Auto (Mitte), aspect-korrekt, vertikal zentriert
+    const drawW = carZoneW - pad * 2;
+    const drawH = bh - pad * 2;
     const imgAspect = bounds.w / bounds.h;
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
@@ -3878,19 +3873,30 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     } else {
       renderW = drawW; renderH = renderW / imgAspect;
     }
-    const renderX = bx + (bw - renderW) / 2;
-    const renderY = by + padTop + (drawH - renderH) / 2;
+    const renderX = carZoneX + (carZoneW - renderW) / 2;
+    const renderY = by + (bh - renderH) / 2;
     ctx.drawImage(img, bounds.x, bounds.y, bounds.w, bounds.h, renderX, renderY, renderW, renderH);
 
-    // Model label at bottom-centre
-    const labelFontSz = Math.max(7, Math.round(bh * 0.20));
+    // Bezeichnung LINKS (vertikal zentriert, linksbündig)
+    const labelFontSz = Math.max(8, Math.round(bh * 0.32));
     ctx.fillStyle    = '#FFFFFF';
     ctx.font         = `800 ${labelFontSz}px 'Montserrat', sans-serif`;
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'bottom';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
     ctx.shadowColor  = 'rgba(0,0,0,0.85)';
     ctx.shadowBlur   = 4;
-    ctx.fillText(spriteKey.toUpperCase(), cx, by + bh - 2);
+    ctx.fillText(spriteKey.toUpperCase(), bx + 4, by + bh / 2);
+    ctx.shadowBlur   = 0;
+
+    // Leapmotor-Symbol RECHTS (aspect-korrekt)
+    if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
+      const symAspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight;
+      const symH = bh * 0.6;
+      const symW = symH * symAspect;
+      const symX = bx + bw - symZoneW / 2 - symW / 2;
+      const symY = by + (bh - symH) / 2;
+      ctx.drawImage(leapSymbolImg, symX, symY, symW, symH);
+    }
 
     ctx.restore();
     return;
