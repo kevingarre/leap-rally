@@ -575,7 +575,7 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   position: relative;
   z-index: 11;
   align-self: center;
-  margin: 40px auto 0;  /* leave room for the larger centered Leapmotor top-bar logo */
+  margin: 50px auto 0;  /* leave room for the centered Leapmotor top-bar logo */
   padding: 3px 14px;
   border-radius: 999px;
   font-family: var(--font-display);
@@ -1953,17 +1953,18 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
 /* Top bar with centered Leapmotor logo */
 .game-topbar {
   position: absolute;
-  top: max(8px, env(safe-area-inset-top));
+  top: max(14px, calc(env(safe-area-inset-top) + 6px));
   left: 0;
   right: 0;
   z-index: 12;
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: visible;
   pointer-events: none;
 }
 .game-topbar-logo {
-  height: 42px;
+  height: 38px;
   width: auto;
   filter: invert(1) brightness(2);
   opacity: 0.9;

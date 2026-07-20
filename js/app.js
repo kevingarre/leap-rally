@@ -63,6 +63,44 @@ const BALL_MIN_VY_FRAC = 0.30;
 // Leapmotor symbol image — overlaid on ball
 const leapSymbolImg = new Image();
 leapSymbolImg.src = 'assets/brand/leapmotor-symbol.svg';
+const vehicleSpriteBounds = {};
+
+function getOpaqueImageBounds(img) {
+  if (!img || !img.naturalWidth || !img.naturalHeight) {
+    return null;
+  }
+  const probe = document.createElement('canvas');
+  probe.width = img.naturalWidth;
+  probe.height = img.naturalHeight;
+  const probeCtx = probe.getContext('2d', { willReadFrequently: true });
+  probeCtx.drawImage(img, 0, 0);
+  const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+  let minX = probe.width;
+  let minY = probe.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < probe.height; y++) {
+    for (let x = 0; x < probe.width; x++) {
+      const alpha = pixels[(y * probe.width + x) * 4 + 3];
+      if (alpha <= 8) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return { x: 0, y: 0, w: probe.width, h: probe.height };
+  }
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX + 1,
+    h: maxY - minY + 1,
+  };
+}
 
 // ═══════════════════════════════════════════════════════════
 // DIFFICULTY PRESETS + GAME CONFIG RESOLVER
@@ -1596,51 +1634,63 @@ function renderBlocks() {
 // PADDLE REDESIGN: sleek neon-pong bar, Leapmotor-CI
 // ─────────────────────────────────────────────────────
 function renderPaddle() {
-  const cx = paddle.x + paddle.w / 2;  // Mittelpunkt X
-  const cy = paddle.y + paddle.h / 2;  // Mittelpunkt Y
-  const bladeW = paddle.w * 0.72;
-  const bladeH = Math.max(16, paddle.h * 2.2);  // Blade ist höher als der Hitbox-Rect
-  const handleW = paddle.w * 0.18;
-  const handleH = paddle.h * 1.2;
+  const cx = paddle.x + paddle.w / 2;
+  const cy = paddle.y + paddle.h / 2 - 1;
+  const bladeW = paddle.w * 0.70;
+  const bladeH = Math.max(17, paddle.h * 1.7);
+  const handleW = Math.max(10, paddle.w * 0.12);
+  const handleH = Math.max(10, paddle.h * 0.95);
+  const handleX = cx - handleW / 2;
+  const handleY = cy + bladeH * 0.34;
+  const handleR = Math.min(handleW / 2, 4);
 
   ctx.save();
   ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 30 : 12;
+  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 22 : 10;
 
-  // Handle (Griff) — unter dem Blade
-  const handleX = cx - handleW / 2;
-  const handleY = cy + bladeH / 2 - 4;
-  ctx.fillStyle = '#5C3317';
-  ctx.fillRect(handleX, handleY, handleW, handleH);
+  // Handle
+  roundRect(ctx, handleX, handleY, handleW, handleH, handleR);
+  const handleGrad = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
+  handleGrad.addColorStop(0, '#C18A56');
+  handleGrad.addColorStop(0.55, '#8B5A34');
+  handleGrad.addColorStop(1, '#5C3317');
+  ctx.fillStyle = handleGrad;
+  ctx.fill();
 
-  // Blade (Schlagfläche) — Ellipse
+  // Neck between handle and blade
+  roundRect(ctx, cx - handleW * 0.35, cy + bladeH * 0.20, handleW * 0.70, bladeH * 0.22, handleW * 0.18);
+  ctx.fillStyle = '#7A241D';
+  ctx.fill();
+
+  // Blade
   ctx.beginPath();
   ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
-  const bladeGrad = ctx.createRadialGradient(cx, cy - bladeH * 0.15, 2, cx, cy, bladeH / 2);
-  bladeGrad.addColorStop(0,   '#C0392B');
-  bladeGrad.addColorStop(0.7, '#8B1A1A');
-  bladeGrad.addColorStop(1,   '#5A0E0E');
+  const bladeGrad = ctx.createRadialGradient(cx, cy - bladeH * 0.2, 2, cx, cy, bladeH * 0.72);
+  bladeGrad.addColorStop(0, '#D64A39');
+  bladeGrad.addColorStop(0.62, '#A3201B');
+  bladeGrad.addColorStop(1, '#62110F');
   ctx.fillStyle = bladeGrad;
   ctx.fill();
 
-  // Grüner Leapmotor-Rand um Blade
   ctx.beginPath();
   ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
   ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3 : 1.5;
+  ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3.4 : 2;
   ctx.stroke();
 
-  // Glanzeffekt oben auf Blade
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
   ctx.clip();
   const sheenGrad = ctx.createLinearGradient(cx, cy - bladeH / 2, cx, cy);
-  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.22)');
-  sheenGrad.addColorStop(0.5, 'rgba(255,255,255,0.06)');
-  sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
+  sheenGrad.addColorStop(0, 'rgba(255,255,255,0.26)');
+  sheenGrad.addColorStop(0.48, 'rgba(255,255,255,0.08)');
+  sheenGrad.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = sheenGrad;
   ctx.fillRect(cx - bladeW / 2, cy - bladeH / 2, bladeW, bladeH / 2);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fillRect(cx - bladeW * 0.18, cy - bladeH * 0.18, bladeW * 0.36, bladeH * 0.55);
   ctx.restore();
 
   ctx.restore();
@@ -1700,13 +1750,15 @@ function renderBall() {
 
     // Leapmotor symbol zentriert (nur wenn geladen)
     if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
-      const symbolSize = ball.r * 1.1;
+      const symbolAspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight;
+      const symbolH = ball.r * 1.02;
+      const symbolW = symbolH * symbolAspect;
       ctx.drawImage(
         leapSymbolImg,
-        ball.x - symbolSize / 2,
-        ball.y - symbolSize / 2,
-        symbolSize,
-        symbolSize
+        ball.x - symbolW / 2,
+        ball.y - symbolH / 2,
+        symbolW,
+        symbolH
       );
     }
   }
@@ -3808,11 +3860,19 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Transparent PNG — draw normally on block color
-    const pad = Math.round(Math.min(bw, bh) * 0.02);
-    const drawW = bw - pad * 2;
-    const drawH = bh - pad * 2;
-    const imgAspect = 300 / 200; // 1.5:1
+    const bounds = vehicleSpriteBounds[spriteKey] || {
+      x: 0,
+      y: 0,
+      w: img.naturalWidth,
+      h: img.naturalHeight,
+    };
+    const labelReserve = Math.max(5, bh * 0.14);
+    const padX = Math.max(1, Math.round(Math.min(bw, bh) * 0.015));
+    const padTop = Math.max(1, Math.round(bh * 0.02));
+    const padBottom = Math.max(1, Math.round(bh * 0.03));
+    const drawW = bw - padX * 2;
+    const drawH = bh - padTop - padBottom - labelReserve;
+    const imgAspect = bounds.w / bounds.h;
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
       renderH = drawH; renderW = renderH * imgAspect;
@@ -3820,8 +3880,8 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
       renderW = drawW; renderH = renderW / imgAspect;
     }
     const renderX = bx + (bw - renderW) / 2;
-    const renderY = by + (bh - renderH) / 2;
-    ctx.drawImage(img, renderX, renderY, renderW, renderH);
+    const renderY = by + padTop + (drawH - renderH) / 2;
+    ctx.drawImage(img, bounds.x, bounds.y, bounds.w, bounds.h, renderX, renderY, renderW, renderH);
 
     // Model label at bottom-centre
     const labelFontSz = Math.max(7, Math.round(bh * 0.20));
@@ -4337,7 +4397,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Preload vehicle PNG sprites
   VEHICLE_KEYS.forEach(function(key) {
     const img = new Image();
-    img.onload  = function() { img.loaded = true; }; // sprite ready, next frame picks it up
+    img.onload  = function() {
+      img.loaded = true;
+      vehicleSpriteBounds[key] = getOpaqueImageBounds(img);
+    };
     img.onerror = function() { img.loaded = false; };
     img.src = 'assets/vehicles/' + key + '.png?v=20260715l';
     vehicleSprites[key] = img;
