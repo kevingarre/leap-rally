@@ -15,6 +15,11 @@ jobs:
         with:
           ref: main
 
+      - name: Remove internal files before deploy
+        run: |
+          rm -f MEMORY.md README-BACKUP.md backup-worker.js setup-backup-cron.sh
+          rm -rf docs supabase .git
+
       - name: Deploy to gh-pages root
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -22,6 +27,5 @@ jobs:
           publish_branch: gh-pages
           publish_dir: .
           destination_dir: .
-          exclude_assets: '.github,.git,MEMORY.md,README-BACKUP.md,backup-worker.js,setup-backup-cron.sh,docs,supabase'
           keep_files: true
           commit_message: 'deploy: live from main (${{ github.sha }})'
