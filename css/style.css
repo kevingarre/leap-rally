@@ -1963,7 +1963,7 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   pointer-events: none;
 }
 .game-topbar-logo {
-  height: 28px;
+  height: 42px;
   width: auto;
   filter: invert(1) brightness(2);
   opacity: 0.9;
