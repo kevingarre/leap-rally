@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" href="favicon.ico">
+  <meta name="theme-color" content="#000000">
+  <title>LEAPMOTOR CHALLENGE – TV LEADERBOARD</title>
+  <style>
+    /* ── Local Fonts ──────────────────────────────────────── */
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Black.ttf') format('truetype');
+      font-weight: 900; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-ExtraBold.ttf') format('truetype');
+      font-weight: 800; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Bold.ttf') format('truetype');
+      font-weight: 700; font-style: normal; font-display: block;
+    }
+    @font-face {
+      font-family: 'Montserrat';
+      src: url('assets/brand/Montserrat-Regular.ttf') format('truetype');
+      font-weight: 400; font-style: normal; font-display: block;
+    }
+
+    /* ── Design Tokens ──────────────────────────────────────── */
+    :root {
+      --green:    #67C23A;
+      --greens:   #95D475;
+      --greend:   #529B2E;
+      --dark:     #000000;
+      --dark2:    #0A0A0A;
+      --card:     rgba(255,255,255,0.05);
+      --border:   rgba(255,255,255,0.10);
+      --muted:    rgba(255,255,255,0.50);
+      --gold:     #FFD700;
+      --silver:   #C0C0C0;
+      --bronze:   #CD7F32;
+      --font:     'Montserrat', -apple-system, sans-serif;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--dark);
+      color: #fff;
+      font-family: var(--font);
+      overflow: hidden; /* TV-full-screen – no scroll */
+    }
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    #tv-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 0;
+      gap: 0;
+      position: relative;
+    }
+    /* 3-Spalten-Hauptbereich */
+    #tv-main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+      overflow: hidden;
+    }
+    /* QR-Seitenstreifen links & rechts */
+    .tv-qr-panel {
+      width: 230px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 20px 18px;
+      background: linear-gradient(180deg,
+        rgba(103,194,58,0.07) 0%,
+        rgba(103,194,58,0.02) 100%);
+      border-right: 1px solid rgba(103,194,58,0.14);
+    }
+    .tv-qr-panel.right {
+      border-right: none;
+      border-left: 1px solid rgba(103,194,58,0.14);
+    }
+    .tv-qr-panel .panel-logo {
+      height: 26px;
+      filter: brightness(0) invert(1);
+      opacity: 0.65;
+    }
+    .tv-qr-panel .panel-qr {
+      width: 175px;
+      height: 175px;
+      border-radius: 14px;
+      box-shadow: 0 0 0 2px rgba(103,194,58,0.25);
+      animation: qr-glow 3s ease-in-out infinite;
+    }
+    @keyframes qr-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(103,194,58,0.20), 0 0 0 2px rgba(103,194,58,0.20); }
+      50%       { box-shadow: 0 0 50px rgba(103,194,58,0.50), 0 0 0 2px rgba(103,194,58,0.40); }
+    }
+    .tv-qr-panel .panel-cta {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .tv-qr-panel .panel-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+    .tv-qr-panel .panel-arrow {
+      font-size: 32px;
+      animation: arrow-l 1.3s ease-in-out infinite;
+    }
+    .tv-qr-panel.right .panel-arrow {
+      animation: arrow-r 1.3s ease-in-out infinite;
+    }
+    @keyframes arrow-l {
+      0%, 100% { transform: translateX(0);  opacity: 0.6; }
+      50%       { transform: translateX(7px); opacity: 1; }
+    }
+    @keyframes arrow-r {
+      0%, 100% { transform: translateX(0);   opacity: 0.6; }
+      50%       { transform: translateX(-7px); opacity: 1; }
+    }
+    /* Leaderboard-Mittelspalte */
+    #tv-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 32px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    #tv-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 40px 20px;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+    #tv-logo {
+      height: 48px;
+      filter: brightness(0) invert(1);
+    }
+    #tv-title {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    #tv-title .title-leap   { color: #fff; }
+    #tv-title .title-charge { color: var(--green); }
+    #tv-subtitle {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 5px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── Leaderboard Table ───────────────────────────────────── */
+    #tv-lb-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .tv-entry {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 14px 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      flex-shrink: 0;
+      /* animation entrance */
+      opacity: 0;
+      transform: translateX(-30px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .tv-entry.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    /* Highlight top 3 */
+    .tv-entry.rank-1 {
+      background: rgba(255,215,0,0.08);
+      border-color: rgba(255,215,0,0.30);
+    }
+    .tv-entry.rank-2 {
+      background: rgba(192,192,192,0.06);
+      border-color: rgba(192,192,192,0.22);
+    }
+    .tv-entry.rank-3 {
+      background: rgba(205,127,50,0.06);
+      border-color: rgba(205,127,50,0.22);
+    }
+
+    .tv-rank {
+      font-size: 36px;
+      font-weight: 900;
+      min-width: 70px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .tv-rank.gold   { color: var(--gold); }
+    .tv-rank.silver { color: var(--silver); }
+    .tv-rank.bronze { color: var(--bronze); }
+    .tv-rank.other  { color: var(--muted); font-size: 28px; }
+
+    .tv-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .tv-name {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tv-city {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .tv-level {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--greens);
+      background: rgba(103,194,58,0.12);
+      border: 1px solid rgba(103,194,58,0.25);
+      border-radius: 6px;
+      padding: 4px 10px;
+      flex-shrink: 0;
+      letter-spacing: 1px;
+    }
+
+    .tv-score {
+      font-size: 40px;
+      font-weight: 900;
+      color: var(--green);
+      min-width: 160px;
+      text-align: right;
+      flex-shrink: 0;
+      letter-spacing: -1px;
+    }
+    .tv-entry.rank-1 .tv-score { color: var(--gold); font-size: 48px; }
+
+    /* ── Empty State ─────────────────────────────────────────── */
+    #tv-empty {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 24px;
+      text-align: center;
+    }
+    #tv-empty.visible { display: flex; }
+    #tv-empty-icon {
+      font-size: 80px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.08); opacity: 0.75; }
+    }
+    #tv-empty-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #fff;
+    }
+    #tv-empty-sub {
+      font-size: 18px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    #tv-empty-qr {
+      font-size: 48px;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    #tv-footer {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      height: 90px;
+    }
+    #tv-footer-cars {
+      flex: 1;
+      height: 90px;
+      position: relative;
+      overflow: hidden;
+      background: #000;
+    }
+    .tv-footer-car {
+      position: absolute;
+      height: 68px;
+      top: 50%;
+      transform: translateY(-50%) scaleX(-1);
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: brightness(1.1) drop-shadow(0 0 10px rgba(103,194,58,0.5));
+      animation: tv-drive linear infinite;
+    }
+    /* Footer-QR ausgeblendet — QR jetzt in Seitenstreifen */
+    #tv-footer-qr { display: none; }
+    #tv-footer-cta { display: none; }
+    #tv-event-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+    #tv-refresh-info { display: none; }
+    #tv-last-update { display: none; }
+
+    /* ── Demo Badge ─────────────────────────────────────────── */
+    #tv-demo-badge {
+      display: none;
+      position: absolute;
+      top: 16px;
+      right: 40px;
+      background: #E53935;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      padding: 4px 12px;
+      border-radius: 6px;
+    }
+
+    /* ── Responsive: iPad / smaller screens ─────────────────── */
+    @media (max-width: 900px) {
+      #tv-header { padding: 14px 16px 12px; }
+      #tv-logo { height: 32px; }
+      #tv-title { font-size: 20px; letter-spacing: 2px; }
+      .tv-qr-panel { width: 160px; padding: 14px 12px; gap: 12px; }
+      .tv-qr-panel .panel-qr { width: 120px; height: 120px; }
+      .tv-qr-panel .panel-cta { font-size: 10px; }
+      .tv-qr-panel .panel-sub { font-size: 9px; }
+      .tv-qr-panel .panel-arrow { font-size: 22px; }
+      #tv-center { padding: 0 16px; }
+      .tv-rank  { font-size: 26px; min-width: 50px; }
+      .tv-name  { font-size: 20px; }
+      .tv-city  { font-size: 13px; }
+      .tv-score { font-size: 26px; min-width: 110px; }
+      .tv-entry.rank-1 .tv-score { font-size: 30px; }
+      .tv-entry { padding: 10px 16px; border-radius: 10px; gap: 12px; }
+    }
+    .tv-car {
+      position: absolute;
+      height: 52px;
+      top: 50%;
+      transform: translateY(-50%) scaleX(-1);
+      object-fit: contain;
+      mix-blend-mode: screen;
+      filter: brightness(1.1) drop-shadow(0 0 10px rgba(103,194,58,0.5));
+      animation: tv-drive linear infinite;
+    }
+    .tv-car-1 { animation-duration: 7s;   animation-delay:  0s;   }
+    .tv-car-2 { animation-duration: 10s;  animation-delay: -3s;   }
+    .tv-car-3 { animation-duration: 8.5s; animation-delay: -5.5s; }
+    .tv-car-4 { animation-duration: 12s;  animation-delay: -1.5s; }
+    @keyframes tv-drive {
+      from { left: 110%; }
+      to   { left: -28%; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="tv-wrapper">
+  <!-- Demo badge (shown when ?demo=1) -->
+  <div id="tv-demo-badge">DEMO</div>
+
+  <!-- Header -->
+  <div id="tv-header">
+    <img id="tv-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+    <div id="tv-title">
+      <span class="title-leap">LEAPMOTOR</span>
+      <span class="title-charge"> CHALLENGE</span>
+      <span style="color:var(--muted);font-size:0.55em;display:block;margin-top:4px;">— TOP 10 —</span>
+    </div>
+    <div id="tv-subtitle">Live Leaderboard</div>
+  </div>
+
+  <!-- 3-Spalten-Hauptbereich -->
+  <div id="tv-main">
+
+    <!-- Linker QR-Streifen -->
+    <div class="tv-qr-panel left">
+      <img class="panel-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+      <img class="panel-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR Code spielen">
+      <div class="panel-cta">⚡ Jetzt spielen<br>&amp; gewinnen!</div>
+      <div class="panel-sub">QR-Code scannen<br>kein Download nötig</div>
+      <div class="panel-arrow">➡️</div>
+    </div>
+
+    <!-- Mitte: Leaderboard -->
+    <div id="tv-center">
+      <!-- Leaderboard entries -->
+      <div id="tv-lb-wrap">
+        <!-- filled by JS -->
+      </div>
+
+      <!-- Empty state -->
+      <div id="tv-empty">
+        <div id="tv-empty-icon">⚡</div>
+        <div id="tv-empty-title">Sei der Erste!</div>
+        <div id="tv-empty-sub">Jetzt spielen und einen Platz sichern</div>
+        <div id="tv-empty-qr"><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR Code" style="width:140px;height:140px;border-radius:12px;"><div style="font-size:13px;margin-top:8px;letter-spacing:2px;color:rgba(255,255,255,0.5)">JETZT SPIELEN</div></div>
+      </div>
+    </div>
+
+    <!-- Rechter QR-Streifen -->
+    <div class="tv-qr-panel right">
+      <img class="panel-logo" src="assets/brand/leapmotor-logo.svg" alt="Leapmotor">
+      <img class="panel-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&color=67C23A&bgcolor=000000&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR Code spielen">
+      <div class="panel-cta">⚡ Jetzt spielen<br>&amp; gewinnen!</div>
+      <div class="panel-sub">QR-Code scannen<br>kein Download nötig</div>
+      <div class="panel-arrow">⬅️</div>
+    </div>
+
+  </div><!-- /#tv-main -->
+
+  <!-- Footer (Autostreifen) -->
+  <div id="tv-footer">
+    <div id="tv-footer-cars">
+      <img src="assets/vehicles/c10.png?v=20260715l" class="tv-footer-car" style="animation-duration:7s;animation-delay:0s" alt="">
+      <img src="assets/vehicles/b10.png?v=20260715l" class="tv-footer-car" style="animation-duration:10s;animation-delay:-3.5s" alt="">
+      <img src="assets/vehicles/b05.png?v=20260715l" class="tv-footer-car" style="animation-duration:8.5s;animation-delay:-6s" alt="">
+      <img src="assets/vehicles/t03.png?v=20260715l" class="tv-footer-car" style="animation-duration:12s;animation-delay:-1.5s" alt="">
+    </div>
+    <div id="tv-footer-qr">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=67C23A&bgcolor=0a0a0f&data=https%3A%2F%2Fleapmotor.tt.kevingarre.de&format=png&qzone=2" alt="QR">
+      <div id="tv-footer-cta">⚡ Jetzt spielen & gewinnen!</div>
+    </div>
+    <span id="tv-event-name" style="display:none">LEAPMOTOR TT CHALLENGE</span>
+    <span id="tv-refresh-info">Auto-Refresh alle 30 Sek.</span>
+    <span id="tv-last-update">–</span>
+  </div>
+</div>
+
+<script src="js/supabase-config.js?v=20260716b"></script>
+<script src="js/api.js?v=20260716b"></script>
+<script>
+'use strict';
+
+/* ──────────────────────────────────────────────────────────
+   TV LEADERBOARD — Standalone page for event stand monitor
+   Requires: supabase-config.js + api.js (provides getLeaderboard, initLeapEvent)
+   Auto-refreshes every 30 seconds.
+   Demo mode: ?demo=1 shows fake entries, no DB calls.
+────────────────────────────────────────────────────────── */
+
+var REFRESH_INTERVAL_MS = 30000;  // 30 seconds
+var tvDemoMode = false;
+var refreshTimer = null;
+
+// ── Demo data ──────────────────────────────────────────────
+var DEMO_ENTRIES = [
+  { name: 'M. Mustermann', city: 'München',   best_score: 4250, max_level: 4, any_ghost_overtaken: true  },
+  { name: 'L. Schmidt',    city: 'Berlin',    best_score: 3800, max_level: 3, any_ghost_overtaken: false },
+  { name: 'K. Müller',     city: 'Hamburg',   best_score: 2990, max_level: 2, any_ghost_overtaken: false },
+];
+
+// ── Init ───────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  // Demo-Mode detection
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === '1') {
+    tvDemoMode = true;
+    var badge = document.getElementById('tv-demo-badge');
+    if (badge) badge.style.display = 'block';
+  }
+
+  // Initial load
+  loadAndRender();
+
+  // Auto-refresh
+  refreshTimer = setInterval(function() {
+    loadAndRender();
+  }, REFRESH_INTERVAL_MS);
+});
+
+// ── Load + Render ──────────────────────────────────────────
+async function loadAndRender() {
+  try {
+    var rows;
+    if (tvDemoMode) {
+      rows = DEMO_ENTRIES;
+    } else {
+      // Ensure event is loaded
+      if (!window.LEAP_EVENT) {
+        await initLeapEvent();
+      }
+      if (!window.LEAP_EVENT) {
+        renderError('Kein aktives Event gefunden.');
+        return;
+      }
+      rows = await getLeaderboard(window.LEAP_EVENT.id, 10);
+      // Update event name in footer
+      var evNameEl = document.getElementById('tv-event-name');
+      if (evNameEl && window.LEAP_EVENT.name) {
+        evNameEl.textContent = window.LEAP_EVENT.name.toUpperCase();
+      }
+    }
+
+    renderLeaderboard(rows);
+
+    // Update timestamp
+    var now = new Date();
+    var ts = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    var lastUpdateEl = document.getElementById('tv-last-update');
+    if (lastUpdateEl) lastUpdateEl.textContent = 'Zuletzt: ' + ts;
+
+  } catch (err) {
+    console.error('[TV-LB] Load error:', err);
+    renderError('Verbindungsfehler – nächster Versuch in 30 Sek.');
+  }
+}
+
+// ── Render Leaderboard ─────────────────────────────────────
+function renderLeaderboard(rows) {
+  var wrap  = document.getElementById('tv-lb-wrap');
+  var empty = document.getElementById('tv-empty');
+  if (!wrap) return;
+
+  if (!rows || rows.length === 0) {
+    wrap.innerHTML = '';
+    if (empty) empty.classList.add('visible');
+    return;
+  }
+  if (empty) empty.classList.remove('visible');
+
+  // Remove entries that are gone (keep ones still in list)
+  var existingIds = {};
+  wrap.querySelectorAll('.tv-entry').forEach(function(el) {
+    existingIds[el.dataset.key] = el;
+  });
+
+  var newHtml = '';
+  var rank10  = Math.min(rows.length, 10);
+
+  for (var i = 0; i < rank10; i++) {
+    var row  = rows[i];
+    var rank = i + 1;
+
+    var rankClass  = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : 'other';
+    var entryClass = rank <= 3 ? ' rank-' + rank : '';
+    var rankDisplay = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank;
+
+    var firstName = (row.first_name || row.name || '').split(' ')[0] || '';
+    // DSGVO: nur Vorname anzeigen
+    var displayName = firstName || '–';
+    var city  = row.city || '';
+    var score = row.best_score !== undefined ? row.best_score : 0;
+    var level = row.max_level  !== undefined ? row.max_level  : 1;
+
+    var scoreStr = score.toLocaleString('de-DE');
+    var levelStr = 'LVL ' + level;
+    var demoBadgeHtml = tvDemoMode
+      ? '<span style="background:#E53935;color:#fff;font-size:9px;padding:1px 6px;border-radius:3px;margin-left:8px;font-weight:700;">DEMO</span>'
+      : '';
+
+    newHtml +=
+      '<div class="tv-entry' + entryClass + '" data-key="rank-' + rank + '" style="transition-delay:' + (i * 60) + 'ms">' +
+        '<div class="tv-rank ' + rankClass + '">' + rankDisplay + '</div>' +
+        '<div class="tv-info">' +
+          '<div class="tv-name">' + escTv(displayName) + demoBadgeHtml + '</div>' +
+          (city ? '<div class="tv-city">📍 ' + escTv(city) + '</div>' : '') +
+        '</div>' +
+        '<div class="tv-level">' + escTv(levelStr) + '</div>' +
+        '<div class="tv-score">' + scoreStr + '</div>' +
+      '</div>';
+  }
+
+  wrap.innerHTML = newHtml;
+
+  // Trigger entrance animation
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      wrap.querySelectorAll('.tv-entry').forEach(function(el) {
+        el.classList.add('visible');
+      });
+    });
+  });
+}
+
+// ── Error state ────────────────────────────────────────────
+function renderError(msg) {
+  var wrap  = document.getElementById('tv-lb-wrap');
+  var empty = document.getElementById('tv-empty');
+  if (wrap) wrap.innerHTML = '';
+  if (empty) {
+    empty.classList.add('visible');
+    var sub = document.getElementById('tv-empty-sub');
+    if (sub) sub.textContent = msg;
+  }
+}
+
+// ── Escape HTML ────────────────────────────────────────────
+function escTv(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>
