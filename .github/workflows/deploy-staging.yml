@@ -1,0 +1,27 @@
+name: Deploy Staging (dev → gh-pages/staging)
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Deploy to gh-pages/staging
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: .
+          destination_dir: staging
+          exclude_assets: '.github,.git,MEMORY.md,README-BACKUP.md,backup-worker.js,setup-backup-cron.sh,docs,supabase'
+          keep_files: true
+          commit_message: 'deploy: staging from dev (${{ github.sha }})'
