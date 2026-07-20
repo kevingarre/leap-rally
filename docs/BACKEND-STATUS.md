@@ -1,36 +1,34 @@
-# Backend-Status — LEAP CHARGE (Supabase)
+# Backend-Status — LEAP CHARGE
 
-Stand: 2026-07-14
+**Stand: 2026-07-20** (migriert 2026-07-15, commit `6b7cf44`)
 
-## Projekt
-- Supabase-Projekt: **tischtennis**
-- Project-Ref: `xyugoecalszyoptaxnxy`
-- URL: `https://xyugoecalszyoptaxnxy.supabase.co`
-- Region: (Projekt-Default; prüfen ob eu-central-1)
+## Aktuelles Backend
+- **Kein Supabase Cloud mehr** — migriert am 15. Juli 2026
+- **Stack:** PostgREST auf Hetzner-VPS (nginx/1.24.0, Ubuntu)
+- **URL:** `https://leapmotor.tt.kevingarre.de`
+- **API-Format:** PostgREST REST v1 (identische Schnittstelle wie Supabase Cloud)
 
-## Keys (in Apple Keychain, service=leap)
-- `leap-supabase-url` — Project URL
-- `leap-supabase-anon` — Publishable Key (`sb_publishable_...`) → Frontend
-- `leap-supabase-service` — Secret Key (`sb_secret_...`) → Staff/Admin serverseitig
-- Quelle: 1Password Vault „OpenClaw Automation" → Item „Supabase Project tischtennis"
-- DB-Passwort ebenfalls im 1Password-Item.
+## Keys
+- **Frontend anon-Key:** in `js/supabase-config.js` (JWT, client-safe, RLS schützt Daten)
+- **Service-Key (Admin):** 1Password Vault „OpenClaw Automation" → „Leapmotor PostgREST"
+- **Staff-PIN:** 2882 (geändert bei Migration)
 
-## Migration ausgeführt (2026-07-14)
-Direkt via Pooler `aws-0-eu-central-1.pooler.supabase.com:6543` (user `postgres.xyugoecalszyoptaxnxy`).
-Hinweis: `db.<ref>.supabase.co:5432` löst per DNS NICHT auf → Pooler nutzen.
-- 01_schema.sql → OK
-- 02_rls.sql → OK
-- Tabellen: events, players, scores, instant_wins, archived_events + View leaderboard
+## Datenbank (PostgreSQL auf Hetzner)
+- Tabellen: `events`, `players`, `scores`, `instant_wins`, `archived_events`
+- View: `leaderboard`
+- Migrations: `supabase/01_schema.sql` bis `09_missing_staff_rpcs.sql`
 
-## Test-Event
-- id: `226359d3-7292-4142-a447-56ce0c335c47`
-- name: „Testlauf Dev", is_active=true, instant_win_score=1500
+## Aktive Events
+- `75c246f0-ee0c-46ac-8804-d78f5ec64761` — „Testevent", is_active=true
 
-## Verifiziert
-- Secret-Key: INSERT event OK (bypass RLS)
-- Anon-Key: SELECT active event OK, nur erlaubte Spalten (RLS greift)
+## Verifikation (2026-07-20)
+```bash
+curl "https://leapmotor.tt.kevingarre.de/rest/v1/events?select=id,name,is_active" \
+  -H "apikey: <anon-key>" \
+  -H "Authorization: Bearer <anon-key>"
+# → [{"id":"75c246f0...","name":"Testevent","is_active":true}]
+```
 
-## Nächster Schritt (Sprint 2)
-- Frontend supabase-Client (anon key) → Score-Submission (score, level_reached, ghost_overtaken, play_duration_s)
-- Opt-In-Formular am Endscreen → players insert
-- Real-Leaderboard aus View lesen
+## Nicht mehr gültig
+- ~~`xyugoecalszyoptaxnxy.supabase.co`~~ — alter Supabase-Cloud-Endpunkt, nicht mehr aktiv
+- ~~Keychain `LEAP_SUPABASE_URL`~~ — veralteter Eintrag, zeigt noch auf alte URL
