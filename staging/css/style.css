@@ -2218,9 +2218,11 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
     border-left: 1px solid rgba(103,194,58,0.14);
   }
   .landscape-qr-panel .lqr-logo {
-    height: 22px;
+    height: 48px;
     filter: brightness(0) invert(1);
-    opacity: 0.6;
+    opacity: 0.95;
+    display: block;
+    margin-bottom: 8px;
   }
   .landscape-qr-panel .lqr-img {
     width: clamp(120px, 22dvh, 180px);
