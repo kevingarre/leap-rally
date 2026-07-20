@@ -3856,16 +3856,11 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
       w: img.naturalWidth,
       h: img.naturalHeight,
     };
-    // ── 3-Zonen-Layout: Name LINKS · Auto MITTE · Leapmotor-Symbol RECHTS ──
-    const nameZoneW = bw * 0.30;   // links: Bezeichnung
-    const symZoneW  = bw * 0.22;   // rechts: Leapmotor-Symbol
-    const carZoneX  = bx + nameZoneW;
-    const carZoneW  = bw - nameZoneW - symZoneW;
+    // ── Layout: Auto groß + zentriert, Bezeichnung unten-links überlagert ──
     const pad = 2;
-
-    // Auto (Mitte), aspect-korrekt, vertikal zentriert
-    const drawW = carZoneW - pad * 2;
-    const drawH = bh - pad * 2;
+    const labelH = Math.max(10, bh * 0.26);
+    const drawW  = bw - pad * 2;
+    const drawH  = bh - pad * 2;
     const imgAspect = bounds.w / bounds.h;
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
@@ -3873,30 +3868,20 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     } else {
       renderW = drawW; renderH = renderW / imgAspect;
     }
-    const renderX = carZoneX + (carZoneW - renderW) / 2;
+    const renderX = bx + (bw - renderW) / 2;
     const renderY = by + (bh - renderH) / 2;
     ctx.drawImage(img, bounds.x, bounds.y, bounds.w, bounds.h, renderX, renderY, renderW, renderH);
 
-    // Bezeichnung LINKS (vertikal zentriert, linksbündig)
-    const labelFontSz = Math.max(8, Math.round(bh * 0.32));
+    // Bezeichnung unten-links als Badge
+    const labelFontSz = Math.max(7, Math.round(bh * 0.26));
     ctx.fillStyle    = '#FFFFFF';
     ctx.font         = `800 ${labelFontSz}px 'Montserrat', sans-serif`;
     ctx.textAlign    = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor  = 'rgba(0,0,0,0.85)';
-    ctx.shadowBlur   = 4;
-    ctx.fillText(spriteKey.toUpperCase(), bx + 4, by + bh / 2);
-    ctx.shadowBlur   = 0;
-
-    // Leapmotor-Symbol RECHTS (aspect-korrekt)
-    if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
-      const symAspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight;
-      const symH = bh * 0.6;
-      const symW = symH * symAspect;
-      const symX = bx + bw - symZoneW / 2 - symW / 2;
-      const symY = by + (bh - symH) / 2;
-      ctx.drawImage(leapSymbolImg, symX, symY, symW, symH);
-    }
+    ctx.textBaseline = 'bottom';
+    ctx.shadowColor  = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur   = 5;
+    ctx.fillText(spriteKey.toUpperCase(), bx + 3, by + bh - 2);
+    ctx.shadowBlur = 0;
 
     ctx.restore();
     return;
