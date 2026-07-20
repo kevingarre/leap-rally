@@ -1964,16 +1964,10 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   pointer-events: none;
 }
 .game-topbar-logo {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 900;
-  font-size: clamp(18px, 4.5vw, 28px);
-  letter-spacing: 0.18em;
-  color: #FFFFFF;
+  height: 22px;
+  width: auto;
   opacity: 0.95;
   display: block;
-  line-height: 1;
-  text-transform: uppercase;
-  pointer-events: auto;
 }
 
 /* ═══════════════════════════════════════════════════════════
