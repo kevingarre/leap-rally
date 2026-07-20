@@ -60,9 +60,7 @@ const BALL_MAX_SPEED   = 1.40;  // raised from 1.15 — cap fuer Level 4 + Bonus
 const BALL_WAVE_ACCEL  = 1.06;
 const BALL_MIN_VY_FRAC = 0.30;
 
-// Leapmotor symbol image — overlaid on ball
-const leapSymbolImg = new Image();
-leapSymbolImg.src = 'assets/brand/leapmotor-symbol.svg';
+// Leapmotor symbol — drawn directly on canvas (no file dependency)
 const vehicleSpriteBounds = {};
 
 function getOpaqueImageBounds(img) {
@@ -1634,63 +1632,53 @@ function renderBlocks() {
 // PADDLE REDESIGN: sleek neon-pong bar, Leapmotor-CI
 // ─────────────────────────────────────────────────────
 function renderPaddle() {
-  const cx = paddle.x + paddle.w / 2;
-  const cy = paddle.y + paddle.h / 2 - 1;
-  const bladeW = paddle.w * 0.70;
-  const bladeH = Math.max(17, paddle.h * 1.7);
-  const handleW = Math.max(10, paddle.w * 0.12);
-  const handleH = Math.max(10, paddle.h * 0.95);
-  const handleX = cx - handleW / 2;
-  const handleY = cy + bladeH * 0.34;
-  const handleR = Math.min(handleW / 2, 4);
+  const x = paddle.x;
+  const y = paddle.y;
+  const w = paddle.w;
+  const h = Math.max(12, paddle.h);
+  const r = h / 2;  // vollständig abgerundete Enden
 
   ctx.save();
+
+  // Glow — Leapmotor-Grün bei Boost, sonst gedämpft
   ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 22 : 10;
+  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 36 : 14;
 
-  // Handle
-  roundRect(ctx, handleX, handleY, handleW, handleH, handleR);
-  const handleGrad = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
-  handleGrad.addColorStop(0, '#C18A56');
-  handleGrad.addColorStop(0.55, '#8B5A34');
-  handleGrad.addColorStop(1, '#5C3317');
-  ctx.fillStyle = handleGrad;
-  ctx.fill();
-
-  // Neck between handle and blade
-  roundRect(ctx, cx - handleW * 0.35, cy + bladeH * 0.20, handleW * 0.70, bladeH * 0.22, handleW * 0.18);
-  ctx.fillStyle = '#7A241D';
-  ctx.fill();
-
-  // Blade
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
-  const bladeGrad = ctx.createRadialGradient(cx, cy - bladeH * 0.2, 2, cx, cy, bladeH * 0.72);
-  bladeGrad.addColorStop(0, '#D64A39');
-  bladeGrad.addColorStop(0.62, '#A3201B');
-  bladeGrad.addColorStop(1, '#62110F');
-  ctx.fillStyle = bladeGrad;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
-  ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3.4 : 2;
+  // Outer green border
+  roundRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = state.paddleBoostTimer > 0 ? '#67C23A' : 'rgba(103,194,58,0.80)';
+  ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3 : 2;
   ctx.stroke();
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, bladeW / 2, bladeH / 2, 0, 0, Math.PI * 2);
-  ctx.clip();
-  const sheenGrad = ctx.createLinearGradient(cx, cy - bladeH / 2, cx, cy);
-  sheenGrad.addColorStop(0, 'rgba(255,255,255,0.26)');
-  sheenGrad.addColorStop(0.48, 'rgba(255,255,255,0.08)');
-  sheenGrad.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = sheenGrad;
-  ctx.fillRect(cx - bladeW / 2, cy - bladeH / 2, bladeW, bladeH / 2);
+  ctx.shadowBlur = 0;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.10)';
-  ctx.fillRect(cx - bladeW * 0.18, cy - bladeH * 0.18, bladeW * 0.36, bladeH * 0.55);
+  // Main body: TT-Gummi-Rot (Tischtennis-Schläger Rubber-Seite)
+  roundRect(ctx, x, y, w, h, r);
+  const bodyGrad = ctx.createLinearGradient(x, y, x, y + h);
+  bodyGrad.addColorStop(0,    '#C0392B');
+  bodyGrad.addColorStop(0.45, '#922B21');
+  bodyGrad.addColorStop(1,    '#641E16');
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+
+  // Mittellinie (Tischtennis-Charakteristik)
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.fillRect(x + w * 0.5 - 0.5, y + 2, 1, h - 4);
+  ctx.restore();
+
+  // Weißer Glanzstreifen oben
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.22)');
+  sheenGrad.addColorStop(0.6, 'rgba(255,255,255,0.05)');
+  sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.fillStyle = sheenGrad;
+  ctx.fillRect(x, y, w, h * 0.5);
   ctx.restore();
 
   ctx.restore();
@@ -1744,23 +1732,34 @@ function renderBall() {
     ctx.fill();
 
     // Thin subtle rim
-    ctx.strokeStyle = 'rgba(200,200,200,0.5)';
+    ctx.strokeStyle = 'rgba(180,180,180,0.6)';
     ctx.lineWidth   = 1;
     ctx.stroke();
 
-    // Leapmotor symbol zentriert (nur wenn geladen)
-    if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
-      const symbolAspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight;
-      const symbolH = ball.r * 1.02;
-      const symbolW = symbolH * symbolAspect;
-      ctx.drawImage(
-        leapSymbolImg,
-        ball.x - symbolW / 2,
-        ball.y - symbolH / 2,
-        symbolW,
-        symbolH
-      );
-    }
+    // Leapmotor L-arrow symbol direkt auf Canvas (kein SVG-Loading)
+    // Zwei Balken: vertikaler + horizontaler mit Pfeilspitze
+    const s  = ball.r * 0.52;  // Symbolbreite/-höhe Hälfte
+    const sw = Math.max(1.5, ball.r * 0.22); // Strichbreite
+    const cx2 = ball.x, cy2 = ball.y;
+    ctx.save();
+    ctx.strokeStyle = '#67C23A';
+    ctx.lineWidth   = sw;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    // Vertikaler Balken (links)
+    ctx.beginPath();
+    ctx.moveTo(cx2 - s * 0.35, cy2 - s * 0.75);
+    ctx.lineTo(cx2 - s * 0.35, cy2 + s * 0.35);
+    // Horizontaler Balken (unten)
+    ctx.lineTo(cx2 + s * 0.75, cy2 + s * 0.35);
+    ctx.stroke();
+    // Pfeilspitze rechts
+    ctx.beginPath();
+    ctx.moveTo(cx2 + s * 0.55, cy2 + s * 0.1);
+    ctx.lineTo(cx2 + s * 0.75, cy2 + s * 0.35);
+    ctx.lineTo(cx2 + s * 0.55, cy2 + s * 0.6);
+    ctx.stroke();
+    ctx.restore();
   }
 
   ctx.restore();
@@ -3866,10 +3865,10 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
       w: img.naturalWidth,
       h: img.naturalHeight,
     };
-    const labelReserve = Math.max(5, bh * 0.14);
-    const padX = Math.max(1, Math.round(Math.min(bw, bh) * 0.015));
-    const padTop = Math.max(1, Math.round(bh * 0.02));
-    const padBottom = Math.max(1, Math.round(bh * 0.03));
+    const labelReserve = Math.max(4, bh * 0.18); // label at bottom
+    const padX = 1;
+    const padTop = 1;
+    const padBottom = 1;
     const drawW = bw - padX * 2;
     const drawH = bh - padTop - padBottom - labelReserve;
     const imgAspect = bounds.w / bounds.h;

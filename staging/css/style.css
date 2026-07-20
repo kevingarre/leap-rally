@@ -1953,7 +1953,7 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
 /* Top bar with centered Leapmotor logo */
 .game-topbar {
   position: absolute;
-  top: max(14px, calc(env(safe-area-inset-top) + 6px));
+  top: max(8px, calc(env(safe-area-inset-top) + 4px));
   left: 0;
   right: 0;
   z-index: 12;
@@ -1964,10 +1964,12 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   pointer-events: none;
 }
 .game-topbar-logo {
-  height: 38px;
+  height: 32px;
   width: auto;
+  max-height: 32px;
   filter: invert(1) brightness(2);
   opacity: 0.9;
+  display: block;
 }
 
 /* ═══════════════════════════════════════════════════════════
