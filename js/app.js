@@ -60,6 +60,48 @@ const BALL_MAX_SPEED   = 1.40;  // raised from 1.15 — cap fuer Level 4 + Bonus
 const BALL_WAVE_ACCEL  = 1.06;
 const BALL_MIN_VY_FRAC = 0.30;
 
+// Leapmotor symbol image — echtes Logo aus assets, overlaid auf Ball + Blöcke
+const leapSymbolImg = new Image();
+leapSymbolImg.src = 'assets/brand/leapmotor-symbol.svg';
+const vehicleSpriteBounds = {};
+
+function getOpaqueImageBounds(img) {
+  if (!img || !img.naturalWidth || !img.naturalHeight) {
+    return null;
+  }
+  const probe = document.createElement('canvas');
+  probe.width = img.naturalWidth;
+  probe.height = img.naturalHeight;
+  const probeCtx = probe.getContext('2d', { willReadFrequently: true });
+  probeCtx.drawImage(img, 0, 0);
+  const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+  let minX = probe.width;
+  let minY = probe.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < probe.height; y++) {
+    for (let x = 0; x < probe.width; x++) {
+      const alpha = pixels[(y * probe.width + x) * 4 + 3];
+      if (alpha <= 8) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return { x: 0, y: 0, w: probe.width, h: probe.height };
+  }
+  return {
+    x: minX,
+    y: minY,
+    w: maxX - minX + 1,
+    h: maxY - minY + 1,
+  };
+}
+
 // ═══════════════════════════════════════════════════════════
 // DIFFICULTY PRESETS + GAME CONFIG RESOLVER
 // ═══════════════════════════════════════════════════════════
@@ -791,7 +833,7 @@ function initBlocks() {
   const cols    = cfg.cols;
   const usableW = cw - BLOCK_SIDE_PAD * 2;
   const blockW  = (usableW - BLOCK_GAP * (cols - 1)) / cols;
-  const blockH  = Math.max(14, Math.round(ch * 0.055));
+  const blockH  = Math.max(20, Math.round(ch * 0.075));
 
   const totalBlocks  = rows * cols;
   const turboIndices = new Set();
@@ -1596,57 +1638,55 @@ function renderPaddle() {
   const y = paddle.y;
   const w = paddle.w;
   const h = Math.max(12, paddle.h);
-  const r = h / 2;  // fully rounded ends
+  const r = h / 2;  // abgerundete Enden
+  const cx = x + w / 2;
 
   ctx.save();
 
-  // Outer glow — brighter + wider when paddle-boost is active
-  ctx.shadowColor = '#67C23A';
-  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 40 : 18;
-  roundRect(ctx, x, y, w, h, r);
-  ctx.strokeStyle = 'rgba(103,194,58,0.55)';
-  ctx.lineWidth   = 4;
+  // ── Griff (Handle) unter der Mitte — macht es zum Tischtennis-Schläger ──
+  const handleW = Math.max(14, h * 1.3);
+  const handleH = Math.max(12, h * 1.6);
+  const handleX = cx - handleW / 2;
+  const handleY = y + h - 2;
+  const handleGrad = ctx.createLinearGradient(handleX, handleY, handleX, handleY + handleH);
+  handleGrad.addColorStop(0,    '#8B5A34');
+  handleGrad.addColorStop(0.5,  '#6B4226');
+  handleGrad.addColorStop(1,    '#4A2D18');
+  roundRect(ctx, handleX, handleY, handleW, handleH, 3);
+  ctx.fillStyle = handleGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 1;
   ctx.stroke();
 
-  ctx.shadowBlur  = 0;
-
-  // Main body: dark glossy black
+  // ── Blade (Schlagfläche) — rote Gummi-Seite ──
+  ctx.shadowColor = '#67C23A';
+  ctx.shadowBlur  = state.paddleBoostTimer > 0 ? 32 : 12;
   roundRect(ctx, x, y, w, h, r);
   const bodyGrad = ctx.createLinearGradient(x, y, x, y + h);
-  bodyGrad.addColorStop(0,    '#2A2A2A');
-  bodyGrad.addColorStop(0.45, '#111111');
-  bodyGrad.addColorStop(1,    '#000000');
+  bodyGrad.addColorStop(0,    '#D64A39');
+  bodyGrad.addColorStop(0.5,  '#A3201B');
+  bodyGrad.addColorStop(1,    '#6E1512');
   ctx.fillStyle = bodyGrad;
   ctx.fill();
+  ctx.shadowBlur = 0;
 
-  // Green accent stripe at top
-  const stripeH = Math.max(3, h * 0.30);
-  ctx.save();
+  // Grüner Leapmotor-Rand
   roundRect(ctx, x, y, w, h, r);
-  ctx.clip();
-  const stripeGrad = ctx.createLinearGradient(x, y, x, y + stripeH);
-  stripeGrad.addColorStop(0, 'rgba(103,194,58,0.90)');
-  stripeGrad.addColorStop(1, 'rgba(103,194,58,0.20)');
-  ctx.fillStyle = stripeGrad;
-  ctx.fillRect(x, y, w, stripeH);
-  ctx.restore();
-
-  // Crisp bright-green border line
-  roundRect(ctx, x, y, w, h, r);
-  ctx.strokeStyle = '#67C23A';
-  ctx.lineWidth   = 1.5;
+  ctx.strokeStyle = state.paddleBoostTimer > 0 ? '#67C23A' : 'rgba(103,194,58,0.85)';
+  ctx.lineWidth   = state.paddleBoostTimer > 0 ? 3 : 2;
   ctx.stroke();
 
-  // White sheen highlight (top portion)
+  // Weißer Glanzstreifen oben (Gummi-Textur)
   ctx.save();
   roundRect(ctx, x, y, w, h, r);
   ctx.clip();
-  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.45);
-  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.18)');
-  sheenGrad.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+  const sheenGrad = ctx.createLinearGradient(x, y, x, y + h * 0.55);
+  sheenGrad.addColorStop(0,   'rgba(255,255,255,0.28)');
+  sheenGrad.addColorStop(0.6, 'rgba(255,255,255,0.06)');
   sheenGrad.addColorStop(1,   'rgba(255,255,255,0)');
   ctx.fillStyle = sheenGrad;
-  ctx.fillRect(x, y, w, h * 0.45);
+  ctx.fillRect(x, y, w, h * 0.55);
   ctx.restore();
 
   ctx.restore();
@@ -1654,7 +1694,8 @@ function renderPaddle() {
 
 function renderBall() {
   ctx.save();
-  // Power-up visual: pierce = electric blue, speed = orange trail glow, default = yellow
+
+  // Power-up shadow colours (keep for pierce/speed)
   if (state.pierceActive) {
     ctx.shadowColor = '#00CFFF';
     ctx.shadowBlur  = 32;
@@ -1662,39 +1703,55 @@ function renderBall() {
     ctx.shadowColor = '#FF6B00';
     ctx.shadowBlur  = 28;
   } else {
-    ctx.shadowColor = '#F5E642';
-    ctx.shadowBlur  = 20;
+    ctx.shadowColor = 'rgba(255,255,255,0.6)';
+    ctx.shadowBlur  = 18;
   }
 
-  const g = ctx.createRadialGradient(
-    ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.08,
-    ball.x, ball.y, ball.r
-  );
-  // Colour shifts with active power-up
+  // Power-up: pierce = blue tint, speed = orange tint, default = white
   if (state.pierceActive) {
+    const g = ctx.createRadialGradient(
+      ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.08,
+      ball.x, ball.y, ball.r
+    );
     g.addColorStop(0,   '#FFFFFF');
     g.addColorStop(0.4, '#00CFFF');
     g.addColorStop(1,   '#0070AA');
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
   } else if (state.speedBoostTimer > 0) {
+    const g = ctx.createRadialGradient(
+      ball.x - ball.r * 0.3, ball.y - ball.r * 0.35, ball.r * 0.08,
+      ball.x, ball.y, ball.r
+    );
     g.addColorStop(0,   '#FFFFFF');
     g.addColorStop(0.4, '#FF9E3D');
     g.addColorStop(1,   '#C85000');
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
   } else {
-    g.addColorStop(0,   '#FFFFFF');
-    g.addColorStop(0.4, '#F5E642');
-    g.addColorStop(1,   '#C49A00');
+    // Default: white ball (Tischtennis-Ball)
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+
+    // Thin subtle rim
+    ctx.strokeStyle = 'rgba(180,180,180,0.6)';
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    // Echtes Leapmotor-Symbol zentriert (aspect-korrekt, kein Verzerren)
+    if (leapSymbolImg.complete && leapSymbolImg.naturalWidth > 0) {
+      const aspect = leapSymbolImg.naturalWidth / leapSymbolImg.naturalHeight; // ~0.88
+      const symH = ball.r * 1.15;
+      const symW = symH * aspect;
+      ctx.drawImage(leapSymbolImg, ball.x - symW / 2, ball.y - symH / 2, symW, symH);
+    }
   }
-
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-  ctx.fillStyle = g;
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(0,0,0,0.14)';
-  ctx.lineWidth   = 1.2;
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.r * 0.68, 0.15, Math.PI - 0.15);
-  ctx.stroke();
 
   ctx.restore();
 }
@@ -3597,7 +3654,7 @@ function showShareActions() {
     nativeBtn.onclick = function() {
       if (navigator.share) {
         navigator.share({
-          title: 'Leapmotor TT Challenge',
+          title: 'Leapmotor Tischtennis-Challenge',
           text:  shareText,
           url:   SHARE_GAME_URL,
         }).catch(function() {});
@@ -3641,7 +3698,7 @@ function copyShareText() {
 function buildShareText() {
   const levelNames = ['', 'Warm-Up', 'Charge', 'Boost', 'OVERTAKE'];
   const lvlLabel   = state.maxLevelReached >= 5 ? 'OVERTAKE' : (levelNames[state.maxLevelReached] || '');
-  return `🏓⚡🚗 LEAPMOTOR TT CHALLENGE
+  return `🏓⚡🚗 LEAPMOTOR TISCHTENNIS-CHALLENGE
 
 Score:    ${formatScore(state.score)} Punkte
 Blöcke:   ${state.hits} zerstört · Max Combo ×${state.maxCombo}
@@ -3649,7 +3706,7 @@ Batterie: ${Math.round(state.energy)}% · Wellen: ${state.wavesCleared}
 Level:    ${state.maxLevelReached} (${lvlLabel})${state.ghostOvertaken ? ' · 🏁 OVERTAKE!' : ''}
 
 Kannst du meinen Leapmotor-Score schlagen?
-#LeapMotor #TTChallenge #Tischtennis #EMobility`;
+#LeapMotor #TischtennisChallenge #Tischtennis #EMobility`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3793,11 +3850,18 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Transparent PNG — draw normally on block color
-    const pad = Math.round(Math.min(bw, bh) * 0.05);
-    const drawW = bw - pad * 2;
-    const drawH = bh - pad * 2;
-    const imgAspect = 300 / 200; // 1.5:1
+    const bounds = vehicleSpriteBounds[spriteKey] || {
+      x: 0,
+      y: 0,
+      w: img.naturalWidth,
+      h: img.naturalHeight,
+    };
+    // ── Layout: Auto groß + zentriert, Bezeichnung unten-links überlagert ──
+    const pad = 2;
+    const labelH = Math.max(10, bh * 0.26);
+    const drawW  = bw - pad * 2;
+    const drawH  = bh - pad * 2;
+    const imgAspect = bounds.w / bounds.h;
     let renderW, renderH;
     if (drawW / drawH > imgAspect) {
       renderH = drawH; renderW = renderH * imgAspect;
@@ -3806,17 +3870,18 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
     }
     const renderX = bx + (bw - renderW) / 2;
     const renderY = by + (bh - renderH) / 2;
-    ctx.drawImage(img, renderX, renderY, renderW, renderH);
+    ctx.drawImage(img, bounds.x, bounds.y, bounds.w, bounds.h, renderX, renderY, renderW, renderH);
 
-    // Model label at bottom-centre
-    const labelFontSz = Math.max(7, Math.round(bh * 0.20));
+    // Bezeichnung unten-links als Badge
+    const labelFontSz = Math.max(7, Math.round(bh * 0.26));
     ctx.fillStyle    = '#FFFFFF';
     ctx.font         = `800 ${labelFontSz}px 'Montserrat', sans-serif`;
-    ctx.textAlign    = 'center';
+    ctx.textAlign    = 'left';
     ctx.textBaseline = 'bottom';
-    ctx.shadowColor  = 'rgba(0,0,0,0.85)';
-    ctx.shadowBlur   = 4;
-    ctx.fillText(spriteKey.toUpperCase(), cx, by + bh - 2);
+    ctx.shadowColor  = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur   = 5;
+    ctx.fillText(spriteKey.toUpperCase(), bx + 3, by + bh - 2);
+    ctx.shadowBlur = 0;
 
     ctx.restore();
     return;
@@ -3826,9 +3891,9 @@ function drawVehicleSprite(bx, by, bw, bh, spriteKey) {
   const shape = VEHICLE_SHAPES[spriteKey] || VEHICLE_SHAPES.b05;
 
   // ── Contain silhouette in block with aspect ~shape.bodyAspect : 1 ──────────
-  const pad   = Math.max(2, Math.round(Math.min(bw, bh) * 0.07));
+  const pad   = Math.max(1, Math.round(Math.min(bw, bh) * 0.02));
   const maxW  = bw - pad * 2;
-  const maxH  = bh - pad * 2 - Math.max(6, bh * 0.22); // reserve room for label
+  const maxH  = bh - pad * 2 - Math.max(5, bh * 0.15); // reserve room for label (+20% car size)
 
   // target size
   let carW, carH;
@@ -4322,7 +4387,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Preload vehicle PNG sprites
   VEHICLE_KEYS.forEach(function(key) {
     const img = new Image();
-    img.onload  = function() { img.loaded = true; }; // sprite ready, next frame picks it up
+    img.onload  = function() {
+      img.loaded = true;
+      vehicleSpriteBounds[key] = getOpaqueImageBounds(img);
+    };
     img.onerror = function() { img.loaded = false; };
     img.src = 'assets/vehicles/' + key + '.png?v=20260715l';
     vehicleSprites[key] = img;
