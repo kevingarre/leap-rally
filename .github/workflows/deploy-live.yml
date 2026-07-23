@@ -29,3 +29,12 @@ jobs:
           destination_dir: .
           keep_files: true
           commit_message: 'deploy: live from main (${{ github.sha }})'
+
+      # requires HETZNER_SSH_KEY secret
+      # - name: Deploy to Hetzner
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: 88.198.104.87
+      #     username: root
+      #     key: ${{ secrets.HETZNER_SSH_KEY }}
+      #     script: bash /var/www/leapmotor-tt/deploy.sh

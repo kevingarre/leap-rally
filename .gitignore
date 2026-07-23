@@ -1,0 +1,6 @@
+MEMORY.md
+README-BACKUP.md
+backup-worker.js
+setup-backup-cron.sh
+docs/
+supabase/
