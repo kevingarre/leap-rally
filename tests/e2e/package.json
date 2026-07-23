@@ -1,0 +1,11 @@
+{
+  "name": "leap-rally-e2e",
+  "scripts": {
+    "test": "playwright test",
+    "test:mobile": "playwright test --project='Mobile Chrome'",
+    "test:desktop": "playwright test --project='Desktop Chrome'"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
