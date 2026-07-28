@@ -14,7 +14,7 @@
 var STAFF_PIN = '2882';
 
 // ── Konfigurierbare Spiel-URL (leicht aenderbar) ──────────────
-var GAME_URL = 'https://kevingarre.github.io/leap-rally/';
+var GAME_URL = 'https://leapmotor.tt.kevingarre.de/';
 
 // ── sessionStorage Keys ───────────────────────────────────────
 var SS_AUTHED       = 'leap_staff_authed';
@@ -824,8 +824,8 @@ function copyDemoLink(btn) {
 // ══════════════════════════════════════════════════════════════
 
 function generateQrUrl(targetUrl) {
-  return 'https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=' +
-    encodeURIComponent(targetUrl) + '&choe=UTF-8';
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&qzone=2&data=' +
+    encodeURIComponent(targetUrl);
 }
 
 function renderQrSection() {
