@@ -1,12 +1,6 @@
--- ═══════════════════════════════════════════════════════════
--- LEAP CHARGE — RPC-Funktionen (SECURITY DEFINER)
--- Grund: PostgREST-Direktinsert auf players war trotz korrekter
--- RLS-Policy nicht zuverlässig (Cache-Eigenart). RPC ist robust,
--- atomar und einfacher fürs Frontend (1 Call statt 3).
--- ═══════════════════════════════════════════════════════════
+-- Migration 10: same email in one event must reuse the same participant and win code.
+-- Fixes case/whitespace variants and concurrent submissions.
 
--- Legt Player + Score (+ optional Instant-Win) in EINER Transaktion an.
--- Gibt player_id, score_id und ggf. claim_code zurück.
 create or replace function public.submit_entry(
   p_event_id            uuid,
   p_score               integer,
@@ -39,26 +33,22 @@ declare
   v_win_score  integer;
   v_win_ghost  boolean;
   v_is_win     boolean := false;
-  v_code       text    := null;
+  v_code       text := null;
   v_try        integer := 0;
   v_returning  boolean := false;
   v_email      text;
 begin
-  -- Terms sind Pflicht
   if p_terms_accepted is not true then
     raise exception 'terms_not_accepted';
   end if;
 
-  -- Event-Konfiguration lesen
   select instant_win_score, instant_win_ghost_req
     into v_win_score, v_win_ghost
     from events where id = p_event_id;
-
   if v_win_score is null then
     raise exception 'event_not_found';
   end if;
 
-  -- Normalize and serialize by event/email so concurrent submits cannot create duplicates.
   v_email := nullif(lower(trim(p_email)), '');
   if v_email is not null then
     perform pg_advisory_xact_lock(hashtextextended(p_event_id::text || ':' || v_email, 0));
@@ -70,9 +60,8 @@ begin
   end if;
 
   if v_player_id is not null then
-    -- Bekannter Spieler: kein neuer Win-Code
     v_returning := true;
-    v_is_win    := false;
+    v_is_win := false;
     select iw.claim_code into v_code
       from instant_wins iw
       join scores s on s.id = iw.score_id
@@ -80,10 +69,8 @@ begin
       order by iw.created_at asc
       limit 1;
   else
-    -- Neuer Spieler anlegen
     v_is_win := p_score >= v_win_score
                 and (case when v_win_ghost then p_ghost_overtaken else true end);
-
     insert into players (
       event_id, contact_intent, vehicle_interest, zip, city,
       first_name, last_name, email, phone,
@@ -97,7 +84,6 @@ begin
     ) returning id into v_player_id;
   end if;
 
-  -- Score immer speichern (auch bei Rückkehrern)
   insert into scores (
     event_id, player_id, score, ghost_overtaken, level_reached, play_duration_s, is_instant_win
   ) values (
@@ -105,7 +91,6 @@ begin
     coalesce(p_level_reached,1), p_play_duration_s, v_is_win
   ) returning id into v_score_id;
 
-  -- Win-Code nur für neue Spieler
   if v_is_win then
     loop
       v_try := v_try + 1;
@@ -121,11 +106,11 @@ begin
   end if;
 
   return json_build_object(
-    'player_id',      v_player_id,
-    'score_id',       v_score_id,
+    'player_id', v_player_id,
+    'score_id', v_score_id,
     'is_instant_win', v_is_win,
-    'claim_code',     v_code,
-    'is_returning',   v_returning
+    'claim_code', v_code,
+    'is_returning', v_returning
   );
 end;
 $$;
@@ -134,19 +119,3 @@ grant execute on function public.submit_entry(
   uuid,integer,boolean,integer,integer,text,text,text,text,text,text,text,text,
   boolean,boolean,boolean,boolean,integer,text
 ) to anon, authenticated;
-
--- Anonymen Score (ohne Formular) sichern — falls Spieler nicht einträgt.
--- Optional genutzt; für "Score zuerst"-Variante.
-create or replace function public.submit_anon_score(
-  p_event_id uuid, p_score integer, p_ghost boolean, p_level integer, p_duration integer
-) returns uuid
-language plpgsql security definer set search_path = public as $$
-declare v_id uuid;
-begin
-  insert into scores (event_id, score, ghost_overtaken, level_reached, play_duration_s)
-  values (p_event_id, p_score, coalesce(p_ghost,false), coalesce(p_level,1), p_duration)
-  returning id into v_id;
-  return v_id;
-end; $$;
-
-grant execute on function public.submit_anon_score(uuid,integer,boolean,integer,integer) to anon, authenticated;

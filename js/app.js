@@ -2903,9 +2903,12 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
     session.scoreId  = result && result.score_id;
     if (result && result.is_instant_win && result.claim_code) {
       session.instantWinCode = result.claim_code;
-    } else {
+    } else if (!(result && result.is_returning)) {
       // Fallback: client-side code (shown only if server doesn't return one)
       session.instantWinCode = session.instantWinCode || generateClaimCode();
+    } else {
+      // Returning participants get the server's existing code, never a new random code.
+      session.instantWinCode = result && result.claim_code ? result.claim_code : null;
     }
 
     session.submitted = true;
@@ -3376,7 +3379,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
     if (result && result.is_instant_win && result.claim_code) {
       // Server confirmed instant win with a code
       session.instantWinCode = result.claim_code;
-    } else if (state.instantWinTriggered || state.instantWinPending) {
+    } else if (!(result && result.is_returning) && (state.instantWinTriggered || state.instantWinPending)) {
       // Frontend had triggered instant-win but server didn't confirm
       // (e.g. score calculated slightly differently). Keep existing code
       // or generate one as fallback so the player always gets their prize.

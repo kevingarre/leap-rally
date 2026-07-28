@@ -166,6 +166,7 @@ async function getLeaderboard(eventId, limit) {
  * @returns {Promise<{player_id, score_id, is_instant_win, claim_code}>}
  */
 async function submitEntry(f) {
+  const normalizedEmail = (f.email || '').trim().toLowerCase() || null;
   const body = {
     p_event_id:         f.event_id,
     p_score:            f.score,
@@ -178,7 +179,7 @@ async function submitEntry(f) {
     p_city:             f.city || null,
     p_first_name:       f.first_name || null,
     p_last_name:        f.last_name || null,
-    p_email:            f.email || null,
+    p_email:            normalizedEmail,
     p_phone:            f.phone || null,
     p_consent_stay:     !!f.consent_stay,
     p_consent_offers:   !!f.consent_offers,
