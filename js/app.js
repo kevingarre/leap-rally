@@ -4425,7 +4425,7 @@ document.addEventListener('DOMContentLoaded', function() {
       vehicleSpriteBounds[key] = getOpaqueImageBounds(img);
     };
     img.onerror = function() { img.loaded = false; };
-    img.src = 'assets/vehicles/' + key + '.png?v=20260728c';
+    img.src = 'assets/vehicles/' + key + '.png?v=20260728f';
     vehicleSprites[key] = img;
   });
 
