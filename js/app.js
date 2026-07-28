@@ -3843,7 +3843,8 @@ function generateClaimCode() {
 // VEHICLE SPRITE — Canvas-drawn vector silhouettes
 // PNG assets no longer used; all 4 models drawn via Canvas paths.
 // ═══════════════════════════════════════════════════════════
-const VEHICLE_KEYS = ['t03', 'b05', 'b10', 'c10', 'b03x'];
+// Keep B03X in the first three-car wave so the new power-up is immediately visible.
+const VEHICLE_KEYS = ['t03', 'b05', 'b03x', 'b10', 'c10'];
 const vehicleSprites = {}; // preloaded Image objects, keyed by VEHICLE_KEYS
 
 // ─── Vehicle shape parameters (unitless, scaled to fit block) ───────────────
