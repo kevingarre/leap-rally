@@ -1927,6 +1927,27 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
   animation: vpb-drop 0.22s ease-out;
 }
 .vehicle-preview-bar.hidden { display: none; }
+
+.second-chance-status {
+  min-height: 1.1em;
+  margin: 2px auto 0;
+  color: #67C23A;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.second-chance-status.active { opacity: 1; }
+
+.t03-wltp-note {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,0.62);
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
 @keyframes vpb-drop {
   from { transform: translateY(-100%); opacity: 0; }
   to   { transform: translateY(0);     opacity: 1; }
