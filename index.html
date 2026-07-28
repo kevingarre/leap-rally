@@ -11,7 +11,7 @@
   <meta name="description" content="LEAPMOTOR TISCHTENNIS-CHALLENGE – Tischtennis Breakout, Leapmotor aufladen, Ghost-Car überholen. Event Activation Mini-Game.">
   <title>LEAPMOTOR TISCHTENNIS-CHALLENGE</title>
   <!-- Fonts: Montserrat lokal via @font-face in style.css – kein CDN -->
-  <link rel="stylesheet" href="css/style.css?v=20260728g">
+  <link rel="stylesheet" href="css/style.css?v=20260728h">
 </head>
 <body>
 
@@ -70,11 +70,16 @@
 
     <!-- Fahrzeugband auf dem eigentlichen Startscreen -->
     <div class="start-vehicle-band" aria-label="Leapmotor Fahrzeugmodelle">
-      <img src="assets/vehicles/t03.png?v=20260728f" alt="T03">
-      <img src="assets/vehicles/b05.png?v=20260728f" alt="B05">
-      <img src="assets/vehicles/b03x.png?v=20260728f" alt="B03X">
-      <img src="assets/vehicles/b10.png?v=20260728f" alt="B10">
-      <img src="assets/vehicles/c10.png?v=20260728f" alt="C10">
+      <div class="start-vehicle-track">
+        <img src="assets/vehicles/t03.png?v=20260728h" alt="T03">
+        <img src="assets/vehicles/b05.png?v=20260728h" alt="B05">
+        <img src="assets/vehicles/b03x.png?v=20260728h" alt="B03X">
+        <img src="assets/vehicles/b10.png?v=20260728h" alt="B10">
+        <img src="assets/vehicles/c10.png?v=20260728h" alt="C10">
+        <img src="assets/vehicles/t03.png?v=20260728h" alt="T03">
+        <img src="assets/vehicles/b05.png?v=20260728h" alt="B05">
+        <img src="assets/vehicles/b03x.png?v=20260728h" alt="B03X">
+      </div>
     </div>
 
     <div class="start-cta">
@@ -195,6 +200,9 @@
           <span class="life-heart life-full">❤️</span>
           <span class="life-heart life-full">❤️</span>
           <span class="life-heart life-full">❤️</span>
+        </div>
+        <div id="second-chance-hud" class="second-chance-hud" aria-live="polite" aria-label="Ball-Retter nicht aktiv">
+          <span class="second-chance-icon" aria-hidden="true">🛡️</span><span class="second-chance-count">1</span>
         </div>
         <div class="hud-label">LEBEN</div>
       </div>
@@ -677,7 +685,7 @@
         <img src="assets/vehicles/b10.png" class="attract-car attract-car-2" alt="">
         <img src="assets/vehicles/b05.png" class="attract-car attract-car-3" alt="">
         <img src="assets/vehicles/t03.png" class="attract-car attract-car-4" alt="">
-        <img src="assets/vehicles/b03x.png?v=20260728f" class="attract-car attract-car-5" alt="">
+        <img src="assets/vehicles/b03x.png?v=20260728h" class="attract-car attract-car-5" alt="">
       </div>
       <h2 class="attract-headline">JETZT SPIELEN &amp; GEWINNEN!</h2>
       <p class="attract-sub">Tippe um zu starten</p>
@@ -715,7 +723,7 @@
 
 <script src="js/supabase-config.js?v=20260716b"></script>
 <script src="js/api.js?v=20260728d"></script>
-<script src="js/app.js?v=20260728f"></script>
+<script src="js/app.js?v=20260728h"></script>
 
 <!-- Landscape QR-Panel rechts -->
 <div class="landscape-qr-panel right" aria-hidden="true">

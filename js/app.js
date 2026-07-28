@@ -2660,9 +2660,14 @@ function activateVehiclePowerUp(key, blkX, blkY) {
 
 function updateSecondChanceUI() {
   const label = document.getElementById('second-chance-status');
+  const hud = document.getElementById('second-chance-hud');
   if (label) {
     label.textContent = state.secondChanceActive ? '🛡️ B03X: BALL-RETTER BEREIT' : '';
     label.classList.toggle('active', state.secondChanceActive);
+  }
+  if (hud) {
+    hud.classList.toggle('active', state.secondChanceActive);
+    hud.setAttribute('aria-label', state.secondChanceActive ? 'Ball-Retter bereit: eine Rettung verfügbar' : 'Ball-Retter nicht aktiv');
   }
 }
 
@@ -4425,7 +4430,7 @@ document.addEventListener('DOMContentLoaded', function() {
       vehicleSpriteBounds[key] = getOpaqueImageBounds(img);
     };
     img.onerror = function() { img.loaded = false; };
-    img.src = 'assets/vehicles/' + key + '.png?v=20260728f';
+    img.src = 'assets/vehicles/' + key + '.png?v=20260728h';
     vehicleSprites[key] = img;
   });
 

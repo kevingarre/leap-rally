@@ -408,12 +408,21 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   border-top: 1px solid rgba(103,194,58,0.25);
   border-bottom: 1px solid rgba(103,194,58,0.25);
 }
-.start-vehicle-band img {
-  width: 20%;
-  max-width: 110px;
+.start-vehicle-track {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: start-band-drive 22s linear infinite;
+}
+.start-vehicle-track img {
+  flex: 0 0 110px;
   height: 54px;
   object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(103,194,58,0.35));
+}
+@keyframes start-band-drive {
+  from { transform: translateX(0); }
+  to { transform: translateX(-440px); }
 }
 
 /* Start CTA */
@@ -580,6 +589,20 @@ button { border: none; background: none; cursor: pointer; font-family: inherit; 
   gap: 4px;
   align-items: center;
 }
+.second-chance-hud {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 20px;
+  color: #67C23A;
+  font-size: 13px;
+  font-weight: 800;
+  filter: drop-shadow(0 0 5px rgba(103,194,58,0.8));
+}
+.second-chance-hud.active { display: flex; }
+.second-chance-icon { font-size: 15px; line-height: 1; }
+.second-chance-count { font-size: 11px; }
 .life-heart {
   font-size: 18px;
   transition: transform 0.2s, opacity 0.3s;
