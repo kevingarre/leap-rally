@@ -29,7 +29,9 @@ async function _supaFetch(path, opts = {}) {
   const url = cfg.url + path;
   const headers = {
     'apikey':        cfg.anonKey,
-    'Authorization': 'Bearer ' + cfg.anonKey,
+    // Hetzner PostgREST authenticates the public role via apikey. Sending a
+    // second Authorization header through the Nginx proxy can be parsed as a
+    // malformed JWT ("Expected 3 parts; got 2").
     'Content-Type':  'application/json',
     'Accept':        'application/json',
     ...((opts.headers) || {}),

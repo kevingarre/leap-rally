@@ -25,9 +25,17 @@
 ```bash
 curl "https://leapmotor.tt.kevingarre.de/rest/v1/events?select=id,name,is_active" \
   -H "apikey: <anon-key>" \
-  -H "Authorization: Bearer <anon-key>"
+  -H "Origin: https://leapmotor.tt.kevingarre.de"
 # → [{"id":"75c246f0...","name":"Testevent","is_active":true}]
 ```
+
+## Browser-Zugriff
+
+- Erlaubte Frontend-Origins: `https://leapmotor.tt.kevingarre.de` und
+  `https://kevingarre.github.io`
+- Der öffentliche Browser-Client sendet den JWT ausschließlich im `apikey`-Header.
+  Ein zusätzlicher `Authorization`-Header wird vom Nginx/PostgREST-Proxy als
+  fehlerhafter JWT interpretiert.
 
 ## Nicht mehr gültig
 - ~~`xyugoecalszyoptaxnxy.supabase.co`~~ — alter Supabase-Cloud-Endpunkt, nicht mehr aktiv
