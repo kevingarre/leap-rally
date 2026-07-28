@@ -36,6 +36,7 @@ const VEHICLE_BONUS = {
   b05: { score: 150, label: 'B05 TURBO'    },
   b10: { score: 200, label: 'B10'          },
   c10: { score: 300, label: 'C10 JACKPOT!' },
+  b03x: { score: 180, label: 'B03X'        },
 };
 
 // Block grid
@@ -302,6 +303,7 @@ let state = {
   speedBoostTimer: 0,
   paddleBoostTimer: 0,
   paddleBaseW:     0,
+  secondChanceActive: false,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -503,7 +505,9 @@ function resetGameState() {
     speedBoostTimer:  0,
     paddleBoostTimer: 0,
     paddleBaseW:      0,
+    secondChanceActive: false,
   });
+  updateSecondChanceUI();
 
   extraBalls   = [];
   particles    = [];
@@ -1306,6 +1310,16 @@ function doBouncePaddle(b) {
 }
 
 function onBallMiss() {
+  if (state.secondChanceActive) {
+    state.secondChanceActive = false;
+    resetBallToPaddle();
+    hintAlpha = 1;
+    updateSecondChanceUI();
+    spawnFloatText(cw / 2, ch * 0.5, '🛡️ BALL-RETTER!', '#67C23A');
+    playTone(520, 'sine', 0.16, 0.3);
+    return;
+  }
+
   state.lives--;
   state.combo = 1;
   updateComboUI();
@@ -2558,6 +2572,7 @@ function activateVehiclePowerUp(key, blkX, blkY) {
     b05: 'B05  🔥 SPEED BOOST',
     b10: 'B10  ↔ PADDLE BOOST',
     c10: 'C10  🎉 JACKPOT MULTIBALL',
+    b03x: 'B03X  🛡️ BALL-RETTER',
   };
   vehiclePreview = {
     active:   true,
@@ -2632,6 +2647,22 @@ function activateVehiclePowerUp(key, blkX, blkY) {
       spawnFloatText(cw / 2, ch * 0.38, '🎉 C10 TRIPLE BALL!', '#FF9500');
       break;
     }
+    case 'b03x': {
+      // SECOND CHANCE: save exactly one life on the next ball miss.
+      state.secondChanceActive = true;
+      updateSecondChanceUI();
+      spawnFloatText(blkX, blkY - 20, '🛡️ SECOND CHANCE!', '#67C23A');
+      playTone(440, 'sine', 0.2, 0.35);
+      break;
+    }
+  }
+}
+
+function updateSecondChanceUI() {
+  const label = document.getElementById('second-chance-status');
+  if (label) {
+    label.textContent = state.secondChanceActive ? '🛡️ B03X: BALL-RETTER BEREIT' : '';
+    label.classList.toggle('active', state.secondChanceActive);
   }
 }
 
@@ -3812,7 +3843,7 @@ function generateClaimCode() {
 // VEHICLE SPRITE — Canvas-drawn vector silhouettes
 // PNG assets no longer used; all 4 models drawn via Canvas paths.
 // ═══════════════════════════════════════════════════════════
-const VEHICLE_KEYS = ['t03', 'b05', 'b10', 'c10'];
+const VEHICLE_KEYS = ['t03', 'b05', 'b10', 'c10', 'b03x'];
 const vehicleSprites = {}; // preloaded Image objects, keyed by VEHICLE_KEYS
 
 // ─── Vehicle shape parameters (unitless, scaled to fit block) ───────────────
@@ -3827,6 +3858,7 @@ const VEHICLE_SHAPES = {
   b05: { bodyAspect: 1.70, roofFrac: 0.50, roofHeight: 0.45, roofOffsetX: -0.03, wheelSzFrac: 0.36, label: 'B05'  },
   b10: { bodyAspect: 1.88, roofFrac: 0.52, roofHeight: 0.42, roofOffsetX:  0.00, wheelSzFrac: 0.37, label: 'B10'  },
   c10: { bodyAspect: 2.05, roofFrac: 0.54, roofHeight: 0.40, roofOffsetX:  0.02, wheelSzFrac: 0.38, label: 'C10'  },
+  b03x: { bodyAspect: 1.92, roofFrac: 0.53, roofHeight: 0.43, roofOffsetX:  0.01, wheelSzFrac: 0.37, label: 'B03X' },
 };
 
 /**
