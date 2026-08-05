@@ -514,7 +514,6 @@ function handleNewEvent(e) {
     p_starts_at:         startsAt,
     p_ends_at:           endsAt,
     p_instant_win_score: threshold,
-    p_difficulty:        difficulty,
     p_ghost_req:         ghostReq,
     p_staff_pin:         STAFF_PIN,
   }).then(function (result) {
