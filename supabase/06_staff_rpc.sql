@@ -23,7 +23,8 @@ CREATE OR REPLACE FUNCTION public.archive_and_new_event(
   p_ends_at           timestamptz,
   p_instant_win_score integer,
   p_ghost_req         boolean,
-  p_staff_pin         text
+  p_staff_pin         text,
+  p_difficulty        text    DEFAULT 'normal'
 )
 RETURNS json
 LANGUAGE plpgsql
@@ -86,6 +87,7 @@ BEGIN
     starts_at,
     ends_at,
     is_active,
+    difficulty,
     instant_win_score,
     instant_win_ghost_req
   ) VALUES (
@@ -94,6 +96,7 @@ BEGIN
     p_starts_at,
     p_ends_at,
     true,
+    coalesce(p_difficulty, 'normal'),
     coalesce(p_instant_win_score, 1500),
     coalesce(p_ghost_req, true)
   )
