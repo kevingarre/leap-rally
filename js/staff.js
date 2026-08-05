@@ -258,7 +258,7 @@ function loadActiveEvent() {
 
   return supaFetch(
     '/rest/v1/events?is_active=eq.true' +
-    '&select=id,name,location,starts_at,ends_at,difficulty,instant_win_score,instant_win_ghost_req' +
+    '&select=id,name,location,starts_at,ends_at,difficulty,instant_win_score,instant_win_ghost_req,tnb_text' +
     '&limit=1'
   ).then(function (rows) {
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -392,6 +392,7 @@ function changeDifficulty(diff) {
 // ══════════════════════════════════════════════════════════════
 function openEditEventForm() {
   var ev = window._currentEvent || {};
+  var tnb = ev.tnb_text || '';
   var html =
     '<div class="edit-event-overlay" id="edit-event-overlay" onclick="if(event.target===this)closeEditEventForm()">' +
     '<div class="edit-event-modal">' +
@@ -400,9 +401,10 @@ function openEditEventForm() {
     '<label>Location<input id="eed-location" class="form-input" value="' + escHtml(ev.location||'') + '"></label>' +
     '<label>Start<input id="eed-start" class="form-input" type="datetime-local" value="' + (ev.starts_at?ev.starts_at.slice(0,16):'') + '"></label>' +
     '<label>Ende<input id="eed-end" class="form-input" type="datetime-local" value="' + (ev.ends_at?ev.ends_at.slice(0,16):'') + '"></label>' +
+    '<label>Teilnahmebedingungen (HTML)<textarea id="eed-tnb" class="form-input" rows="10" style="font-family:monospace;font-size:12px;resize:vertical">' + escHtml(tnb) + '</textarea></label>' +
     '<div id="eed-msg"></div>' +
     '<div class="edit-event-actions">' +
-    '<button class="btn-action" onclick="saveEditEvent(this)">' + '\ud83d\udcbe Speichern</button>' +
+    '<button class="btn-action" onclick="saveEditEvent(this)">\ud83d\udcbe Speichern</button>' +
     '<button class="btn-action btn-secondary" onclick="closeEditEventForm()">Abbrechen</button>' +
     '</div></div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
@@ -416,17 +418,23 @@ function saveEditEvent(btn) {
   var location = document.getElementById('eed-location').value.trim();
   var start    = document.getElementById('eed-start').value;
   var end      = document.getElementById('eed-end').value;
+  var tnb      = document.getElementById('eed-tnb') ? document.getElementById('eed-tnb').value : null;
   var msgEl    = document.getElementById('eed-msg');
   if (!name || !location) { msgEl.innerHTML = '<span style="color:#f66">Name und Location sind Pflicht.</span>'; return; }
   btn.disabled = true; btn.textContent = '\u23f3';
-  callRpc('update_event_details', {
+  var p1 = callRpc('update_event_details', {
     p_event_id:  currentEventId,
     p_name:      name,
     p_location:  location,
     p_starts_at: start ? new Date(start).toISOString() : null,
     p_ends_at:   end   ? new Date(end).toISOString()   : null,
     p_staff_pin: STAFF_PIN,
-  }).then(function() {
+  });
+  var p2 = (tnb !== null) ? callRpc('update_tnb', {
+    p_staff_pin: STAFF_PIN,
+    p_tnb_text:  tnb,
+  }) : Promise.resolve();
+  Promise.all([p1, p2]).then(function() {
     closeEditEventForm();
     loadActiveEvent();
   }).catch(function(e) {
