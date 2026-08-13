@@ -118,6 +118,11 @@
       text-align: center;
     }
     a { color: var(--green); }
+
+    /* The editable event text is the single source of truth. Keep the old
+       document scaffold out of the rendered page. */
+    body > .legal-section { display: none; }
+    #tnb-content .legal-section { display: block; }
   </style>
 </head>
 <body>
