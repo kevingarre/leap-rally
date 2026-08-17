@@ -337,7 +337,7 @@ function applyDealerImport(btn) {
   }).catch(function(err){showToast('Import fehlgeschlagen: '+err.message,true);btn.disabled=false;btn.textContent='✅ Geprüften Import übernehmen';});
 }
 
-var EXPORT_CONSTANTS=['COUNTRYCODE','BRAND','LANGUAGE','MARKET','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','CTA','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
+var EXPORT_CONSTANTS=['COUNTRYCODE','BRAND','LANGUAGE','CONSENT_TRUE','CONSENT_FALSE','MARKET','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','CTA','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
 function loadExportProfile() {
   var box=document.getElementById('export-profile-fields');
   if(!currentEventId){if(box)box.innerHTML='<div class="msg-empty">Kein aktives Event.</div>';return Promise.resolve();}

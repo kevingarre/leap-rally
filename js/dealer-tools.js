@@ -51,7 +51,7 @@
     var s=v===null||v===undefined?'':String(v);
     return /[;"\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
   }
-  function boolValue(v) { return v ? '1' : '0'; }
+  function boolValue(v, yes, no) { return v ? (yes || '1') : (no || '0'); }
   function formatDate(v) { if(!v)return ''; var d=new Date(v); return isNaN(d.getTime())?'':d.toISOString(); }
   function buildLeadCsv(payload) {
     var profile=payload.profile||{}, constants=profile.constants||{}, models=profile.model_mapping||DEFAULT_MODELS;
@@ -62,8 +62,9 @@
       Object.keys(constants).forEach(function(k){if(HEADERS.indexOf(k)>=0)data[k]=constants[k];});
       Object.assign(data,{
         LEADDATE:formatDate(r.lead_date),NAME:r.first_name||'',SURNAME:r.last_name||'',ZIPCODE:r.zip||'',CITY:r.city||'',
-        MAIL:r.email||'',PHONE:r.phone||'',MARKETINGEMAIL:boolValue(r.consent_stay_in_touch),
-        PRIVACYPROFILATION:boolValue(r.consent_better_offers),PRIVACYTHIRDPARTY:boolValue(r.consent_partners),
+        MAIL:r.email||'',PHONE:r.phone||'',MARKETINGEMAIL:boolValue(r.consent_stay_in_touch,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
+        PRIVACYPROFILATION:boolValue(r.consent_better_offers,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
+        PRIVACYTHIRDPARTY:boolValue(r.consent_partners,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:r.contact_intent||'',
         DEALERCODE:r.dealer_code||'',DEALERCITY:r.dealer_city||'',DEALER:r.dealer_name||'',
         DEALERADDRESS:r.dealer_address||'',DEALERSITE:r.dealer_site_code||'',
