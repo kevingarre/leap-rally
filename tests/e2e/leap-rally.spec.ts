@@ -139,4 +139,71 @@ test.describe('Leap Rally public app', () => {
     await expect(page.getByRole('heading', { name: /Teilnahmebedingungen/i })).toBeVisible();
     await expect(page.locator('.legal-section').first()).toBeVisible();
   });
+
+  test('PLZ-only lead submission delegates dealer selection to the server', async ({ page }) => {
+    const monitor = monitorJsErrors(page);
+    let submittedBody: Record<string, unknown> | null = null;
+
+    await page.route('**/rest/v1/rpc/submit_entry', async (route) => {
+      submittedBody = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          player_id: '00000000-0000-4000-8000-000000000001',
+          score_id: '00000000-0000-4000-8000-000000000002',
+          is_instant_win: false,
+          is_returning: true,
+          claim_code: null,
+          dealer: {
+            dealer_code: 'TEST-803',
+            site_code: '001',
+            name: 'Leapmotor Testhändler',
+            city: 'Berlin',
+            distance_km: 4.2,
+          },
+        }),
+      });
+    });
+
+    await gotoAndWait(page, '/', monitor);
+    await page.evaluate(() => {
+      document.querySelectorAll('.screen').forEach((screen) => screen.classList.remove('active'));
+      document.getElementById('screen-end')?.classList.add('active');
+      session.submitted = false;
+      session.pendingScore = { score: 1200, level_reached: 1, play_duration_s: 12 };
+    });
+
+    await page.locator('#fi-contact').selectOption('angebot');
+    await page.locator('#fi-vehicle').selectOption('b10');
+    await page.locator('#fi-first').fill('E2E');
+    await page.locator('#fi-last').fill('Händlerprüfung');
+    await page.locator('#fi-email').fill('e2e-haendler@example.test');
+    await page.locator('input[name="consent_stay_in_touch"][value="yes"]').check();
+    await page.locator('input[name="consent_better_offers"][value="no"]').check();
+    await page.locator('input[name="consent_partners"][value="yes"]').check();
+    await page.locator('#fi-terms').check();
+
+    await page.locator('#fi-zip').fill('1234');
+    await page.locator('#optin-submit-btn').click();
+    await expect(page.locator('#optin-error')).toContainText('Gültige fünfstellige PLZ');
+    expect(submittedBody).toBeNull();
+
+    await page.locator('#fi-zip').fill('10115');
+    await page.locator('#optin-submit-btn').click();
+
+    await expect.poll(() => submittedBody).not.toBeNull();
+    expect(submittedBody).toMatchObject({
+      p_zip: '10115',
+      p_city: null,
+      p_vehicle_interest: 'b10',
+      p_consent_stay: true,
+      p_consent_offers: false,
+      p_consent_partners: true,
+    });
+    await expect(page.locator('.dealer-assignment')).toContainText(
+      'Zugeordneter Händler: Leapmotor Testhändler, Berlin · ca. 4.2 km',
+    );
+    monitor.assertNoErrors();
+  });
 });
