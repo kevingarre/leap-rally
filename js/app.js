@@ -2791,8 +2791,7 @@ function handleGameOptinSubmit(e) {
   if (!v('gfi-contact')) { errors.push('Kontakt-Wunsch auswählen.'); document.getElementById('gfi-contact').classList.add('error'); }
   // Vehicle only required when contact is desired (not 'nein')
   if (v('gfi-contact') !== 'nein' && !v('gfi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('gfi-vehicle').classList.add('error'); }
-  if (!v('gfi-zip') || v('gfi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('gfi-zip').classList.add('error'); }
-  if (!v('gfi-city'))  { errors.push('Ort eingeben.');     document.getElementById('gfi-city').classList.add('error'); }
+  if (!/^\d{5}$/.test(v('gfi-zip'))) { errors.push('Gültige fünfstellige PLZ eingeben.'); document.getElementById('gfi-zip').classList.add('error'); }
   if (!v('gfi-first')) { errors.push('Vorname eingeben.'); document.getElementById('gfi-first').classList.add('error'); }
   if (!v('gfi-last'))  { errors.push('Nachname eingeben.'); document.getElementById('gfi-last').classList.add('error'); }
   const emailVal = v('gfi-email');
@@ -2828,7 +2827,7 @@ function handleGameOptinSubmit(e) {
     contact_intent:        v('gfi-contact'),
     vehicle_interest:      v('gfi-vehicle'),
     zip:                   v('gfi-zip'),
-    city:                  v('gfi-city'),
+    city:                  null,
     first_name:            v('gfi-first'),
     last_name:             v('gfi-last'),
     email:                 emailVal,
@@ -2901,6 +2900,7 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
+    showDealerAssignment(result && result.dealer, submitBtn);
     if (result && result.is_instant_win && result.claim_code) {
       session.instantWinCode = result.claim_code;
     } else if (!(result && result.is_returning)) {
@@ -2945,6 +2945,17 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
     errorEl.textContent   = `⚠️ Speichern fehlgeschlagen. Bitte erneut versuchen. (${err.message || 'Netzwerkfehler'})`;
     errorEl.classList.remove('hidden');
   }
+}
+
+function showDealerAssignment(dealer, anchor) {
+  if (!dealer || !anchor || !anchor.parentNode) return;
+  var old = anchor.parentNode.querySelector('.dealer-assignment');
+  if (old) old.remove();
+  var el = document.createElement('div');
+  el.className = 'dealer-assignment';
+  el.style.cssText = 'margin:12px 0;padding:12px 14px;border:1px solid rgba(103,194,58,.45);border-radius:10px;background:rgba(103,194,58,.10);font-size:13px;line-height:1.45';
+  el.textContent = 'Zugeordneter Händler: ' + dealer.name + ', ' + dealer.city + ' · ca. ' + dealer.distance_km + ' km';
+  anchor.parentNode.insertBefore(el, anchor);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3018,7 +3029,6 @@ function savePlayerToStorage(formData) {
       email:            formData.email             || '',
       phone:            formData.phone             || '',
       zip:              formData.zip               || '',
-      city:             formData.city              || '',
       vehicle_interest: formData.vehicle_interest  || '',
       contact_intent:   formData.contact_intent    || '',
     };
@@ -3042,7 +3052,6 @@ function prefillFormFromStorage() {
     setField('fi-email',   d.email);
     setField('fi-phone',   d.phone);
     setField('fi-zip',     d.zip);
-    setField('fi-city',    d.city);
     setField('fi-vehicle', d.vehicle_interest);
     setField('fi-contact', d.contact_intent);
     // Consents + TNB: NEVER prefill (DSGVO — must be explicit each time)
@@ -3065,7 +3074,6 @@ function prefillGameOptinFromStorage() {
     setField('gfi-email',   d.email);
     setField('gfi-phone',   d.phone);
     setField('gfi-zip',     d.zip);
-    setField('gfi-city',    d.city);
     setField('gfi-vehicle', d.vehicle_interest);
     setField('gfi-contact', d.contact_intent);
     // Consents + TNB: NEVER prefill (DSGVO)
@@ -3257,8 +3265,7 @@ function handleOptinSubmit(e) {
   if (!v('fi-contact')) { errors.push('Kontakt-Wunsch auswählen.');         document.getElementById('fi-contact').classList.add('error'); }
   // Vehicle only required when contact is desired (not 'nein')
   if (v('fi-contact') !== 'nein' && !v('fi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('fi-vehicle').classList.add('error'); }
-  if (!v('fi-zip') || v('fi-zip').length < 4) { errors.push('Gültige PLZ eingeben.'); document.getElementById('fi-zip').classList.add('error'); }
-  if (!v('fi-city'))    { errors.push('Ort eingeben.');                      document.getElementById('fi-city').classList.add('error'); }
+  if (!/^\d{5}$/.test(v('fi-zip'))) { errors.push('Gültige fünfstellige PLZ eingeben.'); document.getElementById('fi-zip').classList.add('error'); }
   if (!v('fi-first'))   { errors.push('Vorname eingeben.');                  document.getElementById('fi-first').classList.add('error'); }
   if (!v('fi-last'))    { errors.push('Nachname eingeben.');                 document.getElementById('fi-last').classList.add('error'); }
   const emailVal = v('fi-email');
@@ -3294,7 +3301,7 @@ function handleOptinSubmit(e) {
     contact_intent:        v('fi-contact'),
     vehicle_interest:      v('fi-vehicle'),
     zip:                   v('fi-zip'),
-    city:                  v('fi-city'),
+    city:                  null,
     first_name:            v('fi-first'),
     last_name:             v('fi-last'),
     email:                 emailVal,
@@ -3376,6 +3383,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
+    showDealerAssignment(result && result.dealer, submitBtn);
     if (result && result.is_instant_win && result.claim_code) {
       // Server confirmed instant win with a code
       session.instantWinCode = result.claim_code;

@@ -29,6 +29,8 @@ var currentEventId   = null;
 var currentEventName = null;
 var lockoutTimer     = null;
 var toastTimer     = null;
+var pendingDealerImport = null;
+var dealerAdminState = null;
 
 // ══════════════════════════════════════════════════════════════
 // INIT
@@ -242,10 +244,134 @@ function callRpc(funcName, body) {
 function loadDashboard() {
   loadActiveEvent().then(function () {
     loadAllEvents();
-    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics()]);
+    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics(), loadDealerAdmin(), loadExportProfile()]);
   }).catch(function (err) {
     console.error('[Staff] loadDashboard error:', err);
   });
+}
+
+// ══════════════════════════════════════════════════════════════
+// HÄNDLERIMPORT UND EMEA-EXPORT
+// ══════════════════════════════════════════════════════════════
+function loadDealerAdmin() {
+  var status = document.getElementById('dealer-status');
+  if (status) status.textContent = 'Lade Händlerbestand…';
+  return callRpc('get_dealer_admin', { p_staff_pin: STAFF_PIN }).then(function (data) {
+    dealerAdminState = data || { dealers: [], imports: [] };
+    var active = (dealerAdminState.dealers || []).filter(function (d) { return d.active; }).length;
+    var last = (dealerAdminState.imports || [])[0];
+    if (status) status.textContent = active + ' aktive Händler' + (last ? ' · letzter Import: ' + new Date(last.created_at).toLocaleString('de-DE') : '');
+    return dealerAdminState;
+  }).catch(function (err) {
+    if (status) status.textContent = 'Händlerfunktion noch nicht verfügbar: ' + err.message;
+  });
+}
+
+function parseDealerCsv(text) {
+  var lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+  if (!lines.length) return [];
+  var delimiter = lines[0].indexOf(';') >= 0 ? ';' : ',';
+  function cells(line) {
+    var out=[], cur='', quoted=false;
+    for (var i=0;i<line.length;i++) {
+      var ch=line[i];
+      if (ch==='"' && quoted && line[i+1]==='"') { cur+='"'; i++; }
+      else if (ch==='"') quoted=!quoted;
+      else if (ch===delimiter && !quoted) { out.push(cur); cur=''; }
+      else cur+=ch;
+    }
+    out.push(cur); return out;
+  }
+  var headers=cells(lines[0]);
+  return lines.slice(1).map(function (line) { var vals=cells(line), row={}; headers.forEach(function(h,i){row[h]=vals[i]||'';}); return row; });
+}
+
+function fileChecksum(buffer) {
+  if (!crypto.subtle) return Promise.resolve('sha256-unavailable-' + buffer.byteLength);
+  return crypto.subtle.digest('SHA-256', buffer).then(function (hash) {
+    return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  });
+}
+
+function previewDealerImport() {
+  var input=document.getElementById('dealer-file'), box=document.getElementById('dealer-preview');
+  var file=input && input.files && input.files[0];
+  if (!file) { showToast('Bitte Händlerdatei auswählen.', true); return; }
+  if (box) box.innerHTML='<div class="msg-loading">⏳ Datei wird geprüft…</div>';
+  file.arrayBuffer().then(function(buffer){
+    var raw;
+    if (/\.csv$/i.test(file.name)) raw=parseDealerCsv(new TextDecoder('utf-8').decode(buffer));
+    else {
+      var wb=XLSX.read(buffer,{type:'array'});
+      raw=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+    }
+    return Promise.all([Promise.resolve(LeapDealerTools.normalizeDealerRows(raw)),fileChecksum(buffer)]);
+  }).then(function(parts){
+    var checked=parts[0], checksum=parts[1], existing={};
+    ((dealerAdminState&&dealerAdminState.dealers)||[]).forEach(function(d){existing[d.dealer_code]=d;});
+    var inserted=0,updated=0,unchanged=0;
+    checked.rows.forEach(function(r){
+      var d=existing[r.dealer_code];
+      if(!d) inserted++;
+      else if ([d.site_code||'',d.name,d.address,d.city,d.zip].join('|') === [r.site_code,r.name,r.address,r.city,r.zip].join('|') && d.active) unchanged++;
+      else updated++;
+    });
+    pendingDealerImport={rows:checked.rows,fileName:file.name,checksum:checksum};
+    var html='<div class="msg-empty">'+checked.rows.length+' Zeilen · '+inserted+' neu · '+updated+' geändert · '+unchanged+' unverändert · '+checked.warnings.length+' Warnungen</div>';
+    if(checked.errors.length) html+='<div class="msg-error">'+checked.errors.map(function(e){return 'Zeile '+e.line+': '+e.messages.join(', ');}).join('<br>')+'</div>';
+    else html+='<button class="btn-action" onclick="applyDealerImport(this)">✅ Geprüften Import übernehmen</button>';
+    if(checked.warnings.length) html+='<div class="msg-empty">'+checked.warnings.slice(0,12).map(function(w){return 'Zeile '+w.line+': '+w.message;}).join('<br>')+(checked.warnings.length>12?'<br>…':'')+'</div>';
+    if(box) box.innerHTML=html;
+  }).catch(function(err){ if(box)box.innerHTML='<div class="msg-error">'+escHtml(err.message)+'</div>'; });
+}
+
+function applyDealerImport(btn) {
+  if(!pendingDealerImport)return;
+  btn.disabled=true; btn.textContent='⏳ Import läuft…';
+  callRpc('import_dealers',{
+    p_rows:pendingDealerImport.rows,p_file_name:pendingDealerImport.fileName,p_checksum:pendingDealerImport.checksum,
+    p_deactivate_missing:!!document.getElementById('dealer-deactivate-missing').checked,p_staff_pin:STAFF_PIN
+  }).then(function(r){
+    pendingDealerImport=null; showToast('✅ Händlerimport: '+r.inserted+' neu, '+r.updated+' geändert, '+r.deactivated+' deaktiviert.');
+    document.getElementById('dealer-preview').innerHTML=''; return loadDealerAdmin();
+  }).catch(function(err){showToast('Import fehlgeschlagen: '+err.message,true);btn.disabled=false;btn.textContent='✅ Geprüften Import übernehmen';});
+}
+
+var EXPORT_CONSTANTS=['COUNTRYCODE','BRAND','LANGUAGE','MARKET','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','CTA','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
+function loadExportProfile() {
+  var box=document.getElementById('export-profile-fields');
+  if(!currentEventId){if(box)box.innerHTML='<div class="msg-empty">Kein aktives Event.</div>';return Promise.resolve();}
+  return callRpc('get_export_profile',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(p){
+    var constants=p.constants||{},models=p.model_mapping||LeapDealerTools.DEFAULT_MODELS;
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    EXPORT_CONSTANTS.forEach(function(k){html+='<div class="form-group"><label class="form-label">'+k+'</label><input class="form-input export-constant" data-key="'+k+'" value="'+escAttr(constants[k]||'')+'"></div>';});
+    html+='</div><div class="table-scroll"><table class="staff-table"><thead><tr><th>Modell</th><th>Code</th><th>Beschreibung</th></tr></thead><tbody>';
+    Object.keys(LeapDealerTools.DEFAULT_MODELS).forEach(function(k){var m=models[k]||{};html+='<tr><td>'+k.toUpperCase()+'</td><td><input class="form-input export-model-code" data-model="'+k+'" value="'+escAttr(m.code||'')+'"></td><td><input class="form-input export-model-desc" data-model="'+k+'" value="'+escAttr(m.description||'')+'"></td></tr>';});
+    html+='</tbody></table></div>'; if(box)box.innerHTML=html;
+  }).catch(function(err){if(box)box.innerHTML='<div class="msg-error">'+escHtml(err.message)+'</div>';});
+}
+
+function collectExportProfile() {
+  var constants={},models={};
+  document.querySelectorAll('.export-constant').forEach(function(el){if(el.value.trim())constants[el.dataset.key]=el.value.trim();});
+  Object.keys(LeapDealerTools.DEFAULT_MODELS).forEach(function(k){
+    var c=document.querySelector('.export-model-code[data-model="'+k+'"]'),d=document.querySelector('.export-model-desc[data-model="'+k+'"]');
+    models[k]={code:c.value.trim(),description:d.value.trim()};
+  });
+  return {constants:constants,models:models};
+}
+function saveExportProfile(btn) {
+  var p=collectExportProfile(); btn.disabled=true;
+  callRpc('save_export_profile',{p_event_id:currentEventId,p_constants:p.constants,p_model_mapping:p.models,p_staff_pin:STAFF_PIN})
+    .then(function(){showToast('✅ Exportprofil gespeichert.');btn.disabled=false;}).catch(function(e){showToast(e.message,true);btn.disabled=false;});
+}
+function exportEmeaLeads(btn) {
+  btn.disabled=true; var old=btn.textContent;btn.textContent='⏳ Export…';
+  callRpc('get_lead_export',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(data){
+    var csv=LeapDealerTools.buildLeadCsv(data),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download='LEAD_EMEA_PERM_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    showToast('✅ '+((data&&data.rows)||[]).length+' Leads exportiert.');btn.disabled=false;btn.textContent=old;
+  }).catch(function(e){showToast('Export fehlgeschlagen: '+e.message,true);btn.disabled=false;btn.textContent=old;});
 }
 
 // ══════════════════════════════════════════════════════════════
