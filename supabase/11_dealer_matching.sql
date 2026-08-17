@@ -37,10 +37,12 @@ create table if not exists dealer_imports (
 
 create table if not exists event_export_profiles (
   event_id uuid primary key references events(id) on delete cascade,
-  constants jsonb not null default '{"COUNTRYCODE":"DE","BRAND":"LEAP","LANGUAGE":"DE"}'::jsonb,
+  constants jsonb not null default '{"COUNTRYCODE":"DE","BRAND":"LEAP","LANGUAGE":"DE","CONSENT_TRUE":"1","CONSENT_FALSE":"0"}'::jsonb,
   model_mapping jsonb not null default '{"b03x":{"code":"485","description":"B03X"},"b05":{"code":"486","description":"B05"},"b10":{"code":"B108","description":"B10"},"c10":{"code":"B118","description":"C10"},"t03":{"code":"489","description":"T03"}}'::jsonb,
   updated_at timestamptz not null default now()
 );
+update event_export_profiles set constants = constants || '{"CONSENT_TRUE":"1","CONSENT_FALSE":"0"}'::jsonb
+where not (constants ? 'CONSENT_TRUE') or not (constants ? 'CONSENT_FALSE');
 
 alter table players add column if not exists dealer_code text references dealers(dealer_code);
 alter table players add column if not exists dealer_site_code text;

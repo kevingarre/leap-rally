@@ -61,6 +61,7 @@ Der Export behält alle 61 Spalten und ihre Reihenfolge. Nicht belegte Felder bl
 - `COUNTRYCODE=DE`
 - `BRAND=LEAP`
 - `LANGUAGE=DE`
+- `CONSENT_TRUE=1`, `CONSENT_FALSE=0` (im Backend an das Zielformat anpassbar)
 
 Weitere Konstanten wie `MARKET`, `CAMPAIGN`, `OFFER`, `LEVEL1` bis `LEVEL4`, `CTA`, `EVENTNAME` und `EVENTLOCATION` sind eventbezogen im Staff-Bereich pflegbar. Die gespeicherten Modellzuordnungen und Konstanten werden serverseitig auf die Exportdaten angewendet.
 
