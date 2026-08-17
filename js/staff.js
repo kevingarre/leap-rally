@@ -260,11 +260,22 @@ function loadDealerAdmin() {
     dealerAdminState = data || { dealers: [], imports: [] };
     var active = (dealerAdminState.dealers || []).filter(function (d) { return d.active; }).length;
     var last = (dealerAdminState.imports || [])[0];
-    if (status) status.textContent = active + ' aktive Händler' + (last ? ' · letzter Import: ' + new Date(last.created_at).toLocaleString('de-DE') : '');
+    if (status) {
+      status.innerHTML = active + ' aktive Händler' + (last ? ' · letzter Import: ' + escHtml(new Date(last.created_at).toLocaleString('de-DE')) : '') +
+        (last && !last.rolled_back_at ? '<br><button class="btn-refresh" style="margin-top:8px" onclick="rollbackDealerImport(\''+escAttr(last.id)+'\',this)">↩ Letzten Import zurücknehmen</button>' : '');
+    }
     return dealerAdminState;
   }).catch(function (err) {
     if (status) status.textContent = 'Händlerfunktion noch nicht verfügbar: ' + err.message;
   });
+}
+
+function rollbackDealerImport(importId, btn) {
+  if (!confirm('Den Händlerstand vor diesem Import wiederherstellen?')) return;
+  btn.disabled=true;
+  callRpc('rollback_dealer_import',{p_import_id:importId,p_staff_pin:STAFF_PIN}).then(function(r){
+    showToast('✅ Händlerstand zurückgesetzt: '+r.restored+' Datensätze.'); return loadDealerAdmin();
+  }).catch(function(e){showToast('Rücknahme fehlgeschlagen: '+e.message,true);btn.disabled=false;});
 }
 
 function parseDealerCsv(text) {
