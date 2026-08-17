@@ -62,7 +62,7 @@
       touch-action: manipulation;
     }
     button { border: none; cursor: pointer; font-family: var(--font); }
-    input, select { font-family: var(--font); }
+    input, select, textarea { font-family: var(--font); }
     a { color: var(--lm-green); }
 
     /* ══════════════════════════════════════════════════════════
@@ -912,6 +912,36 @@
       <!-- ══ C: TOP-SCORES ══════════════════════════════════ -->
       <div class="section-card">
         <div class="section-head">
+          <span class="section-title">📍 Händlerstamm</span>
+          <button class="btn-refresh" onclick="loadDealerAdmin()">↻</button>
+        </div>
+        <div class="section-body">
+          <p class="msg-empty" id="dealer-status">Lade Händlerbestand…</p>
+          <div class="form-group">
+            <label class="form-label" for="dealer-file">Händlerliste (.xlsx oder .csv)</label>
+            <input type="file" id="dealer-file" class="form-input" accept=".xlsx,.xls,.csv">
+          </div>
+          <label class="checkbox-row"><input type="checkbox" id="dealer-deactivate-missing"> Nicht mehr enthaltene Händler deaktivieren</label>
+          <button class="btn-action" onclick="previewDealerImport()">🔎 Import prüfen</button>
+          <div id="dealer-preview" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <span class="section-title">📤 EMEA-Lead-Export</span>
+          <button class="btn-refresh" onclick="loadExportProfile()">↻</button>
+        </div>
+        <div class="section-body">
+          <div id="export-profile-fields"></div>
+          <button class="btn-action" onclick="saveExportProfile(this)">💾 Exportprofil speichern</button>
+          <button class="btn-action" onclick="exportEmeaLeads(this)">📥 LEAD_EMEA_PERM.csv</button>
+          <div id="export-profile-status" class="msg-empty"></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
           <span class="section-title">🏆 Top-Scores (Live-Leaderboard)</span>
           <button class="btn-refresh" onclick="loadLeaderboard()">↻ Aktualisieren</button>
         </div>
@@ -960,6 +990,8 @@
   <div id="staff-toast"></div>
 
   <script src="js/supabase-config.js"></script>
-  <script src="js/staff.js?v=20260805a"></script>
+  <script src="js/vendor-xlsx.full.min.js?v=0.20.3"></script>
+  <script src="js/dealer-tools.js?v=20260817a"></script>
+  <script src="js/staff.js?v=20260817a"></script>
 </body>
 </html>

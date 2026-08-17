@@ -385,15 +385,10 @@
             <small class="form-hint t03-wltp-note">* Kombinierte Werte für den T03 gem. WLTP: Energieverbrauch 16,3 kWh/100 km; CO₂-Emission 0 g/km; CO₂-Klasse A****.</small>
           </div>
 
-          <div class="form-row form-row-half">
-            <div class="form-col">
-              <label class="form-label" for="gfi-zip">PLZ *</label>
-              <input id="gfi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
-            </div>
-            <div class="form-col">
-              <label class="form-label" for="gfi-city">Ort *</label>
-              <input id="gfi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
-            </div>
+          <div class="form-row">
+            <label class="form-label" for="gfi-zip">PLZ *</label>
+            <input id="gfi-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required placeholder="12345" class="form-input">
+            <small class="form-hint">Wir ordnen automatisch den nächstgelegenen Leapmotor-Händler zu.</small>
           </div>
 
           <div class="form-row form-row-half">
@@ -523,15 +518,10 @@
           <small class="form-hint t03-wltp-note">* Kombinierte Werte für den T03 gem. WLTP: Energieverbrauch 16,3 kWh/100 km; CO₂-Emission 0 g/km; CO₂-Klasse A****.</small>
         </div>
 
-        <div class="form-row form-row-half">
-          <div class="form-col">
-            <label class="form-label" for="fi-zip">PLZ *</label>
-            <input id="fi-zip" name="zip" type="text" inputmode="numeric" maxlength="5" required placeholder="12345" class="form-input">
-          </div>
-          <div class="form-col">
-            <label class="form-label" for="fi-city">Ort *</label>
-            <input id="fi-city" name="city" type="text" required placeholder="Berlin" class="form-input">
-          </div>
+        <div class="form-row">
+          <label class="form-label" for="fi-zip">PLZ *</label>
+          <input id="fi-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required placeholder="12345" class="form-input">
+          <small class="form-hint">Wir ordnen automatisch den nächstgelegenen Leapmotor-Händler zu.</small>
         </div>
 
         <div class="form-row form-row-half">
@@ -722,8 +712,8 @@
 </div>
 
 <script src="js/supabase-config.js?v=20260716b"></script>
-<script src="js/api.js?v=20260728j"></script>
-<script src="js/app.js?v=20260728h"></script>
+<script src="js/api.js?v=20260817a"></script>
+<script src="js/app.js?v=20260817a"></script>
 
 <!-- Landscape QR-Panel rechts -->
 <div class="landscape-qr-panel right" aria-hidden="true">
