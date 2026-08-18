@@ -933,6 +933,8 @@
           <button class="btn-refresh" onclick="loadExportProfile()">↻</button>
         </div>
         <div class="section-body">
+          <div class="form-group"><label class="form-label" for="lead-source-filter">Quelle</label><select id="lead-source-filter" class="form-input" onchange="loadCentralLeadSummary()"><option value="all">Alle Leads</option><option value="game">Game</option><option value="wordpress">WordPress / Formidable</option></select></div>
+          <div id="central-lead-summary" class="msg-empty">Lade zentrale Lead-Übersicht…</div>
           <div id="export-profile-fields"></div>
           <button class="btn-action" onclick="saveExportProfile(this)">💾 Exportprofil speichern</button>
           <button class="btn-action" onclick="exportEmeaLeads(this)">📥 LEAD_EMEA_PERM.csv</button>

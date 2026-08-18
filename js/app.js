@@ -2769,6 +2769,47 @@ function resumeAfterInstantWin(codeShown) {
 }
 
 // Submit handler for in-game instant-win form
+const dealerChoiceState = { fi: [], gfi: [] };
+function dealerEscapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function(c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+function getSelectedDealerCode(prefix) {
+  const checked = document.querySelector('input[name="' + prefix + '_dealer_code"]:checked');
+  return checked ? checked.value : '';
+}
+
+function renderDealerChoices(prefix, dealers, error) {
+  const box = document.getElementById(prefix + '-dealer-choice');
+  if (!box) return;
+  box.classList.remove('hidden');
+  if (error) { box.innerHTML = '<div class="dealer-choice-status">Für diese PLZ konnten keine Händler geladen werden.</div>'; return; }
+  dealerChoiceState[prefix] = dealers || [];
+  box.innerHTML = '<div class="dealer-choice-title">Händler auswählen *</div>' + dealers.map(function(d, index) {
+    const checked = index === 0 ? ' checked' : '';
+    return '<label class="dealer-choice-card"><input type="radio" name="' + prefix + '_dealer_code" value="' + dealerEscapeHtml(d.dealer_code) + '"' + checked + '>' +
+      '<span><span class="dealer-choice-name">' + dealerEscapeHtml(d.name) + '</span>' +
+      '<span class="dealer-choice-meta">' + dealerEscapeHtml(d.address) + ', ' + dealerEscapeHtml(d.city) + ' · ca. ' + dealerEscapeHtml(String(d.distance_km)) + ' km</span></span></label>';
+  }).join('');
+}
+
+function setupDealerChoice(prefix) {
+  const input = document.getElementById(prefix + '-zip');
+  const box = document.getElementById(prefix + '-dealer-choice');
+  if (!input || !box) return;
+  let requestId = 0;
+  input.addEventListener('input', async function() {
+    input.value = input.value.replace(/\D/g, '').slice(0, 5);
+    const current = ++requestId;
+    if (!/^\d{5}$/.test(input.value)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    box.classList.remove('hidden'); box.innerHTML = '<div class="dealer-choice-status">Händler werden geladen…</div>';
+    try {
+      const dealers = await getNearestDealers(input.value);
+      if (current === requestId) renderDealerChoices(prefix, dealers, !Array.isArray(dealers) || dealers.length === 0);
+    } catch (_) { if (current === requestId) renderDealerChoices(prefix, [], true); }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() { setupDealerChoice('fi'); setupDealerChoice('gfi'); });
+
 function handleGameOptinSubmit(e) {
   e.preventDefault();
   if (session.submitted) return;
@@ -2792,6 +2833,8 @@ function handleGameOptinSubmit(e) {
   // Vehicle only required when contact is desired (not 'nein')
   if (v('gfi-contact') !== 'nein' && !v('gfi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('gfi-vehicle').classList.add('error'); }
   if (!/^\d{5}$/.test(v('gfi-zip'))) { errors.push('Gültige fünfstellige PLZ eingeben.'); document.getElementById('gfi-zip').classList.add('error'); }
+  const selectedDealer = getSelectedDealerCode('gfi');
+  if (!selectedDealer) { errors.push('Bitte einen Händler auswählen.'); }
   if (!v('gfi-first')) { errors.push('Vorname eingeben.'); document.getElementById('gfi-first').classList.add('error'); }
   if (!v('gfi-last'))  { errors.push('Nachname eingeben.'); document.getElementById('gfi-last').classList.add('error'); }
   const emailVal = v('gfi-email');
@@ -2839,6 +2882,7 @@ function handleGameOptinSubmit(e) {
     terms_version_at_entry: ev2 ? ev2.terms_version : 1,
     privacy_accepted_at:   new Date().toISOString(),
     entry_source:          'byod',
+    dealer_code:           selectedDealer,
   };
   // event_id must always be present for RPC signature match
 
@@ -2896,6 +2940,7 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
       terms_accepted:   playerData.terms_accepted,
       terms_version:    playerData.terms_version_at_entry,
       entry_source:     playerData.entry_source || 'byod',
+      dealer_code:      playerData.dealer_code,
     });
 
     session.playerId = result && result.player_id;
@@ -3266,6 +3311,8 @@ function handleOptinSubmit(e) {
   // Vehicle only required when contact is desired (not 'nein')
   if (v('fi-contact') !== 'nein' && !v('fi-vehicle')) { errors.push('Wunschmodell auswählen.'); document.getElementById('fi-vehicle').classList.add('error'); }
   if (!/^\d{5}$/.test(v('fi-zip'))) { errors.push('Gültige fünfstellige PLZ eingeben.'); document.getElementById('fi-zip').classList.add('error'); }
+  const selectedDealer = getSelectedDealerCode('fi');
+  if (!selectedDealer) { errors.push('Bitte einen Händler auswählen.'); }
   if (!v('fi-first'))   { errors.push('Vorname eingeben.');                  document.getElementById('fi-first').classList.add('error'); }
   if (!v('fi-last'))    { errors.push('Nachname eingeben.');                 document.getElementById('fi-last').classList.add('error'); }
   const emailVal = v('fi-email');
@@ -3313,6 +3360,7 @@ function handleOptinSubmit(e) {
     terms_version_at_entry: ev2 ? ev2.terms_version : 1,
     privacy_accepted_at:   new Date().toISOString(),
     entry_source:          'byod',
+    dealer_code:           selectedDealer,
   };
   // event_id must always be present for RPC signature match
 
@@ -3379,6 +3427,7 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
       terms_accepted:   playerData.terms_accepted,
       terms_version:    playerData.terms_version_at_entry,
       entry_source:     playerData.entry_source || 'byod',
+      dealer_code:      playerData.dealer_code,
     });
 
     session.playerId = result && result.player_id;

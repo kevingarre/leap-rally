@@ -388,8 +388,9 @@
           <div class="form-row">
             <label class="form-label" for="gfi-zip">PLZ *</label>
             <input id="gfi-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required placeholder="12345" class="form-input">
-            <small class="form-hint">Wir ordnen automatisch den nächstgelegenen Leapmotor-Händler zu.</small>
+            <small class="form-hint">Wähle anschließend einen der drei nächstgelegenen Leapmotor-Händler.</small>
           </div>
+          <div id="gfi-dealer-choice" class="dealer-choice hidden" aria-live="polite"></div>
 
           <div class="form-row form-row-half">
             <div class="form-col">
@@ -521,8 +522,9 @@
         <div class="form-row">
           <label class="form-label" for="fi-zip">PLZ *</label>
           <input id="fi-zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required placeholder="12345" class="form-input">
-          <small class="form-hint">Wir ordnen automatisch den nächstgelegenen Leapmotor-Händler zu.</small>
+          <small class="form-hint">Wähle anschließend einen der drei nächstgelegenen Leapmotor-Händler.</small>
         </div>
+        <div id="fi-dealer-choice" class="dealer-choice hidden" aria-live="polite"></div>
 
         <div class="form-row form-row-half">
           <div class="form-col">

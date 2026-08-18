@@ -244,7 +244,7 @@ function callRpc(funcName, body) {
 function loadDashboard() {
   loadActiveEvent().then(function () {
     loadAllEvents();
-    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics(), loadDealerAdmin(), loadExportProfile()]);
+    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics(), loadDealerAdmin(), loadExportProfile(), loadCentralLeadSummary()]);
   }).catch(function (err) {
     console.error('[Staff] loadDashboard error:', err);
   });
@@ -378,11 +378,24 @@ function saveExportProfile(btn) {
 }
 function exportEmeaLeads(btn) {
   btn.disabled=true; var old=btn.textContent;btn.textContent='⏳ Export…';
-  callRpc('get_lead_export',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(data){
+  var source=(document.getElementById('lead-source-filter')||{}).value||'all';
+  callRpc('get_central_lead_export',{p_event_id:currentEventId,p_source:source,p_staff_pin:STAFF_PIN}).then(function(data){
     var csv=LeapDealerTools.buildLeadCsv(data),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download='LEAD_EMEA_PERM_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
     showToast('✅ '+((data&&data.rows)||[]).length+' Leads exportiert.');btn.disabled=false;btn.textContent=old;
   }).catch(function(e){showToast('Export fehlgeschlagen: '+e.message,true);btn.disabled=false;btn.textContent=old;});
+}
+
+function loadCentralLeadSummary() {
+  var box=document.getElementById('central-lead-summary'); if(!box||!currentEventId)return Promise.resolve();
+  var source=(document.getElementById('lead-source-filter')||{}).value||'all'; box.textContent='Lade Leads…';
+  return callRpc('get_central_lead_export',{p_event_id:currentEventId,p_source:source,p_staff_pin:STAFF_PIN}).then(function(data){
+    var counts=data.counts||{},rows=data.rows||[];
+    var html='<p>Game: '+(counts.game||0)+' · WordPress: '+(counts.wordpress||0)+' · im aktuellen Filter: '+rows.length+'</p>';
+    html+='<div class="table-scroll"><table class="staff-table"><thead><tr><th>Quelle</th><th>Datum</th><th>Name</th><th>PLZ</th><th>Händler</th><th>Rang</th></tr></thead><tbody>';
+    rows.slice(-20).reverse().forEach(function(r){html+='<tr><td><strong>'+(r.source_system==='wordpress'?'WordPress':'Game')+'</strong></td><td>'+escHtml(new Date(r.lead_date).toLocaleString('de-DE'))+'</td><td>'+escHtml((r.first_name||'')+' '+(r.last_name||''))+'</td><td>'+escHtml(r.zip||'')+'</td><td>'+escHtml(r.dealer_name||'')+'</td><td>'+escHtml(r.dealer_rank||'–')+'</td></tr>';});
+    html+='</tbody></table></div>'; box.innerHTML=html;
+  }).catch(function(err){box.textContent='Lead-Übersicht nicht verfügbar: '+err.message;});
 }
 
 // ══════════════════════════════════════════════════════════════
