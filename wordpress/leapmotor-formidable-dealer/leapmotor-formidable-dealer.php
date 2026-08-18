@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet Formidable-Formular 7 die drei nächsten Leapmotor-Händler an und überträgt Leads zentral.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: DriveDesk
  */
 
@@ -36,6 +36,7 @@ final class Leapmotor_Formidable_Dealer {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 		add_filter( 'frm_validate_field_entry', array( __CLASS__, 'validate_zip' ), 8, 3 );
 		add_action( 'frm_after_create_entry', array( __CLASS__, 'save_assignment' ), 20, 2 );
+		add_action( 'frm_before_destroy_entry', array( __CLASS__, 'delete_assignment' ), 20, 1 );
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ), 30 );
 		add_action( 'admin_post_leapmotor_emea_export', array( __CLASS__, 'export' ) );
 		add_action( 'admin_post_leapmotor_integration_settings', array( __CLASS__, 'save_settings' ) );
@@ -44,6 +45,10 @@ final class Leapmotor_Formidable_Dealer {
 	public static function table_name() {
 		global $wpdb;
 		return $wpdb->prefix . 'leapmotor_dealer_assignments';
+	}
+
+	public static function delete_assignment( $entry_id ) {
+		global $wpdb; $wpdb->delete( self::table_name(), array( 'entry_id' => (int) $entry_id ), array( '%d' ) );
 	}
 
 	public static function activate() {
@@ -92,8 +97,8 @@ final class Leapmotor_Formidable_Dealer {
 
 	public static function enqueue() {
 		if ( is_admin() ) { return; }
-		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), '2.0.1' );
-		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), '2.0.1', true );
+		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), '2.0.2' );
+		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), '2.0.2', true );
 		wp_localize_script( 'leapmotor-formidable-dealer', 'LeapmotorDealer', array(
 			'formId' => self::FORM_ID,
 			'zipField' => self::FIELD_ZIP,
@@ -234,7 +239,9 @@ final class Leapmotor_Formidable_Dealer {
 		if ( ! current_user_can( 'manage_options' ) ) { return; }
 		$url = wp_nonce_url( admin_url( 'admin-post.php?action=leapmotor_emea_export' ), 'leapmotor_emea_export' );
 		list( $client, $token ) = self::integration_credentials();
-		global $wpdb; $counts = $wpdb->get_results( 'SELECT sync_status,COUNT(*) count FROM ' . self::table_name() . ' GROUP BY sync_status', ARRAY_A );
+		global $wpdb;
+		$wpdb->query( 'DELETE a FROM ' . self::table_name() . ' a LEFT JOIN ' . $wpdb->prefix . 'frm_items i ON i.id=a.entry_id WHERE i.id IS NULL' );
+		$counts = $wpdb->get_results( 'SELECT sync_status,COUNT(*) count FROM ' . self::table_name() . ' GROUP BY sync_status', ARRAY_A );
 		$status = array(); foreach ( $counts as $row ) { $status[] = esc_html( $row['sync_status'] . ': ' . $row['count'] ); }
 		echo '<div class="wrap"><h1>Leapmotor Lead-Integration</h1><p>Neue Formidable-Leads werden zentral im Tischtennis-Backend gespeichert. Der lokale CSV-Export bleibt als Rückfalloption erhalten.</p><p><strong>Synchronisierung:</strong> ' . ( $status ? implode( ' · ', $status ) : 'noch keine Einträge' ) . '</p>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="leapmotor_integration_settings">'; wp_nonce_field( 'leapmotor_integration_settings' );
