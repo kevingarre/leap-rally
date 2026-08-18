@@ -387,15 +387,15 @@ function exportEmeaLeads(btn) {
 }
 
 function loadCentralLeadSummary() {
-  var box=document.getElementById('central-lead-summary'); if(!box||!currentEventId)return Promise.resolve();
-  var source=(document.getElementById('lead-source-filter')||{}).value||'all'; box.textContent='Lade Leads…';
+  var box=document.getElementById('central-lead-summary'),countsBox=document.getElementById('central-lead-counts'); if(!box||!currentEventId)return Promise.resolve();
+  var source=(document.getElementById('lead-source-filter')||{}).value||'all'; box.textContent='Lade Leads…'; if(countsBox)countsBox.textContent='Lade Lead-Zahlen…';
   return callRpc('get_central_lead_export',{p_event_id:currentEventId,p_source:source,p_staff_pin:STAFF_PIN}).then(function(data){
     var counts=data.counts||{},rows=data.rows||[];
-    var html='<p>Game: '+(counts.game||0)+' · WordPress: '+(counts.wordpress||0)+' · im aktuellen Filter: '+rows.length+'</p>';
-    html+='<div class="table-scroll"><table class="staff-table"><thead><tr><th>Quelle</th><th>Datum</th><th>Name</th><th>PLZ</th><th>Händler</th><th>Rang</th></tr></thead><tbody>';
+    if(countsBox)countsBox.textContent='Game: '+(counts.game||0)+' · WordPress: '+(counts.wordpress||0)+' · im aktuellen Filter: '+rows.length;
+    var html='<div class="table-scroll"><table class="staff-table"><thead><tr><th>Quelle</th><th>Datum</th><th>Name</th><th>PLZ</th><th>Händler</th><th>Rang</th></tr></thead><tbody>';
     rows.slice(-20).reverse().forEach(function(r){html+='<tr><td><strong>'+(r.source_system==='wordpress'?'WordPress':'Game')+'</strong></td><td>'+escHtml(new Date(r.lead_date).toLocaleString('de-DE'))+'</td><td>'+escHtml((r.first_name||'')+' '+(r.last_name||''))+'</td><td>'+escHtml(r.zip||'')+'</td><td>'+escHtml(r.dealer_name||'')+'</td><td>'+escHtml(r.dealer_rank||'–')+'</td></tr>';});
     html+='</tbody></table></div>'; box.innerHTML=html;
-  }).catch(function(err){box.textContent='Lead-Übersicht nicht verfügbar: '+err.message;});
+  }).catch(function(err){box.textContent='Lead-Übersicht nicht verfügbar: '+err.message;if(countsBox)countsBox.textContent='Lead-Zahlen nicht verfügbar.';});
 }
 
 // ══════════════════════════════════════════════════════════════
