@@ -29,7 +29,8 @@ test('EMEA-Export hat exakt 61 Spalten und das freigegebene Modellmapping', () =
     rows:[{lead_date:'2026-08-17T12:00:00Z',first_name:'Max',last_name:'Muster',zip:'10115',city:'Berlin',
       email:'m@example.test',phone:'123',vehicle_interest:'b10',contact_intent:'angebot',
       consent_stay_in_touch:true,consent_better_offers:false,consent_partners:true,
-      dealer_code:'803',dealer_site_code:'001',dealer_name:'Auto;Haus',dealer_address:'Weg 1',dealer_city:'Berlin',terms_version_at_entry:2}]
+      dealer_code:'803',dealer_site_code:'001',dealer_name:'Auto;Haus',dealer_address:'Weg 1',dealer_city:'Berlin',terms_version_at_entry:2,
+      source_system:'wordpress',event_name:'TT Challenge',event_location:'Berlin'}]
   });
   const lines=csv.replace(/^\uFEFF/,'').split('\r\n');
   assert.equal(lines.length,2);
@@ -44,6 +45,9 @@ test('EMEA-Export hat exakt 61 Spalten und das freigegebene Modellmapping', () =
   assert.equal(value('PRIVACYPROFILATION'),'0');
   assert.equal(value('PRIVACYTHIRDPARTY'),'1');
   assert.equal(value('MARKETINGPHONE'),'');
+  assert.equal(value('EVENTNAME'),'TT Challenge');
+  assert.equal(value('EVENTLOCATION'),'Berlin');
+  assert.equal(value('COMMUNICATIONCHANNEL'),'GEWINNSPIEL');
 });
 
 function parseSemicolon(line) {

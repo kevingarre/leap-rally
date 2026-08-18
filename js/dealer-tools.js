@@ -68,7 +68,8 @@
         MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:r.contact_intent||'',
         DEALERCODE:r.dealer_code||'',DEALERCITY:r.dealer_city||'',DEALER:r.dealer_name||'',
         DEALERADDRESS:r.dealer_address||'',DEALERSITE:r.dealer_site_code||'',
-        EVENTNAME:constants.EVENTNAME||r.event_name||'',EVENTLOCATION:constants.EVENTLOCATION||r.event_location||'',
+        EVENTNAME:r.event_name||constants.EVENTNAME||'',EVENTLOCATION:r.event_location||constants.EVENTLOCATION||'',
+        COMMUNICATIONCHANNEL:r.source_system==='wordpress'?'GEWINNSPIEL':r.source_system==='game'?'GAME':'',
         DISCLAIMERID:r.terms_version_at_entry===null||r.terms_version_at_entry===undefined?'':r.terms_version_at_entry
       });
       lines.push(HEADERS.map(function(h){return csvCell(data[h]);}).join(';'));
