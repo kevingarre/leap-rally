@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet Formidable-Formular 7 die drei nächsten Leapmotor-Händler an und überträgt Leads zentral.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: DriveDesk
  */
 
@@ -92,8 +92,8 @@ final class Leapmotor_Formidable_Dealer {
 
 	public static function enqueue() {
 		if ( is_admin() ) { return; }
-		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), '2.0.0' );
-		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), '2.0.0', true );
+		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), '2.0.1' );
+		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), '2.0.1', true );
 		wp_localize_script( 'leapmotor-formidable-dealer', 'LeapmotorDealer', array(
 			'formId' => self::FORM_ID,
 			'zipField' => self::FIELD_ZIP,
@@ -160,8 +160,8 @@ final class Leapmotor_Formidable_Dealer {
 		$zip = trim( (string) $zip );
 		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) { return new WP_Error( 'invalid_zip', 'Ungültige PLZ.', array( 'status' => 400 ) ); }
 		if ( isset( self::$lookup_cache[ $zip ] ) ) { return self::$lookup_cache[ $zip ]; }
-		$cached = get_transient( 'leapmotor_dealer_' . $zip );
-		if ( is_array( $cached ) ) { self::$lookup_cache[ $zip ] = $cached; return $cached; }
+		$cached = get_transient( 'leapmotor_dealers_v2_' . $zip );
+		if ( is_array( $cached ) && isset( $cached[0]['dealer_code'], $cached[0]['rank'] ) ) { self::$lookup_cache[ $zip ] = $cached; return $cached; }
 		$response = wp_remote_post( self::API_URL, array(
 			'timeout' => 8,
 			'headers' => array( 'apikey' => self::API_KEY, 'Content-Type' => 'application/json', 'Accept' => 'application/json' ),
@@ -179,7 +179,7 @@ final class Leapmotor_Formidable_Dealer {
 			$dealer = array_map( 'sanitize_text_field', $dealer );
 		} unset( $dealer );
 		self::$lookup_cache[ $zip ] = $data;
-		set_transient( 'leapmotor_dealer_' . $zip, self::$lookup_cache[ $zip ], DAY_IN_SECONDS );
+		set_transient( 'leapmotor_dealers_v2_' . $zip, self::$lookup_cache[ $zip ], DAY_IN_SECONDS );
 		return self::$lookup_cache[ $zip ];
 	}
 
