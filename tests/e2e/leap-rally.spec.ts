@@ -217,9 +217,7 @@ test.describe('Leap Rally public app', () => {
       p_consent_offers: false,
       p_consent_partners: true,
     });
-    await expect(page.locator('.dealer-assignment')).toContainText(
-      'Zugeordneter Händler: Leapmotor Wunschhändler, Potsdam · ca. 8.4 km',
-    );
+    await expect(page.locator('.dealer-assignment')).toHaveCount(0);
     monitor.assertNoErrors();
   });
 });

@@ -2945,7 +2945,6 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
-    showDealerAssignment(result && result.dealer, submitBtn);
     if (result && result.is_instant_win && result.claim_code) {
       session.instantWinCode = result.claim_code;
     } else if (!(result && result.is_returning)) {
@@ -2990,17 +2989,6 @@ async function _doGameOptinSubmit(playerData, submitBtn, errorEl) {
     errorEl.textContent   = `⚠️ Speichern fehlgeschlagen. Bitte erneut versuchen. (${err.message || 'Netzwerkfehler'})`;
     errorEl.classList.remove('hidden');
   }
-}
-
-function showDealerAssignment(dealer, anchor) {
-  if (!dealer || !anchor || !anchor.parentNode) return;
-  var old = anchor.parentNode.querySelector('.dealer-assignment');
-  if (old) old.remove();
-  var el = document.createElement('div');
-  el.className = 'dealer-assignment';
-  el.style.cssText = 'margin:12px 0;padding:12px 14px;border:1px solid rgba(103,194,58,.45);border-radius:10px;background:rgba(103,194,58,.10);font-size:13px;line-height:1.45';
-  el.textContent = 'Zugeordneter Händler: ' + dealer.name + ', ' + dealer.city + ' · ca. ' + dealer.distance_km + ' km';
-  anchor.parentNode.insertBefore(el, anchor);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3432,7 +3420,6 @@ async function _doOptinSubmit(playerData, submitBtn, errorEl) {
 
     session.playerId = result && result.player_id;
     session.scoreId  = result && result.score_id;
-    showDealerAssignment(result && result.dealer, submitBtn);
     if (result && result.is_instant_win && result.claim_code) {
       // Server confirmed instant win with a code
       session.instantWinCode = result.claim_code;
