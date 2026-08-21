@@ -4,7 +4,7 @@ Stand: 17. August 2026
 
 ## Ziel
 
-Das Formular erfasst nur noch die fünfstellige Postleitzahl. Der Server ordnet reproduzierbar den geografisch nächsten aktiven Leapmotor-Händler zu. Der Staff-Bereich kann den Händlerstamm aus der gelieferten Excel-/CSV-Struktur aktualisieren und Leads im unveränderten 61-spaltigen `LEAD_EMEA_PERM`-Format exportieren.
+Das Formular erfasst nur noch die fünfstellige Postleitzahl. Der Server ordnet reproduzierbar den geografisch nächsten aktiven Leapmotor-Händler zu. Der Staff-Bereich kann den Händlerstamm aus der gelieferten Excel-/CSV-Struktur aktualisieren und Leads im freigegebenen 62-spaltigen `LEAD_EMEA_PERM`-Format exportieren.
 
 ## Händler-Importvertrag
 
@@ -13,13 +13,13 @@ Akzeptierte Spalten:
 | Eingabespalte | Intern | Regel |
 |---|---|---|
 | `MandatsNr.` | `dealer_code` | Pflicht, eindeutige stabile Kennung |
-| `Site Code Vertrieb` | `site_code` | Optional, als Text inklusive führender Nullen |
+| `Site Code Vertrieb` | `site_code` | Pflicht, exakt drei Ziffern; führende Nullen bleiben erhalten |
 | `Händlername` | `name` | Pflicht |
 | `Adresse` | `address` | Pflicht |
 | `Ort` | `city` | Pflicht |
 | `PLZ` | `zip` | Pflicht, exakt fünf Ziffern und im PLZ-Katalog vorhanden |
 
-Der Import normalisiert Leerzeichen, erhält führende Nullen und blockiert ungültige Pflichtfelder, doppelte Händlercodes und unbekannte PLZ. Fehlende Site-Codes sind Warnungen. Vor dem Schreiben zeigt die Oberfläche neue, geänderte, unveränderte und fehlerhafte Zeilen. Das Schreiben erfolgt vollständig oder gar nicht. Fehlende Händler werden nur nach ausdrücklicher Wahl deaktiviert. Jeder Lauf speichert Dateiname, Prüfsumme, Zählwerte und den vorherigen Händlerstand für eine Rücknahme.
+Der Import normalisiert Leerzeichen, ergänzt ein- oder zweistellige Standortkennungen links mit Nullen und blockiert fehlende oder ungültige Standortkennungen, ungültige Pflichtfelder, doppelte Händlercodes und unbekannte PLZ. Vor dem Schreiben zeigt die Oberfläche neue, geänderte, unveränderte und fehlerhafte Zeilen. Das Schreiben erfolgt vollständig oder gar nicht. Fehlende Händler werden nur nach ausdrücklicher Wahl deaktiviert. Jeder Lauf speichert Dateiname, Prüfsumme, Zählwerte und den vorherigen Händlerstand für eine Rücknahme.
 
 ## Geo-Zuordnung
 
@@ -56,14 +56,18 @@ Nicht verwendet werden B03 sowie die getrennten Varianten B10 BEV/REEV und C10 B
 
 ## Exportprofil
 
-Der Export behält alle 61 Spalten und ihre Reihenfolge. Nicht belegte Felder bleiben leer. Vorgaben im ersten Profil:
+Der Export enthält alle 62 Spalten in der freigegebenen Reihenfolge. `PROCESSTYPE` steht direkt hinter `LEVEL4`. Nicht belegte Felder bleiben leer. Vorgaben im ersten Profil:
 
-- `COUNTRYCODE=DE`
-- `BRAND=LEAP`
-- `LANGUAGE=DE`
+- `COUNTRYCODE=DE`, `MARKET=8803`, `CAMPAIGN=17646`
+- `OFFER=EARNED MEDIA` (Level 0), `LEVEL1=EVENTS`, `LEVEL2=QR`, `LEVEL3=WWW`, `LEVEL4=LEAPMOTOR`
+- `PROCESSTYPE=Lead Self`
+- `BRAND=LEAPMOTOR`, `LANGUAGE=Tedesco`
+- `CTA=TD` für Probefahrt und `CTA=RP` für Angebot
+- `DISCLAIMERID=1699`
+- `COMMUNICATIONCHANNEL` bleibt leer
 - `CONSENT_TRUE=1`, `CONSENT_FALSE=0` (im Backend an das Zielformat anpassbar)
 
-Weitere Konstanten wie `MARKET`, `CAMPAIGN`, `OFFER`, `LEVEL1` bis `LEVEL4`, `CTA`, `EVENTNAME` und `EVENTLOCATION` sind eventbezogen im Staff-Bereich pflegbar. Die gespeicherten Modellzuordnungen und Konstanten werden serverseitig auf die Exportdaten angewendet.
+Eventname und Veranstaltungsort bleiben eventbezogen. Die freigegebenen Integrationswerte werden beim Export verbindlich angewendet; gespeicherte Altwerte können sie nicht überschreiben.
 
 ## Abnahme
 
@@ -72,6 +76,6 @@ Weitere Konstanten wie `MARKET`, `CAMPAIGN`, `OFFER`, `LEVEL1` bis `LEVEL4`, `CT
 3. Geänderte Händler werden aktualisiert, fehlende nur nach Bestätigung deaktiviert.
 4. Rücknahme stellt den vorherigen Stand wieder her.
 5. Bekannte PLZ liefern den erwarteten nächsten Händler; ungültige PLZ erzeugen keinen Lead.
-6. Der Export hat exakt 61 Spalten, Semikolon, UTF-8-BOM und CRLF.
+6. Der Export hat exakt 62 Spalten, Semikolon, UTF-8-BOM und CRLF.
 7. Alle fünf Modelle werden exakt gemäß Tabelle übersetzt.
 8. Keine Einwilligung wird aus Kontaktangaben oder Kontaktwunsch abgeleitet.

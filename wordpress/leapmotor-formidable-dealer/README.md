@@ -7,7 +7,7 @@ Integration für Formidable-Formular `7` (`leaptischte26`). Das Plugin:
 - zeigt den nächsten Händler nach vollständiger PLZ an,
 - validiert die Zuordnung beim Absenden erneut,
 - speichert einen unveränderlichen Händler-Snapshot je Formidable-Eintrag,
-- stellt im Formidable-Menü den 61-spaltigen `LEAD_EMEA_PERM`-Export bereit.
+- stellt im Formidable-Menü den 62-spaltigen `LEAD_EMEA_PERM`-Export bereit.
 
 Beim ersten Export werden vorhandene Einträge mit gültiger PLZ, aber ohne Snapshot einmalig serverseitig nachgezogen. Neue Einträge erhalten ihren Snapshot direkt beim Speichern.
 

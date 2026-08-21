@@ -175,13 +175,15 @@ final class Leapmotor_Formidable_Dealer {
 		if ( is_wp_error( $response ) ) { return new WP_Error( 'lookup_unavailable', 'Lookup nicht erreichbar.', array( 'status' => 503 ) ); }
 		$code = wp_remote_retrieve_response_code( $response );
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
-		$required = array( 'dealer_code', 'name', 'address', 'city', 'zip', 'distance_km', 'lead_city', 'data_version', 'rank' );
+		$required = array( 'dealer_code', 'site_code', 'name', 'address', 'city', 'zip', 'distance_km', 'lead_city', 'data_version', 'rank' );
 		if ( $code !== 200 || ! is_array( $data ) || count( $data ) < 1 || count( $data ) > 3 ) {
 			return new WP_Error( 'lookup_failed', 'Keine Händlerzuordnung gefunden.', array( 'status' => $code === 400 ? 400 : 503 ) );
 		}
 		foreach ( $data as &$dealer ) {
 			if ( ! is_array( $dealer ) || array_diff( $required, array_keys( $dealer ) ) ) { return new WP_Error( 'lookup_failed', 'Ungültige Händlerantwort.', array( 'status' => 503 ) ); }
 			$dealer = array_map( 'sanitize_text_field', $dealer );
+			if ( ! preg_match( '/^[0-9]{1,3}$/', $dealer['site_code'] ) ) { return new WP_Error( 'lookup_failed', 'Ungültige Händler-Standortkennung.', array( 'status' => 503 ) ); }
+			$dealer['site_code'] = str_pad( $dealer['site_code'], 3, '0', STR_PAD_LEFT );
 		} unset( $dealer );
 		self::$lookup_cache[ $zip ] = $data;
 		set_transient( 'leapmotor_dealers_v2_' . $zip, self::$lookup_cache[ $zip ], DAY_IN_SECONDS );
@@ -258,7 +260,7 @@ final class Leapmotor_Formidable_Dealer {
 	}
 
 	public static function headers() {
-		return array( 'LEADDATE','NAME','SURNAME','ADDRESS','ZIPCODE','CITY','PROVINCECODE','COUNTRYCODE','MAIL','PHONE','MOBILE','MARKETINGPOST','MARKETINGEMAIL','MARKETINGSMS','MARKETINGPHONE','MODELCODE','MODELDESCRIPTION','OWNBRANDCODE','OWNMODELCODE','OWNBRANDDESCR','OWNMODELDESCR','EXTERNID','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','BRAND','LANGUAGE','MARKET','CTA','NOTE','DEVICEUSED','DEALERCODE','DEALERCITY','DEALER','DEALERADDRESS','DEALERSITE','DEALERMKT','DEALERPHONE','DEALERMAIL','APPOINTMENTDATE','APPNOTEDEALER','APPOINTMENTNOTES','APPOINTEMENTSUBJECT','GENDER','COMPANYNAME','BUSINESSAREA','EVENTNAME','EVENTLOCATION','PRIVACYPROFILATION','PRIVACYTHIRDPARTY','PRIVACYEXTRAUE','PRIVACYGEOLOCATION','BIRTHDATE','FLEETNUMBEROFOWNEDVEHICLES','DISCLAIMERID','OWNEDCARVIN','VATNUMBER','COMMUNICATIONCHANNEL' );
+		return array( 'LEADDATE','NAME','SURNAME','ADDRESS','ZIPCODE','CITY','PROVINCECODE','COUNTRYCODE','MAIL','PHONE','MOBILE','MARKETINGPOST','MARKETINGEMAIL','MARKETINGSMS','MARKETINGPHONE','MODELCODE','MODELDESCRIPTION','OWNBRANDCODE','OWNMODELCODE','OWNBRANDDESCR','OWNMODELDESCR','EXTERNID','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','PROCESSTYPE','BRAND','LANGUAGE','MARKET','CTA','NOTE','DEVICEUSED','DEALERCODE','DEALERCITY','DEALER','DEALERADDRESS','DEALERSITE','DEALERMKT','DEALERPHONE','DEALERMAIL','APPOINTMENTDATE','APPNOTEDEALER','APPOINTMENTNOTES','APPOINTEMENTSUBJECT','GENDER','COMPANYNAME','BUSINESSAREA','EVENTNAME','EVENTLOCATION','PRIVACYPROFILATION','PRIVACYTHIRDPARTY','PRIVACYEXTRAUE','PRIVACYGEOLOCATION','BIRTHDATE','FLEETNUMBEROFOWNEDVEHICLES','DISCLAIMERID','OWNEDCARVIN','VATNUMBER','COMMUNICATIONCHANNEL' );
 	}
 
 	public static function export() {
@@ -288,12 +290,16 @@ final class Leapmotor_Formidable_Dealer {
 				'ZIPCODE' => $meta[ self::FIELD_ZIP ] ?? '', 'CITY' => $a['lead_city'] ?? '', 'COUNTRYCODE' => 'DE',
 				'MAIL' => $meta[ self::FIELD_EMAIL ] ?? '', 'PHONE' => $meta[ self::FIELD_PHONE ] ?? '',
 				'MARKETINGEMAIL' => self::consent( $meta[ self::FIELD_CONSENT_EMAIL ] ?? '' ),
-				'MODELCODE' => $model[0], 'MODELDESCRIPTION' => $model[1], 'BRAND' => 'LEAP', 'LANGUAGE' => 'DE',
-				'CTA' => $meta[ self::FIELD_CONTACT ] ?? '', 'DEALERCODE' => $a['dealer_code'] ?? '', 'DEALERCITY' => $a['dealer_city'] ?? '',
-				'DEALER' => $a['dealer_name'] ?? '', 'DEALERADDRESS' => $a['dealer_address'] ?? '', 'DEALERSITE' => $a['dealer_site_code'] ?? '',
+				'MODELCODE' => $model[0], 'MODELDESCRIPTION' => $model[1], 'CAMPAIGN' => '17646', 'OFFER' => 'EARNED MEDIA',
+				'LEVEL1' => 'EVENTS', 'LEVEL2' => 'QR', 'LEVEL3' => 'WWW', 'LEVEL4' => 'LEAPMOTOR', 'PROCESSTYPE' => 'Lead Self',
+				'BRAND' => 'LEAPMOTOR', 'LANGUAGE' => 'Tedesco', 'MARKET' => '8803',
+				'CTA' => self::cta( $meta[ self::FIELD_CONTACT ] ?? '' ), 'DEALERCODE' => $a['dealer_code'] ?? '', 'DEALERCITY' => $a['dealer_city'] ?? '',
+				'DEALER' => $a['dealer_name'] ?? '', 'DEALERADDRESS' => $a['dealer_address'] ?? '', 'DEALERSITE' => self::site_code( $a['dealer_site_code'] ?? '' ),
 				'PRIVACYPROFILATION' => self::consent( $meta[ self::FIELD_CONSENT_PROFILE ] ?? '' ),
 				'PRIVACYTHIRDPARTY' => self::consent( $meta[ self::FIELD_CONSENT_PARTNER ] ?? '' ),
+				'DISCLAIMERID' => '1699', 'COMMUNICATIONCHANNEL' => '',
 			) );
+			if ( ! preg_match( '/^[0-9]{3}$/', (string) $data['DEALERSITE'] ) ) { wp_die( 'Händler-Standortkennung fehlt oder ist nicht dreistellig.', 422 ); }
 			$lines[] = self::csv_row( array_values( $data ) );
 		}
 		nocache_headers();
@@ -304,6 +310,16 @@ final class Leapmotor_Formidable_Dealer {
 	}
 
 	public static function consent( $value ) { return $value === 'Stimme ich zu' ? '1' : '0'; }
+	public static function cta( $value ) {
+		$value = strtolower( trim( (string) $value ) );
+		if ( $value === 'probefahrt' || $value === 'td' ) { return 'TD'; }
+		if ( $value === 'angebot' || $value === 'rp' ) { return 'RP'; }
+		return '';
+	}
+	public static function site_code( $value ) {
+		$value = trim( (string) $value );
+		return preg_match( '/^[0-9]{1,3}$/', $value ) ? str_pad( $value, 3, '0', STR_PAD_LEFT ) : '';
+	}
 	public static function model_key( $value ) {
 		$models = array( 'Leapmotor B03x' => 'b03x', 'Leapmotor B05' => 'b05', 'Leapmotor B10' => 'b10', 'Leapmotor C10' => 'c10', 'Leapmotor T03' => 't03' );
 		return $models[ (string) $value ] ?? strtolower( trim( (string) $value ) );

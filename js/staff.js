@@ -348,13 +348,13 @@ function applyDealerImport(btn) {
   }).catch(function(err){showToast('Import fehlgeschlagen: '+err.message,true);btn.disabled=false;btn.textContent='✅ Geprüften Import übernehmen';});
 }
 
-var EXPORT_CONSTANTS=['COUNTRYCODE','BRAND','LANGUAGE','CONSENT_TRUE','CONSENT_FALSE','MARKET','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','CTA','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
+var EXPORT_CONSTANTS=['CONSENT_TRUE','CONSENT_FALSE','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
 function loadExportProfile() {
   var box=document.getElementById('export-profile-fields');
   if(!currentEventId){if(box)box.innerHTML='<div class="msg-empty">Kein aktives Event.</div>';return Promise.resolve();}
   return callRpc('get_export_profile',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(p){
     var constants=p.constants||{},models=p.model_mapping||LeapDealerTools.DEFAULT_MODELS;
-    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    var html='<p class="msg-empty">LEAD_EMEA-Vorgaben wie Brand, Markt, Kampagne, Ebenen, Sprache und Disclaimer sind verbindlich hinterlegt.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
     EXPORT_CONSTANTS.forEach(function(k){html+='<div class="form-group"><label class="form-label">'+k+'</label><input class="form-input export-constant" data-key="'+k+'" value="'+escAttr(constants[k]||'')+'"></div>';});
     html+='</div><div class="table-scroll"><table class="staff-table"><thead><tr><th>Modell</th><th>Code</th><th>Beschreibung</th></tr></thead><tbody>';
     Object.keys(LeapDealerTools.DEFAULT_MODELS).forEach(function(k){var m=models[k]||{};html+='<tr><td>'+k.toUpperCase()+'</td><td><input class="form-input export-model-code" data-model="'+k+'" value="'+escAttr(m.code||'')+'"></td><td><input class="form-input export-model-desc" data-model="'+k+'" value="'+escAttr(m.description||'')+'"></td></tr>';});
