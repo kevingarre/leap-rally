@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet Formidable-Formular 7 die drei nächsten Leapmotor-Händler an und überträgt Leads zentral.
- * Version: 2.0.2
+ * Version: 2.0.4
  * Author: DriveDesk
  */
 
