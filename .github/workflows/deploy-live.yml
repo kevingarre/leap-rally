@@ -17,7 +17,7 @@ jobs:
 
       - name: Remove internal files before deploy
         run: |
-          rm -f MEMORY.md README-BACKUP.md backup-worker.js setup-backup-cron.sh
+          rm -f MEMORY.md README-BACKUP.md backup-worker.js setup-backup-cron.sh deploy.sh
           rm -rf docs supabase .git
 
       - name: Deploy to gh-pages root
@@ -27,39 +27,4 @@ jobs:
           publish_branch: gh-pages
           publish_dir: .
           destination_dir: .
-          keep_files: true
           commit_message: 'deploy: live from main (${{ github.sha }})'
-
-      - name: Copy files to Hetzner
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 88.198.104.87
-          username: root
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          source: "."
-          target: /var/www/leapmotor-tt
-          strip_components: 0
-          overwrite: true
-
-      - name: Post-deploy on Hetzner
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 88.198.104.87
-          username: root
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          script: |
-            # Permissions
-            find /var/www/leapmotor-tt -type f -exec chmod 644 {} \;
-            find /var/www/leapmotor-tt -type d -exec chmod 755 {} \;
-            chown -R root:root /var/www/leapmotor-tt
-            echo "staff.html: $(wc -c < /var/www/leapmotor-tt/staff.html) bytes"
-            echo "staff.js:   $(wc -c < /var/www/leapmotor-tt/js/staff.js) bytes"
-            # nginx: exakter String-Tausch (verifizierte Zeile aus Log 2026-08-31T09:21)
-            F=/etc/nginx/sites-enabled/leap-api
-            cp $F $F.bak
-            perl -i -pe 's{get_event_export\|get_all_events_staff\|get_staff_wins\|get_event_analytics\|archive_and_new_event\|update_event\|claim_instant_win}{archive_and_new_event|update_event|claim_instant_win}' $F
-            echo "=== location-Zeile nach Patch ==="
-            grep 'rpc/' $F | grep -v '#'
-            nginx -t && systemctl reload nginx && echo "nginx: OK"
-            kill -SIGUSR1 $(pgrep -x postgrest | head -1) 2>/dev/null && echo "postgrest: OK"
-            echo "DONE"
