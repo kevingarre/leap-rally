@@ -9,7 +9,7 @@
     'LEADDATE','NAME','SURNAME','ADDRESS','ZIPCODE','CITY','PROVINCECODE','COUNTRYCODE','MAIL','PHONE','MOBILE',
     'MARKETINGPOST','MARKETINGEMAIL','MARKETINGSMS','MARKETINGPHONE','MODELCODE','MODELDESCRIPTION','OWNBRANDCODE',
     'OWNMODELCODE','OWNBRANDDESCR','OWNMODELDESCR','EXTERNID','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4',
-    'BRAND','LANGUAGE','MARKET','CTA','NOTE','DEVICEUSED','DEALERCODE','DEALERCITY','DEALER','DEALERADDRESS',
+    'PROCESSTYPE','BRAND','LANGUAGE','MARKET','CTA','NOTE','DEVICEUSED','DEALERCODE','DEALERCITY','DEALER','DEALERADDRESS',
     'DEALERSITE','DEALERMKT','DEALERPHONE','DEALERMAIL','APPOINTMENTDATE','APPNOTEDEALER','APPOINTMENTNOTES',
     'APPOINTEMENTSUBJECT','GENDER','COMPANYNAME','BUSINESSAREA','EVENTNAME','EVENTLOCATION','PRIVACYPROFILATION',
     'PRIVACYTHIRDPARTY','PRIVACYEXTRAUE','PRIVACYGEOLOCATION','BIRTHDATE','FLEETNUMBEROFOWNEDVEHICLES',
@@ -19,6 +19,11 @@
     b03x: { code: '485', description: 'B03X' }, b05: { code: '486', description: 'B05' },
     b10: { code: 'B108', description: 'B10' }, c10: { code: 'B118', description: 'C10' },
     t03: { code: '489', description: 'T03' }
+  };
+  var REQUIRED_EXPORT_CONSTANTS = {
+    COUNTRYCODE: 'DE', CAMPAIGN: '17646', OFFER: 'EARNED MEDIA', LEVEL1: 'EVENTS', LEVEL2: 'QR',
+    LEVEL3: 'WWW', LEVEL4: 'LEAPMOTOR', PROCESSTYPE: 'Lead Self', BRAND: 'LEAPMOTOR', LANGUAGE: 'Tedesco', MARKET: '8803',
+    DISCLAIMERID: '1699', COMMUNICATIONCHANNEL: ''
   };
   var ALIASES = {
     dealer_code: ['MandatsNr.', 'MandatsNr', 'dealer_code'], site_code: ['Site Code Vertrieb', 'site_code'],
@@ -41,22 +46,35 @@
       else if (knownZips && !knownZips[r.zip]) rowErrors.push('PLZ ist nicht im deutschen PLZ-Katalog');
       if (r.dealer_code && seen[r.dealer_code]) rowErrors.push('MandatsNr. ist doppelt (erste Zeile '+seen[r.dealer_code]+')');
       if (r.dealer_code) seen[r.dealer_code]=line;
-      if (!r.site_code || r.site_code==='-') { r.site_code=''; warnings.push({line:line,message:'Site Code Vertrieb fehlt'}); }
+      if (/^\d{1,3}$/.test(r.site_code)) r.site_code=r.site_code.padStart(3,'0');
+      else rowErrors.push('Site Code Vertrieb muss dreistellig sein');
       if (rowErrors.length) errors.push({line:line,messages:rowErrors,row:r});
       rows.push(r);
     });
     return {rows:rows,errors:errors,warnings:warnings};
   }
   function csvCell(v) {
-    var s=v===null||v===undefined?'':String(v);
+    var s=v===null||v===undefined?'':String(v).normalize('NFC');
     return /[;"\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
   }
   function boolValue(v, yes, no) { return v ? (yes || '1') : (no || '0'); }
   function formatDate(v) { if(!v)return ''; var d=new Date(v); return isNaN(d.getTime())?'':d.toISOString(); }
+  function ctaValue(v) {
+    var key=text(v).toLowerCase();
+    if (key==='probefahrt'||key==='td') return 'TD';
+    if (key==='angebot'||key==='rp') return 'RP';
+    return '';
+  }
+  var DEFAULT_SITE_CODE='000';
+  function dealerSiteCode(v) {
+    var code=text(v);
+    if (/^\d{1,3}$/.test(code)) return code.padStart(3,'0');
+    return null;
+  }
   function buildLeadCsv(payload) {
-    var profile=payload.profile||{}, constants=profile.constants||{}, models=profile.model_mapping||DEFAULT_MODELS;
-    var lines=[HEADERS.join(';')];
-    (payload.rows||[]).forEach(function(r){
+    var profile=payload.profile||{}, constants=Object.assign({},profile.constants||{},REQUIRED_EXPORT_CONSTANTS), models=profile.model_mapping||DEFAULT_MODELS;
+    var lines=[HEADERS.join(';')], siteWarnings=[];
+    (payload.rows||[]).forEach(function(r,idx){
       var m=models[String(r.vehicle_interest||'').toLowerCase()]||{};
       var data={}; HEADERS.forEach(function(h){data[h]='';});
       Object.keys(constants).forEach(function(k){if(HEADERS.indexOf(k)>=0)data[k]=constants[k];});
@@ -65,20 +83,26 @@
         MAIL:r.email||'',PHONE:r.phone||'',MARKETINGEMAIL:boolValue(r.consent_stay_in_touch,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         PRIVACYPROFILATION:boolValue(r.consent_better_offers,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         PRIVACYTHIRDPARTY:boolValue(r.consent_partners,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
-        MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:r.contact_intent||'',
+        MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:ctaValue(r.contact_intent),
         DEALERCODE:r.dealer_code||'',DEALERCITY:r.dealer_city||'',DEALER:r.dealer_name||'',
-        DEALERADDRESS:r.dealer_address||'',DEALERSITE:r.dealer_site_code||'',
-        EVENTNAME:constants.EVENTNAME||r.event_name||'',EVENTLOCATION:constants.EVENTLOCATION||r.event_location||'',
-        DISCLAIMERID:r.terms_version_at_entry===null||r.terms_version_at_entry===undefined?'':r.terms_version_at_entry
+        DEALERADDRESS:r.dealer_address||'',
+        EVENTNAME:r.event_name||constants.EVENTNAME||'',EVENTLOCATION:r.event_location||constants.EVENTLOCATION||'',
+        COMMUNICATIONCHANNEL:'', DISCLAIMERID:'1699'
       });
+      var site=dealerSiteCode(r.dealer_site_code);
+      if(site===null){
+        site=DEFAULT_SITE_CODE;
+        siteWarnings.push({index:idx+1,name:((r.first_name||'')+' '+(r.last_name||'')).trim(),dealer_code:r.dealer_code||'',dealer_name:r.dealer_name||'',raw:text(r.dealer_site_code)});
+      }
+      data.DEALERSITE=site;
       lines.push(HEADERS.map(function(h){return csvCell(data[h]);}).join(';'));
     });
-    return '\uFEFF'+lines.join('\r\n');
+    return {csv:'\uFEFF'+lines.join('\r\n'),warnings:siteWarnings};
   }
   function workbookRows(workbook) {
     var first=workbook.SheetNames[0];
     return globalThis.XLSX.utils.sheet_to_json(workbook.Sheets[first],{defval:'',raw:false});
   }
-  return { HEADERS:HEADERS, DEFAULT_MODELS:DEFAULT_MODELS, normalizeDealerRows:normalizeDealerRows,
+  return { HEADERS:HEADERS, DEFAULT_MODELS:DEFAULT_MODELS, REQUIRED_EXPORT_CONSTANTS:REQUIRED_EXPORT_CONSTANTS, normalizeDealerRows:normalizeDealerRows,
     buildLeadCsv:buildLeadCsv, workbookRows:workbookRows, csvCell:csvCell };
 });

@@ -186,14 +186,25 @@ async function submitEntry(f) {
     p_consent_partners: !!f.consent_partners,
     p_terms_accepted:   !!f.terms_accepted,
     p_terms_version:    f.terms_version || 1,
+    p_dealer_code:      f.dealer_code || null,
     p_entry_source:     f.entry_source || 'byod',
   };
-  const res = await _supaFetch('/rest/v1/rpc/submit_entry', {
+  const rpc = f.dealer_code ? 'submit_entry_v2' : 'submit_entry';
+  if (!f.dealer_code) delete body.p_dealer_code;
+  const res = await _supaFetch('/rest/v1/rpc/' + rpc, {
     method: 'POST',
     body: JSON.stringify(body),
   });
   // RPC returns a JSON object (PostgREST wraps scalar json directly)
   return res;
+}
+
+async function getNearestDealers(zip) {
+  if (!/^\d{5}$/.test(String(zip || ''))) throw new Error('invalid_zip');
+  return _supaFetch('/rest/v1/rpc/nearest_dealers_for_zip', {
+    method: 'POST',
+    body: JSON.stringify({ p_zip: String(zip), p_limit: 3 }),
+  });
 }
 
 // ── App-start initialiser ───────────────────────────────

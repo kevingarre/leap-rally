@@ -244,7 +244,7 @@ function callRpc(funcName, body) {
 function loadDashboard() {
   loadActiveEvent().then(function () {
     loadAllEvents();
-    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics(), loadDealerAdmin(), loadExportProfile()]);
+    return Promise.all([loadLeaderboard(), loadInstantWins(), loadAnalytics(), loadDealerAdmin(), loadExportProfile(), loadCentralLeadSummary()]);
   }).catch(function (err) {
     console.error('[Staff] loadDashboard error:', err);
   });
@@ -348,13 +348,13 @@ function applyDealerImport(btn) {
   }).catch(function(err){showToast('Import fehlgeschlagen: '+err.message,true);btn.disabled=false;btn.textContent='✅ Geprüften Import übernehmen';});
 }
 
-var EXPORT_CONSTANTS=['COUNTRYCODE','BRAND','LANGUAGE','CONSENT_TRUE','CONSENT_FALSE','MARKET','CAMPAIGN','OFFER','LEVEL1','LEVEL2','LEVEL3','LEVEL4','CTA','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
+var EXPORT_CONSTANTS=['CONSENT_TRUE','CONSENT_FALSE','EVENTNAME','EVENTLOCATION','DEVICEUSED'];
 function loadExportProfile() {
   var box=document.getElementById('export-profile-fields');
   if(!currentEventId){if(box)box.innerHTML='<div class="msg-empty">Kein aktives Event.</div>';return Promise.resolve();}
   return callRpc('get_export_profile',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(p){
     var constants=p.constants||{},models=p.model_mapping||LeapDealerTools.DEFAULT_MODELS;
-    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    var html='<p class="msg-empty">LEAD_EMEA-Vorgaben wie Brand, Markt, Kampagne, Ebenen, Sprache und Disclaimer sind verbindlich hinterlegt.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
     EXPORT_CONSTANTS.forEach(function(k){html+='<div class="form-group"><label class="form-label">'+k+'</label><input class="form-input export-constant" data-key="'+k+'" value="'+escAttr(constants[k]||'')+'"></div>';});
     html+='</div><div class="table-scroll"><table class="staff-table"><thead><tr><th>Modell</th><th>Code</th><th>Beschreibung</th></tr></thead><tbody>';
     Object.keys(LeapDealerTools.DEFAULT_MODELS).forEach(function(k){var m=models[k]||{};html+='<tr><td>'+k.toUpperCase()+'</td><td><input class="form-input export-model-code" data-model="'+k+'" value="'+escAttr(m.code||'')+'"></td><td><input class="form-input export-model-desc" data-model="'+k+'" value="'+escAttr(m.description||'')+'"></td></tr>';});
@@ -378,11 +378,32 @@ function saveExportProfile(btn) {
 }
 function exportEmeaLeads(btn) {
   btn.disabled=true; var old=btn.textContent;btn.textContent='⏳ Export…';
-  callRpc('get_lead_export',{p_event_id:currentEventId,p_staff_pin:STAFF_PIN}).then(function(data){
-    var csv=LeapDealerTools.buildLeadCsv(data),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  var source=(document.getElementById('lead-source-filter')||{}).value||'all';
+  callRpc('get_central_lead_export',{p_event_id:currentEventId,p_source:source,p_staff_pin:STAFF_PIN}).then(function(data){
+    var result=LeapDealerTools.buildLeadCsv(data),csv=result.csv,warnings=result.warnings||[];
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download='LEAD_EMEA_PERM_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000);
-    showToast('✅ '+((data&&data.rows)||[]).length+' Leads exportiert.');btn.disabled=false;btn.textContent=old;
+    var n=((data&&data.rows)||[]).length;
+    if(warnings.length){
+      var names=warnings.map(function(w){return w.name||w.dealer_name||('Zeile '+w.index);}).join(', ');
+      showToast('⚠️ '+n+' Leads exportiert. '+warnings.length+' ohne Standortkennung → auf 000 gesetzt: '+names,true);
+    } else {
+      showToast('✅ '+n+' Leads exportiert.');
+    }
+    btn.disabled=false;btn.textContent=old;
   }).catch(function(e){showToast('Export fehlgeschlagen: '+e.message,true);btn.disabled=false;btn.textContent=old;});
+}
+
+function loadCentralLeadSummary() {
+  var box=document.getElementById('central-lead-summary'),countsBox=document.getElementById('central-lead-counts'); if(!box||!currentEventId)return Promise.resolve();
+  var source=(document.getElementById('lead-source-filter')||{}).value||'all'; box.textContent='Lade Leads…'; if(countsBox)countsBox.textContent='Lade Lead-Zahlen…';
+  return callRpc('get_central_lead_export',{p_event_id:currentEventId,p_source:source,p_staff_pin:STAFF_PIN}).then(function(data){
+    var counts=data.counts||{},rows=data.rows||[];
+    if(countsBox)countsBox.textContent='Game: '+(counts.game||0)+' · WordPress: '+(counts.wordpress||0)+' · im aktuellen Filter: '+rows.length;
+    var html='<div class="table-scroll"><table class="staff-table"><thead><tr><th>Quelle</th><th>Datum</th><th>Name</th><th>PLZ</th><th>Händler</th><th>Rang</th></tr></thead><tbody>';
+    rows.slice(-20).reverse().forEach(function(r){html+='<tr><td><strong>'+(r.source_system==='wordpress'?'WordPress':'Game')+'</strong></td><td>'+escHtml(new Date(r.lead_date).toLocaleString('de-DE'))+'</td><td>'+escHtml((r.first_name||'')+' '+(r.last_name||''))+'</td><td>'+escHtml(r.zip||'')+'</td><td>'+escHtml(r.dealer_name||'')+'</td><td>'+escHtml(r.dealer_rank||'–')+'</td></tr>';});
+    html+='</tbody></table></div>'; box.innerHTML=html;
+  }).catch(function(err){box.textContent='Lead-Übersicht nicht verfügbar: '+err.message;if(countsBox)countsBox.textContent='Lead-Zahlen nicht verfügbar.';});
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1007,22 +1028,80 @@ function toggleDemoQr(btn) {
 // ══════════════════════════════════════════════════════════════
 
 function loadAnalytics() {
-  var cont = document.getElementById('analytics-content');
-  if (!cont) return Promise.resolve();
+  var gamePanel = document.getElementById('analytics-panel-game');
+  var wpPanel   = document.getElementById('analytics-panel-wordpress');
   if (!currentEventId) {
-    cont.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
+    if (gamePanel) gamePanel.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
+    if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-empty">Kein aktives Event.</div>';
     return Promise.resolve();
   }
-  cont.innerHTML = '<div class="msg-loading">\u23f3 Lade Analytics\u2026</div>';
+  if (gamePanel) gamePanel.innerHTML = '<div class="msg-loading">\u23f3 Lade Game-Analytics\u2026</div>';
+  if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-loading">\u23f3 Lade Gewinnspiel-Analytics\u2026</div>';
 
-  return callRpc('get_event_analytics', {
+  var gameReq = callRpc('get_event_analytics', {
     p_event_id:  currentEventId,
     p_staff_pin: STAFF_PIN,
   }).then(function(d) {
-    renderAnalyticsFromRpc(d || {}, cont);
+    if (gamePanel) renderAnalyticsFromRpc(d || {}, gamePanel);
   }).catch(function(err) {
-    cont.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+    if (gamePanel) gamePanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
   });
+
+  var wpReq = callRpc('get_wordpress_analytics', {
+    p_event_id:  currentEventId,
+    p_staff_pin: STAFF_PIN,
+  }).then(function(d) {
+    if (wpPanel) renderWordpressAnalytics(d || {}, wpPanel);
+  }).catch(function(err) {
+    if (wpPanel) wpPanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+  });
+
+  return Promise.all([gameReq, wpReq]);
+}
+
+function switchAnalyticsTab(tab, btn) {
+  document.querySelectorAll('.analytics-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.analytics-panel').forEach(function(p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  var panel = document.getElementById('analytics-panel-' + tab);
+  if (panel) panel.classList.add('active');
+}
+
+function renderWordpressAnalytics(d, cont) {
+  var total     = Number(d.total             || 0);
+  var pfahrt    = Number(d.probefahrt        || 0);
+  var angebot   = Number(d.angebot           || 0);
+  var kein      = Number(d.kein_kontakt      || 0);
+  var consent   = Number(d.consent_marketing || 0);
+  var topV      = d.top_vehicle ? d.top_vehicle.toUpperCase() + (d.top_vehicle_count > 1 ? ' \u00d7' + d.top_vehicle_count : '') : '\u2013';
+  var convCount = pfahrt + angebot;
+  var convRate  = total > 0 ? Math.round((convCount / total) * 100) : 0;
+  var dealers   = d.top_dealers || [];
+
+  var html = '<div class="analytics-grid">';
+  html += analyticsBox('Leads', total);
+  html += analyticsBox('Conversion', convRate + '%');
+  html += analyticsBox('Top Modell', topV);
+  html += '</div>';
+  html += '<div class="analytics-contacts">';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Probefahrt</span><span class="ac-val ac-green">' + pfahrt + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Angebot</span><span class="ac-val ac-green">' + angebot + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2014 Kein Kontakt</span><span class="ac-val ac-muted">' + kein + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2709 Marketing-Einwilligung</span><span class="ac-val ac-green">' + consent + '</span></div>';
+  html += '</div>';
+
+  if (dealers.length) {
+    html += '<table class="wp-dealer-table"><thead><tr><th>H\u00e4ndler</th><th>Ort</th><th>Leads</th></tr></thead><tbody>';
+    dealers.forEach(function(r) {
+      html += '<tr><td>' + escHtml(r.dealer_name || '\u2013') + '</td><td>' + escHtml(r.dealer_city || '') + '</td><td><strong>' + r.lead_count + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  if (!total) {
+    html += '<p class="analytics-note">Noch keine Gewinnspiel-Leads f\u00fcr dieses Event.</p>';
+  }
+  cont.innerHTML = html;
 }
 
 function renderAnalyticsFromRpc(d, cont) {
