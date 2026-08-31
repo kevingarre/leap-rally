@@ -28,7 +28,9 @@ else:
   fi
 fi
 
-# PostgREST Schema-Cache neu laden (SIGUSR1)
-if pgrep postgrest > /dev/null; then
-  pkill -SIGUSR1 postgrest && echo "postgrest: Schema-Cache reload OK"
+# PostgREST Schema-Cache neu laden (SIGUSR1) — läuft als postgres-User
+if pgrep -x postgrest > /dev/null; then
+  sudo -u postgres pkill -SIGUSR1 -x postgrest 2>/dev/null || kill -SIGUSR1 $(pgrep -x postgrest | head -1) 2>/dev/null
+  echo "postgrest: SIGUSR1 gesendet"
+  sleep 2
 fi
