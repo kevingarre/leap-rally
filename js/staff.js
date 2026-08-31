@@ -1112,7 +1112,7 @@ function renderAnalyticsFromRpc(d, cont) {
   var angebot    = Number(d.angebot       || 0);
   var kein       = Number(d.kein_kontakt  || 0);
   var ohneDaten  = Math.max(0, total - pCount);
-  var convRate   = total > 0 ? Math.round((convCount / total) * 100) : 0;
+  var convRate   = pCount > 0 ? Math.round((convCount / pCount) * 100) : 0;
   var topModel   = d.top_vehicle ? d.top_vehicle.toUpperCase() + (d.top_vehicle_count > 1 ? ' \u00d7' + d.top_vehicle_count : '') : '\u2013';
 
   var html = '<div class="analytics-grid">';
@@ -1132,6 +1132,14 @@ function renderAnalyticsFromRpc(d, cont) {
       '<div class="ac-row"><span class="ac-label">\u2014 Kein Kontakt</span><span class="ac-val ac-muted">' + kein + '</span></div>' +
       '<div class="ac-row"><span class="ac-label">\u2014 Ohne Daten</span><span class="ac-val ac-muted">' + ohneDaten + '</span></div>' +
     '</div>';
+  var dealers = d.top_dealers || [];
+  if (dealers.length) {
+    html += '<table class="wp-dealer-table"><thead><tr><th>H\u00e4ndler</th><th>Ort</th><th>Spieler</th></tr></thead><tbody>';
+    dealers.forEach(function(r) {
+      html += '<tr><td>' + escHtml(r.dealer_name || '\u2013') + '</td><td>' + escHtml(r.dealer_city || '') + '</td><td><strong>' + r.lead_count + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
   cont.innerHTML = html;
 }
 
