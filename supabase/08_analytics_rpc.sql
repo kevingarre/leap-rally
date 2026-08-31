@@ -23,6 +23,7 @@ DECLARE
   v_kein       integer;
   v_top_v      text;
   v_top_vc     integer;
+  v_by_dealer  json;
 BEGIN
   IF p_staff_pin <> '2882' THEN
     RAISE EXCEPTION 'unauthorized';
@@ -53,6 +54,18 @@ BEGIN
   WHERE event_id = p_event_id AND vehicle_interest IS NOT NULL
   GROUP BY vehicle_interest ORDER BY COUNT(*) DESC LIMIT 1;
 
+  SELECT json_agg(row_to_json(x))
+  INTO v_by_dealer
+  FROM (
+    SELECT dealer_name, dealer_city, COUNT(*)::integer AS lead_count
+    FROM players
+    WHERE event_id = p_event_id
+      AND dealer_name IS NOT NULL AND dealer_name <> ''
+    GROUP BY dealer_name, dealer_city
+    ORDER BY COUNT(*) DESC
+    LIMIT 5
+  ) x;
+
   RETURN json_build_object(
     'total_scores',      COALESCE(v_total,     0),
     'avg_score',         COALESCE(v_avg_score, 0),
@@ -63,7 +76,8 @@ BEGIN
     'angebot',           COALESCE(v_angebot,   0),
     'kein_kontakt',      COALESCE(v_kein,      0),
     'top_vehicle',       v_top_v,
-    'top_vehicle_count', COALESCE(v_top_vc,    0)
+    'top_vehicle_count', COALESCE(v_top_vc,    0),
+    'top_dealers',       COALESCE(v_by_dealer, '[]'::json)
   );
 END;
 $$;
