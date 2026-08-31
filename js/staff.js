@@ -1038,25 +1038,23 @@ function loadAnalytics() {
   if (gamePanel) gamePanel.innerHTML = '<div class="msg-loading">\u23f3 Lade Game-Analytics\u2026</div>';
   if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-loading">\u23f3 Lade Gewinnspiel-Analytics\u2026</div>';
 
-  var gameReq = callRpc('get_event_analytics', {
+  // Sequenziell: erst Game, dann WP — Rate-Limit (5 req/min) nicht doppelt triggern
+  return callRpc('get_event_analytics', {
     p_event_id:  currentEventId,
     p_staff_pin: STAFF_PIN,
   }).then(function(d) {
     if (gamePanel) renderAnalyticsFromRpc(d || {}, gamePanel);
-  }).catch(function(err) {
-    if (gamePanel) gamePanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
-  });
-
-  var wpReq = callRpc('get_wordpress_analytics', {
-    p_event_id:  currentEventId,
-    p_staff_pin: STAFF_PIN,
+    return callRpc('get_wordpress_analytics', {
+      p_event_id:  currentEventId,
+      p_staff_pin: STAFF_PIN,
+    });
   }).then(function(d) {
     if (wpPanel) renderWordpressAnalytics(d || {}, wpPanel);
   }).catch(function(err) {
-    if (wpPanel) wpPanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+    var msg = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+    if (gamePanel && gamePanel.innerHTML.indexOf('\u23f3') >= 0) gamePanel.innerHTML = msg;
+    if (wpPanel   && wpPanel.innerHTML.indexOf('\u23f3')   >= 0) wpPanel.innerHTML   = msg;
   });
-
-  return Promise.all([gameReq, wpReq]);
 }
 
 function switchAnalyticsTab(tab, btn) {
