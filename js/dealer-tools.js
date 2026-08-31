@@ -65,15 +65,16 @@
     if (key==='angebot'||key==='rp') return 'RP';
     return '';
   }
+  var DEFAULT_SITE_CODE='000';
   function dealerSiteCode(v) {
     var code=text(v);
     if (/^\d{1,3}$/.test(code)) return code.padStart(3,'0');
-    throw new Error('Händler-Standortkennung fehlt oder ist nicht dreistellig.');
+    return null;
   }
   function buildLeadCsv(payload) {
     var profile=payload.profile||{}, constants=Object.assign({},profile.constants||{},REQUIRED_EXPORT_CONSTANTS), models=profile.model_mapping||DEFAULT_MODELS;
-    var lines=[HEADERS.join(';')];
-    (payload.rows||[]).forEach(function(r){
+    var lines=[HEADERS.join(';')], siteWarnings=[];
+    (payload.rows||[]).forEach(function(r,idx){
       var m=models[String(r.vehicle_interest||'').toLowerCase()]||{};
       var data={}; HEADERS.forEach(function(h){data[h]='';});
       Object.keys(constants).forEach(function(k){if(HEADERS.indexOf(k)>=0)data[k]=constants[k];});
@@ -84,13 +85,19 @@
         PRIVACYTHIRDPARTY:boolValue(r.consent_partners,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:ctaValue(r.contact_intent),
         DEALERCODE:r.dealer_code||'',DEALERCITY:r.dealer_city||'',DEALER:r.dealer_name||'',
-        DEALERADDRESS:r.dealer_address||'',DEALERSITE:dealerSiteCode(r.dealer_site_code),
+        DEALERADDRESS:r.dealer_address||'',
         EVENTNAME:r.event_name||constants.EVENTNAME||'',EVENTLOCATION:r.event_location||constants.EVENTLOCATION||'',
         COMMUNICATIONCHANNEL:'', DISCLAIMERID:'1699'
       });
+      var site=dealerSiteCode(r.dealer_site_code);
+      if(site===null){
+        site=DEFAULT_SITE_CODE;
+        siteWarnings.push({index:idx+1,name:((r.first_name||'')+' '+(r.last_name||'')).trim(),dealer_code:r.dealer_code||'',dealer_name:r.dealer_name||'',raw:text(r.dealer_site_code)});
+      }
+      data.DEALERSITE=site;
       lines.push(HEADERS.map(function(h){return csvCell(data[h]);}).join(';'));
     });
-    return '\uFEFF'+lines.join('\r\n');
+    return {csv:'\uFEFF'+lines.join('\r\n'),warnings:siteWarnings};
   }
   function workbookRows(workbook) {
     var first=workbook.SheetNames[0];

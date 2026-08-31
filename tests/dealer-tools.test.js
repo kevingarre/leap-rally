@@ -24,7 +24,7 @@ test('verschobene und doppelte Händlerzeilen werden blockiert', () => {
 });
 
 test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping', () => {
-  const csv = tools.buildLeadCsv({
+  const result = tools.buildLeadCsv({
     profile:{constants:{BRAND:'VERALTET',COMMUNICATIONCHANNEL:'GAME'},model_mapping:tools.DEFAULT_MODELS},
     rows:[{lead_date:'2026-08-17T12:00:00Z',first_name:'Max',last_name:'Muster',zip:'10115',city:'Düsseldorf',
       email:'m@example.test',phone:'123',vehicle_interest:'b10',contact_intent:'angebot',
@@ -32,6 +32,8 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
       dealer_code:'803',dealer_site_code:'1',dealer_name:'Auto;Haus Nürnberg',dealer_address:'Weg 1',dealer_city:'Nürnberg',terms_version_at_entry:2,
       source_system:'wordpress',event_name:'TT Challenge',event_location:'Berlin'}]
   });
+  const csv=result.csv;
+  assert.equal(result.warnings.length,0);
   const lines=csv.replace(/^\uFEFF/,'').split('\r\n');
   assert.equal(lines.length,2);
   assert.equal(lines[0].split(';').length,62);
@@ -68,12 +70,26 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
   assert.ok(Buffer.from(csv, 'utf8').includes(Buffer.from('Düsseldorf', 'utf8')));
 });
 
-test('CTA unterscheidet Probefahrt und Angebot und Export blockiert fehlende Standortkennung', () => {
+test('CTA unterscheidet Probefahrt und Angebot', () => {
   const base={lead_date:'2026-08-17T12:00:00Z',vehicle_interest:'b10',dealer_site_code:'000'};
-  const csv=tools.buildLeadCsv({rows:[Object.assign({},base,{contact_intent:'probefahrt'})]});
-  const lines=csv.replace(/^\uFEFF/,'').split('\r\n'),headers=lines[0].split(';'),cells=parseSemicolon(lines[1]);
+  const result=tools.buildLeadCsv({rows:[Object.assign({},base,{contact_intent:'probefahrt'})]});
+  const lines=result.csv.replace(/^\uFEFF/,'').split('\r\n'),headers=lines[0].split(';'),cells=parseSemicolon(lines[1]);
   assert.equal(cells[headers.indexOf('CTA')],'TD');
-  assert.throws(() => tools.buildLeadCsv({rows:[Object.assign({},base,{dealer_site_code:''})]}), /Standortkennung/);
+});
+
+test('Export crasht NICHT bei fehlender Standortkennung, setzt Default 000 und warnt', () => {
+  const base={lead_date:'2026-08-17T12:00:00Z',vehicle_interest:'b10',first_name:'Jieyue',last_name:'Shi',dealer_code:'8030160',dealer_name:'Gromes'};
+  const result=tools.buildLeadCsv({rows:[Object.assign({},base,{dealer_site_code:''})]});
+  const lines=result.csv.replace(/^\uFEFF/,'').split('\r\n'),headers=lines[0].split(';'),cells=parseSemicolon(lines[1]);
+  assert.equal(cells[headers.indexOf('DEALERSITE')],'000');
+  assert.equal(result.warnings.length,1);
+  assert.equal(result.warnings[0].name,'Jieyue Shi');
+  // NULL und nicht-numerisch ebenso robust
+  const r2=tools.buildLeadCsv({rows:[Object.assign({},base,{dealer_site_code:null}),Object.assign({},base,{dealer_site_code:'ABC'})]});
+  assert.equal(r2.warnings.length,2);
+  const l2=r2.csv.replace(/^\uFEFF/,'').split('\r\n');
+  assert.equal(parseSemicolon(l2[1])[headers.indexOf('DEALERSITE')],'000');
+  assert.equal(parseSemicolon(l2[2])[headers.indexOf('DEALERSITE')],'000');
 });
 
 function parseSemicolon(line) {
