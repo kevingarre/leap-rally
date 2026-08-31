@@ -140,11 +140,24 @@ test.describe('Leap Rally public app', () => {
     await expect(page.locator('.legal-section').first()).toBeVisible();
   });
 
-  test('PLZ-only lead submission delegates dealer selection to the server', async ({ page }) => {
+  test('lead submission offers top three dealers and submits the selected dealer', async ({ page }) => {
     const monitor = monitorJsErrors(page);
     let submittedBody: Record<string, unknown> | null = null;
 
-    await page.route('**/rest/v1/rpc/submit_entry', async (route) => {
+    await page.route('**/rest/v1/events?*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{
+        id: '00000000-0000-4000-8000-000000000099', name: 'E2E', instant_win_score: 1500,
+        instant_win_ghost_req: false, terms_md: 'Test', terms_version: 1,
+      }]) });
+    });
+    await page.route('**/rest/v1/rpc/nearest_dealers_for_zip', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { dealer_code: 'TEST-803', name: 'Leapmotor Testhändler', address: 'Testweg 1', city: 'Berlin', distance_km: 4.2, rank: 1 },
+        { dealer_code: 'TEST-804', name: 'Leapmotor Wunschhändler', address: 'Testweg 2', city: 'Potsdam', distance_km: 8.4, rank: 2 },
+        { dealer_code: 'TEST-805', name: 'Leapmotor Dritthändler', address: 'Testweg 3', city: 'Berlin', distance_km: 12.6, rank: 3 },
+      ]) });
+    });
+    await page.route('**/rest/v1/rpc/submit_entry_v2', async (route) => {
       submittedBody = route.request().postDataJSON() as Record<string, unknown>;
       await route.fulfill({
         status: 200,
@@ -156,11 +169,11 @@ test.describe('Leap Rally public app', () => {
           is_returning: true,
           claim_code: null,
           dealer: {
-            dealer_code: 'TEST-803',
+            dealer_code: 'TEST-804',
             site_code: '001',
-            name: 'Leapmotor Testhändler',
-            city: 'Berlin',
-            distance_km: 4.2,
+            name: 'Leapmotor Wunschhändler',
+            city: 'Potsdam',
+            distance_km: 8.4,
           },
         }),
       });
@@ -190,6 +203,8 @@ test.describe('Leap Rally public app', () => {
     expect(submittedBody).toBeNull();
 
     await page.locator('#fi-zip').fill('10115');
+    await expect(page.locator('input[name="fi_dealer_code"]')).toHaveCount(3);
+    await page.locator('input[name="fi_dealer_code"][value="TEST-804"]').check();
     await page.locator('#optin-submit-btn').click();
 
     await expect.poll(() => submittedBody).not.toBeNull();
@@ -197,13 +212,12 @@ test.describe('Leap Rally public app', () => {
       p_zip: '10115',
       p_city: null,
       p_vehicle_interest: 'b10',
+      p_dealer_code: 'TEST-804',
       p_consent_stay: true,
       p_consent_offers: false,
       p_consent_partners: true,
     });
-    await expect(page.locator('.dealer-assignment')).toContainText(
-      'Zugeordneter Händler: Leapmotor Testhändler, Berlin · ca. 4.2 km',
-    );
+    await expect(page.locator('.dealer-assignment')).toHaveCount(0);
     monitor.assertNoErrors();
   });
 });

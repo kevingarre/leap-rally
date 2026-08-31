@@ -2338,3 +2338,4 @@ button:focus-visible { outline: 2px solid var(--leap-green); outline-offset: 2px
     50%       { transform: translateX(-7px); opacity: 1; }
   }
 }
+.dealer-choice{display:grid;gap:10px;margin:4px 0 18px}.dealer-choice.hidden{display:none}.dealer-choice-title{font-size:13px;font-weight:800;color:#fff}.dealer-choice-status{font-size:13px;color:rgba(255,255,255,.72)}.dealer-choice-card{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.05);cursor:pointer}.dealer-choice-card:has(input:checked){border-color:#67c23a;background:rgba(103,194,58,.13)}.dealer-choice-card input{margin-top:4px}.dealer-choice-name{display:block;font-weight:800;color:#fff}.dealer-choice-meta{display:block;margin-top:3px;font-size:12px;line-height:1.35;color:rgba(255,255,255,.72)}

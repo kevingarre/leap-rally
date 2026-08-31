@@ -34,7 +34,7 @@ LEAP RALLY ist eine eigenständige, statische Web-App als interaktiver Concept-P
 - 🎨 **Animiert** – Ripples, Float-Zahlen, Energie-Funken, Puls-Animationen
 - 📍 **Händlerzuordnung** – nächster aktiver Leapmotor-Händler wird serverseitig aus der PLZ ermittelt
 - 📥 **Versionierter Händlerimport** – Excel/CSV mit Vorschau, Validierung und Rücknahme im Staff-Bereich
-- 📤 **EMEA-Lead-Export** – 61-spaltiges Zielprofil mit Modell-, Händler- und Einwilligungszuordnung
+- 📤 **EMEA-Lead-Export** – 62-spaltiges Zielprofil mit Modell-, Händler- und Einwilligungszuordnung
 
 Der Datenvertrag und die Abnahmeregeln stehen in `docs/HAENDLER-IMPORT-UND-LEAD-EXPORT.md`. Die Datenbankerweiterung liegt in `supabase/11_dealer_matching.sql`.
 
