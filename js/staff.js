@@ -1028,22 +1028,80 @@ function toggleDemoQr(btn) {
 // ══════════════════════════════════════════════════════════════
 
 function loadAnalytics() {
-  var cont = document.getElementById('analytics-content');
-  if (!cont) return Promise.resolve();
+  var gamePanel = document.getElementById('analytics-panel-game');
+  var wpPanel   = document.getElementById('analytics-panel-wordpress');
   if (!currentEventId) {
-    cont.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
+    if (gamePanel) gamePanel.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
+    if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-empty">Kein aktives Event.</div>';
     return Promise.resolve();
   }
-  cont.innerHTML = '<div class="msg-loading">\u23f3 Lade Analytics\u2026</div>';
+  if (gamePanel) gamePanel.innerHTML = '<div class="msg-loading">\u23f3 Lade Game-Analytics\u2026</div>';
+  if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-loading">\u23f3 Lade Gewinnspiel-Analytics\u2026</div>';
 
-  return callRpc('get_event_analytics', {
+  var gameReq = callRpc('get_event_analytics', {
     p_event_id:  currentEventId,
     p_staff_pin: STAFF_PIN,
   }).then(function(d) {
-    renderAnalyticsFromRpc(d || {}, cont);
+    if (gamePanel) renderAnalyticsFromRpc(d || {}, gamePanel);
   }).catch(function(err) {
-    cont.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+    if (gamePanel) gamePanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
   });
+
+  var wpReq = callRpc('get_wordpress_analytics', {
+    p_event_id:  currentEventId,
+    p_staff_pin: STAFF_PIN,
+  }).then(function(d) {
+    if (wpPanel) renderWordpressAnalytics(d || {}, wpPanel);
+  }).catch(function(err) {
+    if (wpPanel) wpPanel.innerHTML = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
+  });
+
+  return Promise.all([gameReq, wpReq]);
+}
+
+function switchAnalyticsTab(tab, btn) {
+  document.querySelectorAll('.analytics-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.analytics-panel').forEach(function(p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  var panel = document.getElementById('analytics-panel-' + tab);
+  if (panel) panel.classList.add('active');
+}
+
+function renderWordpressAnalytics(d, cont) {
+  var total     = Number(d.total             || 0);
+  var pfahrt    = Number(d.probefahrt        || 0);
+  var angebot   = Number(d.angebot           || 0);
+  var kein      = Number(d.kein_kontakt      || 0);
+  var consent   = Number(d.consent_marketing || 0);
+  var topV      = d.top_vehicle ? d.top_vehicle.toUpperCase() + (d.top_vehicle_count > 1 ? ' \u00d7' + d.top_vehicle_count : '') : '\u2013';
+  var convCount = pfahrt + angebot;
+  var convRate  = total > 0 ? Math.round((convCount / total) * 100) : 0;
+  var dealers   = d.top_dealers || [];
+
+  var html = '<div class="analytics-grid">';
+  html += analyticsBox('Leads', total);
+  html += analyticsBox('Conversion', convRate + '%');
+  html += analyticsBox('Top Modell', topV);
+  html += '</div>';
+  html += '<div class="analytics-contacts">';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Probefahrt</span><span class="ac-val ac-green">' + pfahrt + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Angebot</span><span class="ac-val ac-green">' + angebot + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2014 Kein Kontakt</span><span class="ac-val ac-muted">' + kein + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2709 Marketing-Einwilligung</span><span class="ac-val ac-green">' + consent + '</span></div>';
+  html += '</div>';
+
+  if (dealers.length) {
+    html += '<table class="wp-dealer-table"><thead><tr><th>H\u00e4ndler</th><th>Ort</th><th>Leads</th></tr></thead><tbody>';
+    dealers.forEach(function(r) {
+      html += '<tr><td>' + escHtml(r.dealer_name || '\u2013') + '</td><td>' + escHtml(r.dealer_city || '') + '</td><td><strong>' + r.lead_count + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  if (!total) {
+    html += '<p class="analytics-note">Noch keine Gewinnspiel-Leads f\u00fcr dieses Event.</p>';
+  }
+  cont.innerHTML = html;
 }
 
 function renderAnalyticsFromRpc(d, cont) {

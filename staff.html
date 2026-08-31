@@ -394,6 +394,56 @@
     .ac-muted { color: rgba(255,255,255,0.35); }
     .analytics-note { font-size: 12px; color: var(--lm-grey); margin-top: 8px; }
 
+    /* ── Analytics Tabs ─────────────────────────────────────── */
+    .analytics-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .analytics-tab {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.45);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .analytics-tab.active {
+      background: var(--lm-green);
+      border-color: var(--lm-green);
+      color: #000;
+    }
+    .analytics-panel { display: none; }
+    .analytics-panel.active { display: block; }
+    .wp-dealer-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .wp-dealer-table th {
+      text-align: left;
+      color: var(--lm-grey);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .wp-dealer-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.85);
+    }
+    .wp-dealer-table tr:last-child td { border-bottom: none; }
+
     /* Event meta */
     .event-name {
       font-size: 18px;
@@ -871,7 +921,16 @@
           <button class="btn-refresh" onclick="loadAnalytics()">↻ Aktualisieren</button>
         </div>
         <div class="section-body" id="analytics-content">
-          <div class="msg-loading">⏳ Lade Analytics…</div>
+          <div class="analytics-tabs">
+            <button class="analytics-tab active" onclick="switchAnalyticsTab('game', this)">🎮 Game</button>
+            <button class="analytics-tab" onclick="switchAnalyticsTab('wordpress', this)">📋 Gewinnspiel</button>
+          </div>
+          <div class="analytics-panel active" id="analytics-panel-game">
+            <div class="msg-loading">⏳ Lade Analytics…</div>
+          </div>
+          <div class="analytics-panel" id="analytics-panel-wordpress">
+            <div class="msg-loading">⏳ Lade Gewinnspiel-Analytics…</div>
+          </div>
         </div>
       </div>
 
