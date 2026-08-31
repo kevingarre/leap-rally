@@ -27,3 +27,8 @@ else:
     echo "nginx: Allowlist bereits aktuell"
   fi
 fi
+
+# PostgREST Schema-Cache neu laden (SIGUSR1)
+if pgrep postgrest > /dev/null; then
+  pkill -SIGUSR1 postgrest && echo "postgrest: Schema-Cache reload OK"
+fi
