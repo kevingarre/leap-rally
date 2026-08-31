@@ -1030,13 +1030,16 @@ function toggleDemoQr(btn) {
 function loadAnalytics() {
   var gamePanel = document.getElementById('analytics-panel-game');
   var wpPanel   = document.getElementById('analytics-panel-wordpress');
+  var totPanel  = document.getElementById('analytics-panel-total');
   if (!currentEventId) {
     if (gamePanel) gamePanel.innerHTML = '<div class="msg-empty">Kein aktives Event.</div>';
     if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-empty">Kein aktives Event.</div>';
+    if (totPanel)  totPanel.innerHTML  = '<div class="msg-empty">Kein aktives Event.</div>';
     return Promise.resolve();
   }
   if (gamePanel) gamePanel.innerHTML = '<div class="msg-loading">\u23f3 Lade Game-Analytics\u2026</div>';
   if (wpPanel)   wpPanel.innerHTML   = '<div class="msg-loading">\u23f3 Lade Gewinnspiel-Analytics\u2026</div>';
+  if (totPanel)  totPanel.innerHTML  = '<div class="msg-loading">\u23f3 Lade Gesamt-Analytics\u2026</div>';
 
   // Sequenziell: erst Game, dann WP — Rate-Limit (5 req/min) nicht doppelt triggern
   return callRpc('get_event_analytics', {
@@ -1050,10 +1053,17 @@ function loadAnalytics() {
     });
   }).then(function(d) {
     if (wpPanel) renderWordpressAnalytics(d || {}, wpPanel);
+    return callRpc('get_total_analytics', {
+      p_event_id:  currentEventId,
+      p_staff_pin: STAFF_PIN,
+    });
+  }).then(function(d) {
+    if (totPanel) renderTotalAnalytics(d || {}, totPanel);
   }).catch(function(err) {
     var msg = '<div class="msg-error">\u26a0\ufe0f Fehler: ' + escHtml(err.message) + '</div>';
     if (gamePanel && gamePanel.innerHTML.indexOf('\u23f3') >= 0) gamePanel.innerHTML = msg;
     if (wpPanel   && wpPanel.innerHTML.indexOf('\u23f3')   >= 0) wpPanel.innerHTML   = msg;
+    if (totPanel  && totPanel.innerHTML.indexOf('\u23f3')  >= 0) totPanel.innerHTML  = msg;
   });
 }
 
@@ -1098,6 +1108,42 @@ function renderWordpressAnalytics(d, cont) {
 
   if (!total) {
     html += '<p class="analytics-note">Noch keine Gewinnspiel-Leads f\u00fcr dieses Event.</p>';
+  }
+  cont.innerHTML = html;
+}
+
+function renderTotalAnalytics(d, cont) {
+  var gamePlayers = Number(d.game_players    || 0);
+  var gamePfahrt  = Number(d.game_probefahrt || 0);
+  var gameAngebot = Number(d.game_angebot    || 0);
+  var wpTotal     = Number(d.wp_total        || 0);
+  var wpPfahrt    = Number(d.wp_probefahrt   || 0);
+  var wpAngebot   = Number(d.wp_angebot      || 0);
+  var consent     = Number(d.consent_marketing || 0);
+  var topV        = d.top_vehicle ? d.top_vehicle.toUpperCase() + (d.top_vehicle_count > 1 ? ' \u00d7' + d.top_vehicle_count : '') : '\u2013';
+  var totalLeads  = gamePlayers + wpTotal;
+  var totalConv   = gamePfahrt + gameAngebot + wpPfahrt + wpAngebot;
+  var convRate    = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0;
+  var dealers     = d.top_dealers || [];
+
+  var html = '<div class="analytics-grid">';
+  html += analyticsBox('Leads gesamt', totalLeads);
+  html += analyticsBox('Conversion', convRate + '%');
+  html += analyticsBox('Top Modell', topV);
+  html += '</div>';
+  html += '<div class="analytics-contacts">';
+  html += '<div class="ac-row"><span class="ac-label">\ud83c\udfae Game-Spieler</span><span class="ac-val">' + gamePlayers + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\ud83d\udccb Gewinnspiel-Leads</span><span class="ac-val">' + wpTotal + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Probefahrt gesamt</span><span class="ac-val ac-green">' + (gamePfahrt + wpPfahrt) + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2714 Angebot gesamt</span><span class="ac-val ac-green">' + (gameAngebot + wpAngebot) + '</span></div>';
+  html += '<div class="ac-row"><span class="ac-label">\u2709 Marketing-Einwilligung</span><span class="ac-val ac-green">' + consent + '</span></div>';
+  html += '</div>';
+  if (dealers.length) {
+    html += '<table class="wp-dealer-table"><thead><tr><th>H\u00e4ndler</th><th>Ort</th><th>Leads</th></tr></thead><tbody>';
+    dealers.forEach(function(r) {
+      html += '<tr><td>' + escHtml(r.dealer_name || '\u2013') + '</td><td>' + escHtml(r.dealer_city || '') + '</td><td><strong>' + r.lead_count + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
   }
   cont.innerHTML = html;
 }
