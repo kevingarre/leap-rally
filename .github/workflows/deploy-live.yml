@@ -59,10 +59,12 @@ jobs:
             import re
             f = '/etc/nginx/sites-enabled/leap-api'
             txt = open(f).read()
-            RPCS = 'get_event_export|get_all_events_staff|get_staff_wins|get_event_analytics|get_wordpress_analytics|get_central_lead_export|archive_and_new_event|update_event|claim_instant_win'
-            txt2, n = re.subn(r'(location\s*~\s*\^/rest/v1/rpc/\()[^)]+\)', r'\g<1>' + RPCS + ')', txt)
-            if n: open(f,'w').write(txt2); print('nginx: gepacht')
-            else: print('nginx: bereits aktuell')
+            # leap_staff (restriktiv, 5r/m): nur mutative/sensitive RPCs
+            STAFF_RPCS = 'get_event_export|get_all_events_staff|get_staff_wins|get_event_analytics|archive_and_new_event|update_event|claim_instant_win'
+            # get_wordpress_analytics + get_central_lead_export kommen in leap_api (weniger restriktiv)
+            txt2, n = re.subn(r'(location\s*~\s*\^/rest/v1/rpc/\()[^)]+\)', r'\g<1>' + STAFF_RPCS + ')', txt)
+            if n: open(f,'w').write(txt2); print('nginx: staff-RPCs gepacht:', STAFF_RPCS)
+            else: print('nginx: kein Match')
             PYEOF
             nginx -t && systemctl reload nginx && echo "nginx: OK"
             # PostgREST reload
