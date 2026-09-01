@@ -59,6 +59,20 @@
   }
   function boolValue(v, yes, no) { return v ? (yes || '1') : (no || '0'); }
   function formatDate(v) { if(!v)return ''; var d=new Date(v); return isNaN(d.getTime())?'':d.toISOString(); }
+  function normalizePhone(v) {
+    var raw=text(v);
+    var cleaned=raw.replace(/(?!^\+)[^\d]/g,'').replace(/^\+(?!\d)/,'00');
+    if (!cleaned) return '';
+    if (cleaned === '+') return '00';
+    if (/^\+49/.test(cleaned)) return '0' + cleaned.slice(3);
+    if (/^0049/.test(cleaned)) return '0' + cleaned.slice(4);
+    if (/^490/.test(cleaned)) return cleaned.slice(2);
+    if (/^491/.test(cleaned)) return '0' + cleaned.slice(2);
+    if (/^0/.test(cleaned)) return cleaned;
+    if (/^1/.test(cleaned)) return '0' + cleaned;
+    if (/^\+/.test(cleaned)) return '00' + cleaned.slice(1);
+    return cleaned;
+  }
   function ctaValue(v) {
     var key=text(v).toLowerCase();
     if (key==='probefahrt'||key==='td'||key.startsWith('probefahrt')) return 'TD';
@@ -80,7 +94,7 @@
       Object.keys(constants).forEach(function(k){if(HEADERS.indexOf(k)>=0)data[k]=constants[k];});
       Object.assign(data,{
         LEADDATE:formatDate(r.lead_date),NAME:r.first_name||'',SURNAME:r.last_name||'',ZIPCODE:r.zip||'',CITY:r.city||'',
-        MAIL:r.email||'',PHONE:r.phone||'',MARKETINGEMAIL:boolValue(r.consent_stay_in_touch,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
+        MAIL:r.email||'',PHONE:normalizePhone(r.phone),MARKETINGEMAIL:boolValue(r.consent_stay_in_touch,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         PRIVACYPROFILATION:boolValue(r.consent_better_offers,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         PRIVACYTHIRDPARTY:boolValue(r.consent_partners,constants.CONSENT_TRUE,constants.CONSENT_FALSE),
         MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:ctaValue(r.contact_intent),
@@ -104,5 +118,5 @@
     return globalThis.XLSX.utils.sheet_to_json(workbook.Sheets[first],{defval:'',raw:false});
   }
   return { HEADERS:HEADERS, DEFAULT_MODELS:DEFAULT_MODELS, REQUIRED_EXPORT_CONSTANTS:REQUIRED_EXPORT_CONSTANTS, normalizeDealerRows:normalizeDealerRows,
-    buildLeadCsv:buildLeadCsv, workbookRows:workbookRows, csvCell:csvCell };
+    buildLeadCsv:buildLeadCsv, workbookRows:workbookRows, csvCell:csvCell, normalizePhone:normalizePhone };
 });
