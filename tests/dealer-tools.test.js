@@ -78,6 +78,7 @@ test('normalizePhone vereinheitlicht deutsche Mobilnummern und belässt internat
   assert.equal(tools.normalizePhone('017677123379'), '017677123379');
   assert.equal(tools.normalizePhone('0049 152 2485 9415'), '015224859415');
   assert.equal(tools.normalizePhone('+43660123456'), '0043660123456');
+  assert.equal(tools.normalizePhone('49015223133257'), '015223133257');
   assert.equal(tools.normalizePhone(''), '');
   assert.equal(tools.normalizePhone(null), '');
 });

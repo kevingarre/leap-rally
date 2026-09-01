@@ -66,6 +66,7 @@
     if (cleaned === '+') return '00';
     if (/^\+49/.test(cleaned)) return '0' + cleaned.slice(3);
     if (/^0049/.test(cleaned)) return '0' + cleaned.slice(4);
+    if (/^490/.test(cleaned)) return cleaned.slice(2);
     if (/^491/.test(cleaned)) return '0' + cleaned.slice(2);
     if (/^0/.test(cleaned)) return cleaned;
     if (/^1/.test(cleaned)) return '0' + cleaned;
