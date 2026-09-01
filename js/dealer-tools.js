@@ -61,8 +61,8 @@
   function formatDate(v) { if(!v)return ''; var d=new Date(v); return isNaN(d.getTime())?'':d.toISOString(); }
   function ctaValue(v) {
     var key=text(v).toLowerCase();
-    if (key==='probefahrt'||key==='td') return 'TD';
-    if (key==='angebot'||key==='rp') return 'RP';
+    if (key==='probefahrt'||key==='td'||key.startsWith('probefahrt')) return 'TD';
+    if (key==='angebot'||key==='rp'||key.startsWith('angebot')) return 'RP';
     return '';
   }
   var DEFAULT_SITE_CODE='000';

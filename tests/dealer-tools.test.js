@@ -77,6 +77,21 @@ test('CTA unterscheidet Probefahrt und Angebot', () => {
   assert.equal(cells[headers.indexOf('CTA')],'TD');
 });
 
+test('CTA erkennt WordPress-Strings (Probefahrt vereinbaren / Angebot erhalten)', () => {
+  const base={lead_date:'2026-08-17T12:00:00Z',vehicle_interest:'b10',dealer_site_code:'000'};
+  const mkCsv=(intent)=>{
+    const r=tools.buildLeadCsv({rows:[Object.assign({},base,{contact_intent:intent})]});
+    const lines=r.csv.replace(/^\uFEFF/,'').split('\r\n'),h=lines[0].split(';'),c=parseSemicolon(lines[1]);
+    return c[h.indexOf('CTA')];
+  };
+  assert.equal(mkCsv('Probefahrt vereinbaren'),'TD');
+  assert.equal(mkCsv('probefahrt vereinbaren'),'TD');
+  assert.equal(mkCsv('Angebot erhalten'),'RP');
+  assert.equal(mkCsv('angebot erhalten'),'RP');
+  assert.equal(mkCsv('nein'),'');
+  assert.equal(mkCsv(''),'');
+});
+
 test('Export crasht NICHT bei fehlender Standortkennung, setzt Default 000 und warnt', () => {
   const base={lead_date:'2026-08-17T12:00:00Z',vehicle_interest:'b10',first_name:'Jieyue',last_name:'Shi',dealer_code:'8030160',dealer_name:'Gromes'};
   const result=tools.buildLeadCsv({rows:[Object.assign({},base,{dealer_site_code:''})]});
