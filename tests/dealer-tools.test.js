@@ -27,7 +27,7 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
   const result = tools.buildLeadCsv({
     profile:{constants:{BRAND:'VERALTET',COMMUNICATIONCHANNEL:'GAME'},model_mapping:tools.DEFAULT_MODELS},
     rows:[{lead_date:'2026-08-17T12:00:00Z',first_name:'Max',last_name:'Muster',zip:'10115',city:'Düsseldorf',
-      email:'m@example.test',phone:'123',vehicle_interest:'b10',contact_intent:'angebot',
+      email:'m@example.test',phone:'+4915224859415',vehicle_interest:'b10',contact_intent:'angebot',
       consent_stay_in_touch:true,consent_better_offers:false,consent_partners:true,
       dealer_code:'803',dealer_site_code:'1',dealer_name:'Auto;Haus Nürnberg',dealer_address:'Weg 1',dealer_city:'Nürnberg',terms_version_at_entry:2,
       source_system:'wordpress',event_name:'TT Challenge',event_location:'Berlin'}]
@@ -46,6 +46,7 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
   assert.equal(value('DEALER'),'Auto;Haus Nürnberg');
   assert.equal(value('DEALERCITY'),'Nürnberg');
   assert.equal(value('DEALERSITE'),'001');
+  assert.equal(value('PHONE'),'015224859415');
   assert.equal(value('CTA'),'RP');
   assert.equal(value('BRAND'),'LEAPMOTOR');
   assert.equal(value('MARKET'),'8803');
@@ -68,6 +69,17 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
   assert.equal(value('COMMUNICATIONCHANNEL'),'');
   assert.deepEqual(Array.from(Buffer.from(csv, 'utf8').subarray(0,3)), [0xef, 0xbb, 0xbf]);
   assert.ok(Buffer.from(csv, 'utf8').includes(Buffer.from('Düsseldorf', 'utf8')));
+});
+
+test('normalizePhone vereinheitlicht deutsche Mobilnummern und belässt internationale als 00', () => {
+  assert.equal(tools.normalizePhone('+4915224859415'), '015224859415');
+  assert.equal(tools.normalizePhone('004915224859415'), '015224859415');
+  assert.equal(tools.normalizePhone('15224386569'), '015224386569');
+  assert.equal(tools.normalizePhone('017677123379'), '017677123379');
+  assert.equal(tools.normalizePhone('0049 152 2485 9415'), '015224859415');
+  assert.equal(tools.normalizePhone('+43660123456'), '0043660123456');
+  assert.equal(tools.normalizePhone(''), '');
+  assert.equal(tools.normalizePhone(null), '');
 });
 
 test('CTA unterscheidet Probefahrt und Angebot', () => {
