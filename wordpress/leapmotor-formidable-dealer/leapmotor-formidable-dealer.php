@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet den Leapmotor-Formularen die drei nächsten Händler an und überträgt Leads zentral.
- * Version: 2.1.3
+ * Version: 2.1.4
  * Author: DriveDesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class Leapmotor_Formidable_Dealer {
-	const VERSION = '2.1.3';
+	const VERSION = '2.1.4';
 	const API_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/nearest_dealers_for_zip';
 	const SYNC_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/submit_external_lead';
 	const OPTION_CLIENT_ID = 'leapmotor_integration_client_id';
@@ -207,6 +207,10 @@ final class Leapmotor_Formidable_Dealer {
 		return preg_match( '/^[0-9]{5}$/', $assignment_zip ) ? $assignment_zip : '';
 	}
 
+	public static function export_source( $config ) {
+		return sanitize_text_field( $config['source_event'] ?? '' );
+	}
+
 	private static function persist_assignment( $entry_id, $zip, $a ) {
 		global $wpdb;
 		$wpdb->replace( self::table_name(), array(
@@ -388,6 +392,7 @@ final class Leapmotor_Formidable_Dealer {
 				'BRAND' => 'LEAPMOTOR', 'LANGUAGE' => 'Tedesco', 'MARKET' => '8803',
 				'CTA' => self::cta( $config['contact'] ? ( $meta[ $config['contact'] ] ?? '' ) : '' ), 'DEALERCODE' => $a['dealer_code'] ?? '', 'DEALERCITY' => $a['dealer_city'] ?? '',
 				'DEALER' => $a['dealer_name'] ?? '', 'DEALERADDRESS' => $a['dealer_address'] ?? '', 'DEALERSITE' => self::site_code( $a['dealer_site_code'] ?? '' ) ?: '000',
+				'EVENTNAME' => self::export_source( $config ),
 				'PRIVACYPROFILATION' => self::consent( $meta[ $config['consent_profile'] ] ?? '' ),
 				'PRIVACYTHIRDPARTY' => self::consent( $meta[ $config['consent_partner'] ] ?? '' ),
 				'DISCLAIMERID' => '1699', 'COMMUNICATIONCHANNEL' => '',
