@@ -100,7 +100,7 @@
         MODELCODE:m.code||'',MODELDESCRIPTION:m.description||'',CTA:ctaValue(r.contact_intent),
         DEALERCODE:r.dealer_code||'',DEALERCITY:r.dealer_city||'',DEALER:r.dealer_name||'',
         DEALERADDRESS:r.dealer_address||'',
-        EVENTNAME:r.event_name||constants.EVENTNAME||'',EVENTLOCATION:r.event_location||constants.EVENTLOCATION||'',
+        EVENTNAME:r.source_event||r.event_name||constants.EVENTNAME||'',EVENTLOCATION:r.event_location||constants.EVENTLOCATION||'',
         COMMUNICATIONCHANNEL:'', DISCLAIMERID:'1699'
       });
       var site=dealerSiteCode(r.dealer_site_code);

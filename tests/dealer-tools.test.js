@@ -30,7 +30,7 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
       email:'m@example.test',phone:'+4915224859415',vehicle_interest:'b10',contact_intent:'angebot',
       consent_stay_in_touch:true,consent_better_offers:false,consent_partners:true,
       dealer_code:'803',dealer_site_code:'1',dealer_name:'Auto;Haus Nürnberg',dealer_address:'Weg 1',dealer_city:'Nürnberg',terms_version_at_entry:2,
-      source_system:'wordpress',event_name:'TT Challenge',event_location:'Berlin'}]
+      source_system:'wordpress',source_event:'leapmotor-tischtennis-gewinnspiel',event_name:'TT Challenge',event_location:'Berlin'}]
   });
   const csv=result.csv;
   assert.equal(result.warnings.length,0);
@@ -64,11 +64,23 @@ test('EMEA-Export hat exakt 62 Spalten, UTF-8 und das freigegebene Zielmapping',
   assert.equal(value('PRIVACYPROFILATION'),'0');
   assert.equal(value('PRIVACYTHIRDPARTY'),'1');
   assert.equal(value('MARKETINGPHONE'),'');
-  assert.equal(value('EVENTNAME'),'TT Challenge');
+  assert.equal(value('EVENTNAME'),'leapmotor-tischtennis-gewinnspiel');
   assert.equal(value('EVENTLOCATION'),'Berlin');
   assert.equal(value('COMMUNICATIONCHANNEL'),'');
   assert.deepEqual(Array.from(Buffer.from(csv, 'utf8').subarray(0,3)), [0xef, 0xbb, 0xbf]);
   assert.ok(Buffer.from(csv, 'utf8').includes(Buffer.from('Düsseldorf', 'utf8')));
+});
+
+test('EVENTNAME trennt WordPress-Formularquelle und Game-Event', () => {
+  const base={lead_date:'2026-08-17T12:00:00Z',dealer_site_code:'000'};
+  const result=tools.buildLeadCsv({rows:[
+    Object.assign({},base,{source_system:'wordpress',source_event:'leapmotor-e4-testival',event_name:'e4 Testival'}),
+    Object.assign({},base,{source_system:'game',event_name:'e4 Testival'})
+  ]});
+  const lines=result.csv.replace(/^\uFEFF/,'').split('\r\n');
+  const headers=lines[0].split(';');
+  assert.equal(parseSemicolon(lines[1])[headers.indexOf('EVENTNAME')],'leapmotor-e4-testival');
+  assert.equal(parseSemicolon(lines[2])[headers.indexOf('EVENTNAME')],'e4 Testival');
 });
 
 test('normalizePhone vereinheitlicht deutsche Mobilnummern und belässt internationale als 00', () => {
