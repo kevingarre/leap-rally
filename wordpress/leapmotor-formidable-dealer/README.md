@@ -11,6 +11,12 @@ Integration für die Formidable-Formulare `7` (`leaptischte26`, Glücksrad) und 
 
 Beide Formulare werden zentral übertragen, über Formular-ID und Quelle unterschieden und per UUID dem Backend-Event `e4 Testival` zugeordnet. Formular 8 besitzt keine Kontaktabsicht und kein Wunschmodell; diese beiden Werte werden dort bewusst leer übertragen.
 
+Der lokale CSV-Rückfall-Export schreibt die stabile Formularquelle in `EVENTNAME`:
+`leapmotor-tischtennis-gewinnspiel` für Formular 7 und `leapmotor-e4-testival` für Formular 8.
+Die 62-spaltige Struktur bleibt unverändert. `CTA` wird bei Formular 7 weiterhin aus der im
+Formular gewählten Kontaktabsicht abgeleitet; bei Formular 8 bleibt `CTA` leer, weil die Testfahrt
+bereits stattgefunden hat und kein neuer Testfahrtwunsch behauptet werden darf.
+
 Neue und aktualisierte Einträge werden aus den gespeicherten Formidable-Metadaten synchronisiert. Zusätzlich führt das Plugin die bereits serverseitig validierte PLZ/Orts-Zuordnung in eigenen versteckten POST-Feldern mit, damit Formidable-Feldtransformationen den Nachlauf nicht leeren können. Auf der Integrationsseite können fehlende oder fehlerhafte Übertragungen idempotent erneut gesendet werden.
 
 Beim ersten Export werden vorhandene Einträge mit gültiger PLZ, aber ohne vollständigen Snapshot einmalig serverseitig nachgezogen. Falls ein historischer Händler keine dreistellige Standortkennung mehr liefert, verwendet der lokale Rückfall-Export den dokumentierten neutralen Wert `000`, statt den gesamten Export abzubrechen.
