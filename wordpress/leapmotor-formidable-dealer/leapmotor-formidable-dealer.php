@@ -23,11 +23,13 @@ final class Leapmotor_Formidable_Dealer {
 		return array(
 			7 => array(
 				'form_id' => 7, 'form_key' => 'leaptischte26', 'source_event' => 'leapmotor-tischtennis-gewinnspiel',
+				'event_id' => 'b7be91e4-f2d4-4134-ab39-d025f5f93843',
 				'contact' => 96, 'model' => 97, 'zip' => 98, 'name' => 99, 'email' => 100, 'phone' => 101,
 				'consent_email' => 104, 'consent_profile' => 106, 'consent_partner' => 108, 'city' => 125,
 			),
 			8 => array(
 				'form_id' => 8, 'form_key' => 'leape42026', 'source_event' => 'leapmotor-e4-testival',
+				'event_id' => 'b7be91e4-f2d4-4134-ab39-d025f5f93843',
 				'contact' => null, 'model' => null, 'zip' => 130, 'name' => 132, 'email' => 133, 'phone' => 134,
 				'consent_email' => 137, 'consent_profile' => 139, 'consent_partner' => 141, 'city' => 131,
 			),
@@ -238,7 +240,7 @@ final class Leapmotor_Formidable_Dealer {
 		$model = $config['model'] ? self::model_key( $meta[ $config['model'] ] ?? '' ) : '';
 		return array(
 			'p_client_id' => $client, 'p_token' => $token, 'p_source_form_id' => (string) $config['form_id'],
-			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => $config['source_event'], 'p_lead_date' => gmdate( 'c' ),
+			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => $config['source_event'], 'p_event_id' => $config['event_id'], 'p_lead_date' => gmdate( 'c' ),
 			'p_contact_intent' => $contact, 'p_vehicle_interest' => $model,
 			'p_zip' => sanitize_text_field( $meta[ $config['zip'] ] ?? '' ), 'p_first_name' => $name[0], 'p_last_name' => $name[1],
 			'p_email' => sanitize_email( $meta[ $config['email'] ] ?? '' ), 'p_phone' => sanitize_text_field( $meta[ $config['phone'] ] ?? '' ),

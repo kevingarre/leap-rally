@@ -45,6 +45,8 @@ $form8 = Leapmotor_Formidable_Dealer::form_config( 8 );
 assert_same( 'leapmotor-tischtennis-gewinnspiel', $form7['source_event'], 'Form 7 source event changed.' );
 assert_same( 98, $form7['zip'], 'Form 7 ZIP mapping changed.' );
 assert_same( 'leapmotor-e4-testival', $form8['source_event'], 'Form 8 source event mapping failed.' );
+assert_same( 'b7be91e4-f2d4-4134-ab39-d025f5f93843', $form7['event_id'], 'Form 7 backend event mapping failed.' );
+assert_same( $form7['event_id'], $form8['event_id'], 'Both WordPress forms must target the same backend event.' );
 assert_same( 130, $form8['zip'], 'Form 8 ZIP mapping failed.' );
 assert_same( 131, $form8['city'], 'Form 8 city mapping failed.' );
 assert_same( null, $form8['contact'], 'Form 8 must not invent a contact-intent field.' );
@@ -56,6 +58,7 @@ $payload8 = Leapmotor_Formidable_Dealer::build_sync_payload( 123, $form8, array(
 ), 'client', 'token', array( 'dealer_code' => 'D-1' ) );
 assert_same( '8', $payload8['p_source_form_id'], 'Form 8 source form ID failed.' );
 assert_same( 'leapmotor-e4-testival', $payload8['p_source_event'], 'Form 8 source event payload failed.' );
+assert_same( 'b7be91e4-f2d4-4134-ab39-d025f5f93843', $payload8['p_event_id'], 'Form 8 backend event payload failed.' );
 assert_same( '', $payload8['p_contact_intent'], 'Form 8 contact intent must stay empty.' );
 assert_same( '', $payload8['p_vehicle_interest'], 'Form 8 vehicle interest must stay empty.' );
 assert_same( '01234', $payload8['p_zip'], 'Form 8 ZIP lost its leading zero.' );

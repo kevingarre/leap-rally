@@ -9,7 +9,7 @@ Integration für die Formidable-Formulare `7` (`leaptischte26`, Glücksrad) und 
 - speichert einen unveränderlichen Händler-Snapshot je Formidable-Eintrag,
 - stellt im Formidable-Menü den 62-spaltigen `LEAD_EMEA_PERM`-Export bereit.
 
-Beide Formulare werden zentral übertragen und über Formular-ID und Quelle unterschieden. Formular 8 besitzt keine Kontaktabsicht und kein Wunschmodell; diese beiden Werte werden dort bewusst leer übertragen.
+Beide Formulare werden zentral übertragen, über Formular-ID und Quelle unterschieden und per UUID dem Backend-Event `e4 Testival` zugeordnet. Formular 8 besitzt keine Kontaktabsicht und kein Wunschmodell; diese beiden Werte werden dort bewusst leer übertragen.
 
 Beim ersten Export werden vorhandene Einträge mit gültiger PLZ, aber ohne Snapshot einmalig serverseitig nachgezogen. Neue Einträge erhalten ihren Snapshot direkt beim Speichern.
 
