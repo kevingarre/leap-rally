@@ -22,7 +22,7 @@ function assert_same( $expected, $actual, $message ) {
 }
 
 $headers = Leapmotor_Formidable_Dealer::headers();
-assert_same( '2.1.3', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
+assert_same( '2.1.4', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
 assert_same( true, in_array( 'frm_after_create_entry', $registered_actions, true ), 'Create hook is missing.' );
 assert_same( true, in_array( 'frm_after_update_entry', $registered_actions, true ), 'Update hook is missing.' );
 assert_same( true, in_array( 'admin_post_leapmotor_resync', $registered_actions, true ), 'Resync action is missing.' );
@@ -59,6 +59,9 @@ assert_same( 130, $form8['zip'], 'Form 8 ZIP mapping failed.' );
 assert_same( 131, $form8['city'], 'Form 8 city mapping failed.' );
 assert_same( null, $form8['contact'], 'Form 8 must not invent a contact-intent field.' );
 assert_same( null, $form8['model'], 'Form 8 must not invent a vehicle-interest field.' );
+assert_same( 'leapmotor-tischtennis-gewinnspiel', Leapmotor_Formidable_Dealer::export_source( $form7 ), 'Form 7 CSV source mapping failed.' );
+assert_same( 'leapmotor-e4-testival', Leapmotor_Formidable_Dealer::export_source( $form8 ), 'Form 8 CSV source mapping failed.' );
+assert_same( '', Leapmotor_Formidable_Dealer::cta( $form8['contact'] ? 'Probefahrt' : '' ), 'Form 8 must not claim a future test-drive request.' );
 
 $wpdb = new class {
 	public $prefix = 'wp_';
