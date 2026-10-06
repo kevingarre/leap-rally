@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet den Leapmotor-Formularen die drei nächsten Händler an und überträgt Leads zentral.
- * Version: 2.1.2
+ * Version: 2.1.3
  * Author: DriveDesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class Leapmotor_Formidable_Dealer {
-	const VERSION = '2.1.2';
+	const VERSION = '2.1.3';
 	const API_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/nearest_dealers_for_zip';
 	const SYNC_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/submit_external_lead';
 	const OPTION_CLIENT_ID = 'leapmotor_integration_client_id';
@@ -165,7 +165,8 @@ final class Leapmotor_Formidable_Dealer {
 			$a = is_wp_error( $dealers ) ? null : self::select_assignment( $dealers, $selected_code );
 		}
 		if ( ! is_array( $a ) ) { return; }
-		self::persist_city( $entry_id, $config['city'], $a['lead_city'] );
+		self::persist_entry_meta( $entry_id, $config['zip'], $zip );
+		self::persist_entry_meta( $entry_id, $config['city'], $a['lead_city'] );
 		self::persist_assignment( $entry_id, $zip, $a );
 		$meta[ $config['city'] ] = $a['lead_city'];
 		self::sync_entry( $entry_id, $config, $a, $meta );
@@ -195,8 +196,15 @@ final class Leapmotor_Formidable_Dealer {
 		return $meta;
 	}
 
-	private static function persist_city( $entry_id, $field_id, $city ) {
-		if ( class_exists( 'FrmEntryMeta' ) ) { FrmEntryMeta::update_entry_meta( (int) $entry_id, (int) $field_id, null, sanitize_text_field( $city ) ); }
+	private static function persist_entry_meta( $entry_id, $field_id, $value ) {
+		if ( class_exists( 'FrmEntryMeta' ) ) { FrmEntryMeta::update_entry_meta( (int) $entry_id, (int) $field_id, null, sanitize_text_field( $value ) ); }
+	}
+
+	public static function export_zip( $meta_zip, $assignment_zip ) {
+		$meta_zip = trim( sanitize_text_field( $meta_zip ) );
+		if ( preg_match( '/^[0-9]{5}$/', $meta_zip ) ) { return $meta_zip; }
+		$assignment_zip = trim( sanitize_text_field( $assignment_zip ) );
+		return preg_match( '/^[0-9]{5}$/', $assignment_zip ) ? $assignment_zip : '';
 	}
 
 	private static function persist_assignment( $entry_id, $zip, $a ) {
@@ -331,7 +339,8 @@ final class Leapmotor_Formidable_Dealer {
 			$stored_code = $wpdb->get_var( $wpdb->prepare( 'SELECT dealer_code FROM ' . self::table_name() . ' WHERE entry_id=%d', $item['id'] ) );
 			$a = $stored_code ? self::select_assignment( $dealers, $stored_code ) : ( $dealers[0] ?? null );
 			if ( ! is_array( $a ) ) { continue; }
-			self::persist_city( $item['id'], $config['city'], $a['lead_city'] );
+			self::persist_entry_meta( $item['id'], $config['zip'], $zip );
+			self::persist_entry_meta( $item['id'], $config['city'], $a['lead_city'] );
 			self::persist_assignment( $item['id'], $zip, $a );
 			$meta[ $config['city'] ] = $a['lead_city'];
 			self::sync_entry( $item['id'], $config, $a, $meta );
@@ -356,7 +365,7 @@ final class Leapmotor_Formidable_Dealer {
 			$meta_rows = $wpdb->get_results( $wpdb->prepare( "SELECT field_id, meta_value FROM {$wpdb->prefix}frm_item_metas WHERE item_id=%d", $item['id'] ), ARRAY_A );
 			$meta = array(); foreach ( $meta_rows as $m ) { $meta[ (int) $m['field_id'] ] = maybe_unserialize( $m['meta_value'] ); }
 			$a = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table_name() . ' WHERE entry_id=%d', $item['id'] ), ARRAY_A );
-			$entry_zip = isset( $meta[ $config['zip'] ] ) ? trim( (string) $meta[ $config['zip'] ] ) : '';
+			$entry_zip = self::export_zip( $meta[ $config['zip'] ] ?? '', $a['lead_zip'] ?? '' );
 			if ( ( ! $a || ! self::site_code( $a['dealer_site_code'] ?? '' ) ) && preg_match( '/^[0-9]{5}$/', $entry_zip ) ) {
 				$dealers = self::lookup( $entry_zip );
 				$selected = ! is_wp_error( $dealers ) && $a ? self::select_assignment( $dealers, $a['dealer_code'] ?? '' ) : null;
@@ -371,7 +380,7 @@ final class Leapmotor_Formidable_Dealer {
 			$data = array_fill_keys( self::headers(), '' );
 			$data = array_merge( $data, array(
 				'LEADDATE' => gmdate( 'c', strtotime( $item['created_at'] . ' UTC' ) ), 'NAME' => $name[0], 'SURNAME' => $name[1],
-				'ZIPCODE' => $meta[ $config['zip'] ] ?? '', 'CITY' => $a['lead_city'] ?? '', 'COUNTRYCODE' => 'DE',
+				'ZIPCODE' => $entry_zip, 'CITY' => $a['lead_city'] ?? '', 'COUNTRYCODE' => 'DE',
 				'MAIL' => $meta[ $config['email'] ] ?? '', 'PHONE' => $meta[ $config['phone'] ] ?? '',
 				'MARKETINGEMAIL' => self::consent( $meta[ $config['consent_email'] ] ?? '' ),
 				'MODELCODE' => $model[0], 'MODELDESCRIPTION' => $model[1], 'CAMPAIGN' => '17646', 'OFFER' => 'EARNED MEDIA',
