@@ -27,10 +27,20 @@
     output.className = 'leapmotor-dealer-result';
     output.setAttribute('aria-live', 'polite');
     zip.closest('.frm_form_field')?.appendChild(output);
+    var syncZip = document.createElement('input');
+    syncZip.type = 'hidden';
+    syncZip.name = 'leapmotor_lead_zip';
+    form.appendChild(syncZip);
+    var syncCity = document.createElement('input');
+    syncCity.type = 'hidden';
+    syncCity.name = 'leapmotor_lead_city';
+    form.appendChild(syncCity);
     var controller;
 
     function render(dealers) {
       if (city) city.value = dealers[0]?.lead_city || '';
+      syncZip.value = zip.value.trim();
+      syncCity.value = dealers[0]?.lead_city || '';
       output.innerHTML = '<legend>' + escapeHtml(cfg.labels.title) + '</legend>' + dealers.map(function (dealer, index) {
         return '<label class="leapmotor-dealer-card"><input type="radio" name="leapmotor_dealer_code" value="' + escapeHtml(dealer.dealer_code) + '"' + (index === 0 ? ' checked' : '') + ' required>' +
           '<span><strong>' + escapeHtml(dealer.name) + '</strong><small>' + escapeHtml(dealer.address) + ', ' + escapeHtml(dealer.city) + ' · ca. ' + escapeHtml(dealer.distance_km) + ' km</small></span></label>';
@@ -40,6 +50,8 @@
     async function lookup() {
       var value = zip.value.trim();
       output.innerHTML = '';
+      syncZip.value = '';
+      syncCity.value = '';
       if (!/^[0-9]{5}$/.test(value)) return;
       if (controller) controller.abort();
       controller = new AbortController();

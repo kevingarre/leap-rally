@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet den Leapmotor-Formularen die drei nächsten Händler an und überträgt Leads zentral.
- * Version: 2.1.1
+ * Version: 2.1.2
  * Author: DriveDesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class Leapmotor_Formidable_Dealer {
-	const VERSION = '2.1.1';
+	const VERSION = '2.1.2';
 	const API_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/nearest_dealers_for_zip';
 	const SYNC_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/submit_external_lead';
 	const OPTION_CLIENT_ID = 'leapmotor_integration_client_id';
@@ -155,7 +155,8 @@ final class Leapmotor_Formidable_Dealer {
 		$config = self::form_config( $form_id );
 		if ( ! $config ) { return; }
 		$meta = self::entry_meta( $entry_id, $config );
-		$zip = isset( $meta[ $config['zip'] ] ) ? trim( sanitize_text_field( $meta[ $config['zip'] ] ) ) : '';
+		$zip = self::lead_zip( $meta, $config['zip'], $_POST );
+		$meta[ $config['zip'] ] = $zip;
 		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) { return; }
 		$a = self::$validated_assignments[ $config['form_id'] ] ?? null;
 		if ( ! is_array( $a ) ) {
@@ -168,6 +169,12 @@ final class Leapmotor_Formidable_Dealer {
 		self::persist_assignment( $entry_id, $zip, $a );
 		$meta[ $config['city'] ] = $a['lead_city'];
 		self::sync_entry( $entry_id, $config, $a, $meta );
+	}
+
+	public static function lead_zip( $meta, $field_id, $post ) {
+		$zip = isset( $meta[ $field_id ] ) ? trim( sanitize_text_field( $meta[ $field_id ] ) ) : '';
+		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) && isset( $post['leapmotor_lead_zip'] ) ) { $zip = trim( sanitize_text_field( wp_unslash( $post['leapmotor_lead_zip'] ) ) ); }
+		return preg_match( '/^[0-9]{5}$/', $zip ) ? $zip : '';
 	}
 
 	public static function entry_meta( $entry_id, $config ) {

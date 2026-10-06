@@ -22,7 +22,7 @@ function assert_same( $expected, $actual, $message ) {
 }
 
 $headers = Leapmotor_Formidable_Dealer::headers();
-assert_same( '2.1.1', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
+assert_same( '2.1.2', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
 assert_same( true, in_array( 'frm_after_create_entry', $registered_actions, true ), 'Create hook is missing.' );
 assert_same( true, in_array( 'frm_after_update_entry', $registered_actions, true ), 'Update hook is missing.' );
 assert_same( true, in_array( 'admin_post_leapmotor_resync', $registered_actions, true ), 'Resync action is missing.' );
@@ -75,6 +75,8 @@ $_POST['item_meta'] = array();
 $stored8 = Leapmotor_Formidable_Dealer::entry_meta( 123, $form8 );
 assert_same( '01234', $stored8[130], 'Stored Formidable ZIP fallback failed.' );
 assert_same( 'max@example.test', $stored8[133], 'Stored Formidable email fallback failed.' );
+assert_same( '01234', Leapmotor_Formidable_Dealer::lead_zip( array(), 130, array( 'leapmotor_lead_zip' => '01234' ) ), 'Plugin POST ZIP fallback failed.' );
+assert_same( '', Leapmotor_Formidable_Dealer::lead_zip( array(), 130, array( 'leapmotor_lead_zip' => '12AB' ) ), 'Invalid plugin POST ZIP was accepted.' );
 
 $payload8 = Leapmotor_Formidable_Dealer::build_sync_payload( 123, $form8, array(
 	130 => '01234', 132 => array( 'first' => 'Max', 'last' => 'Muster' ), 133 => 'max@example.test', 134 => '+49123',
