@@ -1,25 +1,15 @@
 <?php
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
- * Description: Bietet Formidable-Formular 7 die drei nächsten Leapmotor-Händler an und überträgt Leads zentral.
- * Version: 2.0.4
+ * Description: Bietet den Leapmotor-Formularen die drei nächsten Händler an und überträgt Leads zentral.
+ * Version: 2.1.0
  * Author: DriveDesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class Leapmotor_Formidable_Dealer {
-	const FORM_ID = 7;
-	const FIELD_CONTACT = 96;
-	const FIELD_MODEL = 97;
-	const FIELD_ZIP = 98;
-	const FIELD_NAME = 99;
-	const FIELD_EMAIL = 100;
-	const FIELD_PHONE = 101;
-	const FIELD_CONSENT_EMAIL = 104;
-	const FIELD_CONSENT_PROFILE = 106;
-	const FIELD_CONSENT_PARTNER = 108;
-	const FIELD_CITY = 125;
+	const VERSION = '2.1.0';
 	const API_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/nearest_dealers_for_zip';
 	const SYNC_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/submit_external_lead';
 	const OPTION_CLIENT_ID = 'leapmotor_integration_client_id';
@@ -27,7 +17,27 @@ final class Leapmotor_Formidable_Dealer {
 	const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6ImxlYXAtcmFsbHkifQ.FbPOePASGJO6vN73Cs1jwdot17Uo3s-2NK52RyN0-xM';
 
 	private static $lookup_cache = array();
-	private static $validated_assignment = null;
+	private static $validated_assignments = array();
+
+	public static function forms() {
+		return array(
+			7 => array(
+				'form_id' => 7, 'form_key' => 'leaptischte26', 'source_event' => 'leapmotor-tischtennis-gewinnspiel',
+				'contact' => 96, 'model' => 97, 'zip' => 98, 'name' => 99, 'email' => 100, 'phone' => 101,
+				'consent_email' => 104, 'consent_profile' => 106, 'consent_partner' => 108, 'city' => 125,
+			),
+			8 => array(
+				'form_id' => 8, 'form_key' => 'leape42026', 'source_event' => 'leapmotor-e4-testival',
+				'contact' => null, 'model' => null, 'zip' => 130, 'name' => 132, 'email' => 133, 'phone' => 134,
+				'consent_email' => 137, 'consent_profile' => 139, 'consent_partner' => 141, 'city' => 131,
+			),
+		);
+	}
+
+	public static function form_config( $form_id ) {
+		$forms = self::forms();
+		return $forms[ (int) $form_id ] ?? null;
+	}
 
 	public static function boot() {
 		register_activation_hook( __FILE__, array( __CLASS__, 'activate' ) );
@@ -97,48 +107,52 @@ final class Leapmotor_Formidable_Dealer {
 
 	public static function enqueue() {
 		if ( is_admin() ) { return; }
-		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), '2.0.2' );
-		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), '2.0.2', true );
+		wp_enqueue_style( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.css', __FILE__ ), array(), self::VERSION );
+		wp_enqueue_script( 'leapmotor-formidable-dealer', plugins_url( 'assets/form.js', __FILE__ ), array(), self::VERSION, true );
+		$forms = array();
+		foreach ( self::forms() as $config ) {
+			$forms[] = array( 'formId' => $config['form_id'], 'formKey' => $config['form_key'], 'zipField' => $config['zip'], 'cityField' => $config['city'] );
+		}
 		wp_localize_script( 'leapmotor-formidable-dealer', 'LeapmotorDealer', array(
-			'formId' => self::FORM_ID,
-			'zipField' => self::FIELD_ZIP,
-			'cityField' => self::FIELD_CITY,
+			'forms' => $forms,
 			'endpoint' => esc_url_raw( rest_url( 'leapmotor/v1/dealer' ) ),
 			'labels' => array( 'loading' => 'Händler werden ermittelt …', 'error' => 'Für diese PLZ konnten keine Händler ermittelt werden.', 'title' => 'Wähle deinen Leapmotor-Händler' ),
 		) );
 	}
 
 	public static function validate_zip( $errors, $field, $value ) {
-		if ( (int) $field->form_id !== self::FORM_ID || (int) $field->id !== self::FIELD_ZIP ) { return $errors; }
+		$config = self::form_config( $field->form_id );
+		if ( ! $config || (int) $field->id !== $config['zip'] ) { return $errors; }
 		$zip = trim( (string) $value );
-		$contact = isset( $_POST['item_meta'][ self::FIELD_CONTACT ] ) ? sanitize_text_field( wp_unslash( $_POST['item_meta'][ self::FIELD_CONTACT ] ) ) : '';
+		$contact = $config['contact'] && isset( $_POST['item_meta'][ $config['contact'] ] ) ? sanitize_text_field( wp_unslash( $_POST['item_meta'][ $config['contact'] ] ) ) : '';
 		if ( $contact === 'nein, vorerst nicht' && $zip === '' ) { return $errors; }
 		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) {
-			$errors[ 'field' . self::FIELD_ZIP ] = 'Bitte gib eine gültige fünfstellige PLZ ein.';
+			$errors[ 'field' . $config['zip'] ] = 'Bitte gib eine gültige fünfstellige PLZ ein.';
 			return $errors;
 		}
 		$dealers = self::lookup( $zip );
 		if ( is_wp_error( $dealers ) ) {
-			$errors[ 'field' . self::FIELD_ZIP ] = 'Die Händlerzuordnung ist gerade nicht verfügbar. Bitte versuche es erneut.';
+			$errors[ 'field' . $config['zip'] ] = 'Die Händlerzuordnung ist gerade nicht verfügbar. Bitte versuche es erneut.';
 			return $errors;
 		}
 		$selected_code = isset( $_POST['leapmotor_dealer_code'] ) ? sanitize_text_field( wp_unslash( $_POST['leapmotor_dealer_code'] ) ) : '';
 		$assignment = self::select_assignment( $dealers, $selected_code );
 		if ( ! $assignment ) {
-			$errors[ 'field' . self::FIELD_ZIP ] = 'Bitte wähle einen der drei angezeigten Händler aus.';
+			$errors[ 'field' . $config['zip'] ] = 'Bitte wähle einen der drei angezeigten Händler aus.';
 			return $errors;
 		}
-		self::$validated_assignment = $assignment;
-		$_POST['item_meta'][ self::FIELD_ZIP ] = $zip;
-		$_POST['item_meta'][ self::FIELD_CITY ] = $assignment['lead_city'];
+		self::$validated_assignments[ $config['form_id'] ] = $assignment;
+		$_POST['item_meta'][ $config['zip'] ] = $zip;
+		$_POST['item_meta'][ $config['city'] ] = $assignment['lead_city'];
 		return $errors;
 	}
 
 	public static function save_assignment( $entry_id, $form_id ) {
-		if ( (int) $form_id !== self::FORM_ID ) { return; }
-		$zip = isset( $_POST['item_meta'][ self::FIELD_ZIP ] ) ? trim( sanitize_text_field( wp_unslash( $_POST['item_meta'][ self::FIELD_ZIP ] ) ) ) : '';
+		$config = self::form_config( $form_id );
+		if ( ! $config ) { return; }
+		$zip = isset( $_POST['item_meta'][ $config['zip'] ] ) ? trim( sanitize_text_field( wp_unslash( $_POST['item_meta'][ $config['zip'] ] ) ) ) : '';
 		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) { return; }
-		$a = self::$validated_assignment;
+		$a = self::$validated_assignments[ $config['form_id'] ] ?? null;
 		if ( ! is_array( $a ) ) {
 			$dealers = self::lookup( $zip );
 			$selected_code = isset( $_POST['leapmotor_dealer_code'] ) ? sanitize_text_field( wp_unslash( $_POST['leapmotor_dealer_code'] ) ) : '';
@@ -146,7 +160,7 @@ final class Leapmotor_Formidable_Dealer {
 		}
 		if ( ! is_array( $a ) ) { return; }
 		self::persist_assignment( $entry_id, $zip, $a );
-		self::sync_entry( $entry_id, $a );
+		self::sync_entry( $entry_id, $config, $a );
 	}
 
 	private static function persist_assignment( $entry_id, $zip, $a ) {
@@ -205,27 +219,33 @@ final class Leapmotor_Formidable_Dealer {
 		return array( trim( (string) $client ), trim( (string) $token ) );
 	}
 
-	private static function sync_entry( $entry_id, $a ) {
+	private static function sync_entry( $entry_id, $config, $a ) {
 		global $wpdb;
 		list( $client, $token ) = self::integration_credentials();
 		if ( $client === '' || $token === '' ) { self::mark_sync( $entry_id, 'pending', 'Integration noch nicht konfiguriert.' ); return; }
 		$meta = isset( $_POST['item_meta'] ) && is_array( $_POST['item_meta'] ) ? wp_unslash( $_POST['item_meta'] ) : array();
-		$name = self::name_parts( $meta[ self::FIELD_NAME ] ?? '' );
-		$payload = array(
-			'p_client_id' => $client, 'p_token' => $token, 'p_source_form_id' => (string) self::FORM_ID,
-			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => 'leapmotor-tischtennis-gewinnspiel', 'p_lead_date' => gmdate( 'c' ),
-			'p_contact_intent' => sanitize_text_field( $meta[ self::FIELD_CONTACT ] ?? '' ), 'p_vehicle_interest' => self::model_key( $meta[ self::FIELD_MODEL ] ?? '' ),
-			'p_zip' => sanitize_text_field( $meta[ self::FIELD_ZIP ] ?? '' ), 'p_first_name' => $name[0], 'p_last_name' => $name[1],
-			'p_email' => sanitize_email( $meta[ self::FIELD_EMAIL ] ?? '' ), 'p_phone' => sanitize_text_field( $meta[ self::FIELD_PHONE ] ?? '' ),
-			'p_consent_stay' => self::consent( $meta[ self::FIELD_CONSENT_EMAIL ] ?? '' ) === '1',
-			'p_consent_offers' => self::consent( $meta[ self::FIELD_CONSENT_PROFILE ] ?? '' ) === '1',
-			'p_consent_partners' => self::consent( $meta[ self::FIELD_CONSENT_PARTNER ] ?? '' ) === '1', 'p_dealer_code' => $a['dealer_code'],
-		);
+		$payload = self::build_sync_payload( $entry_id, $config, $meta, $client, $token, $a );
 		$response = wp_remote_post( self::SYNC_URL, array( 'timeout' => 10, 'headers' => array( 'apikey' => self::API_KEY, 'Content-Type' => 'application/json', 'Accept' => 'application/json' ), 'body' => wp_json_encode( $payload ) ) );
 		if ( is_wp_error( $response ) ) { self::mark_sync( $entry_id, 'error', $response->get_error_message() ); return; }
 		$code = wp_remote_retrieve_response_code( $response );
 		if ( $code < 200 || $code >= 300 ) { self::mark_sync( $entry_id, 'error', 'Backend HTTP ' . (int) $code ); return; }
 		$wpdb->update( self::table_name(), array( 'sync_status' => 'synced', 'sync_error' => null, 'synced_at' => current_time( 'mysql', true ) ), array( 'entry_id' => (int) $entry_id ), array( '%s', '%s', '%s' ), array( '%d' ) );
+	}
+
+	public static function build_sync_payload( $entry_id, $config, $meta, $client, $token, $a ) {
+		$name = self::name_parts( $meta[ $config['name'] ] ?? '' );
+		$contact = $config['contact'] ? sanitize_text_field( $meta[ $config['contact'] ] ?? '' ) : '';
+		$model = $config['model'] ? self::model_key( $meta[ $config['model'] ] ?? '' ) : '';
+		return array(
+			'p_client_id' => $client, 'p_token' => $token, 'p_source_form_id' => (string) $config['form_id'],
+			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => $config['source_event'], 'p_lead_date' => gmdate( 'c' ),
+			'p_contact_intent' => $contact, 'p_vehicle_interest' => $model,
+			'p_zip' => sanitize_text_field( $meta[ $config['zip'] ] ?? '' ), 'p_first_name' => $name[0], 'p_last_name' => $name[1],
+			'p_email' => sanitize_email( $meta[ $config['email'] ] ?? '' ), 'p_phone' => sanitize_text_field( $meta[ $config['phone'] ] ?? '' ),
+			'p_consent_stay' => self::consent( $meta[ $config['consent_email'] ] ?? '' ) === '1',
+			'p_consent_offers' => self::consent( $meta[ $config['consent_profile'] ] ?? '' ) === '1',
+			'p_consent_partners' => self::consent( $meta[ $config['consent_partner'] ] ?? '' ) === '1', 'p_dealer_code' => $a['dealer_code'],
+		);
 	}
 
 	private static function mark_sync( $entry_id, $status, $error ) {
@@ -267,14 +287,16 @@ final class Leapmotor_Formidable_Dealer {
 		if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Nicht erlaubt.', 403 ); }
 		check_admin_referer( 'leapmotor_emea_export' );
 		global $wpdb;
-		$items = $wpdb->get_results( $wpdb->prepare( "SELECT id, created_at FROM {$wpdb->prefix}frm_items WHERE form_id=%d AND is_draft=0 ORDER BY created_at, id", self::FORM_ID ), ARRAY_A );
+		$items = $wpdb->get_results( "SELECT id, form_id, created_at FROM {$wpdb->prefix}frm_items WHERE form_id IN (7,8) AND is_draft=0 ORDER BY created_at, id", ARRAY_A );
 		$models = array( 'Leapmotor B03x' => array( '485', 'B03X' ), 'Leapmotor B05' => array( '486', 'B05' ), 'Leapmotor B10' => array( 'B108', 'B10' ), 'Leapmotor C10' => array( 'B118', 'C10' ), 'Leapmotor T03' => array( '489', 'T03' ) );
 		$lines = array( self::csv_row( self::headers() ) );
 		foreach ( $items as $item ) {
+			$config = self::form_config( $item['form_id'] );
+			if ( ! $config ) { continue; }
 			$meta_rows = $wpdb->get_results( $wpdb->prepare( "SELECT field_id, meta_value FROM {$wpdb->prefix}frm_item_metas WHERE item_id=%d", $item['id'] ), ARRAY_A );
 			$meta = array(); foreach ( $meta_rows as $m ) { $meta[ (int) $m['field_id'] ] = maybe_unserialize( $m['meta_value'] ); }
 			$a = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table_name() . ' WHERE entry_id=%d', $item['id'] ), ARRAY_A );
-			$entry_zip = isset( $meta[ self::FIELD_ZIP ] ) ? trim( (string) $meta[ self::FIELD_ZIP ] ) : '';
+			$entry_zip = isset( $meta[ $config['zip'] ] ) ? trim( (string) $meta[ $config['zip'] ] ) : '';
 			if ( ! $a && preg_match( '/^[0-9]{5}$/', $entry_zip ) ) {
 				$dealers = self::lookup( $entry_zip );
 				if ( ! is_wp_error( $dealers ) && isset( $dealers[0] ) ) {
@@ -282,21 +304,22 @@ final class Leapmotor_Formidable_Dealer {
 					$a = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table_name() . ' WHERE entry_id=%d', $item['id'] ), ARRAY_A );
 				}
 			}
-			$name = self::name_parts( isset( $meta[ self::FIELD_NAME ] ) ? $meta[ self::FIELD_NAME ] : '' );
-			$model = isset( $models[ $meta[ self::FIELD_MODEL ] ?? '' ] ) ? $models[ $meta[ self::FIELD_MODEL ] ] : array( '', '' );
+			$name = self::name_parts( isset( $meta[ $config['name'] ] ) ? $meta[ $config['name'] ] : '' );
+			$model_value = $config['model'] ? ( $meta[ $config['model'] ] ?? '' ) : '';
+			$model = isset( $models[ $model_value ] ) ? $models[ $model_value ] : array( '', '' );
 			$data = array_fill_keys( self::headers(), '' );
 			$data = array_merge( $data, array(
 				'LEADDATE' => gmdate( 'c', strtotime( $item['created_at'] . ' UTC' ) ), 'NAME' => $name[0], 'SURNAME' => $name[1],
-				'ZIPCODE' => $meta[ self::FIELD_ZIP ] ?? '', 'CITY' => $a['lead_city'] ?? '', 'COUNTRYCODE' => 'DE',
-				'MAIL' => $meta[ self::FIELD_EMAIL ] ?? '', 'PHONE' => $meta[ self::FIELD_PHONE ] ?? '',
-				'MARKETINGEMAIL' => self::consent( $meta[ self::FIELD_CONSENT_EMAIL ] ?? '' ),
+				'ZIPCODE' => $meta[ $config['zip'] ] ?? '', 'CITY' => $a['lead_city'] ?? '', 'COUNTRYCODE' => 'DE',
+				'MAIL' => $meta[ $config['email'] ] ?? '', 'PHONE' => $meta[ $config['phone'] ] ?? '',
+				'MARKETINGEMAIL' => self::consent( $meta[ $config['consent_email'] ] ?? '' ),
 				'MODELCODE' => $model[0], 'MODELDESCRIPTION' => $model[1], 'CAMPAIGN' => '17646', 'OFFER' => 'EARNED MEDIA',
 				'LEVEL1' => 'EVENTS', 'LEVEL2' => 'QR', 'LEVEL3' => 'WWW', 'LEVEL4' => 'LEAPMOTOR', 'PROCESSTYPE' => 'Lead Self',
 				'BRAND' => 'LEAPMOTOR', 'LANGUAGE' => 'Tedesco', 'MARKET' => '8803',
-				'CTA' => self::cta( $meta[ self::FIELD_CONTACT ] ?? '' ), 'DEALERCODE' => $a['dealer_code'] ?? '', 'DEALERCITY' => $a['dealer_city'] ?? '',
+				'CTA' => self::cta( $config['contact'] ? ( $meta[ $config['contact'] ] ?? '' ) : '' ), 'DEALERCODE' => $a['dealer_code'] ?? '', 'DEALERCITY' => $a['dealer_city'] ?? '',
 				'DEALER' => $a['dealer_name'] ?? '', 'DEALERADDRESS' => $a['dealer_address'] ?? '', 'DEALERSITE' => self::site_code( $a['dealer_site_code'] ?? '' ),
-				'PRIVACYPROFILATION' => self::consent( $meta[ self::FIELD_CONSENT_PROFILE ] ?? '' ),
-				'PRIVACYTHIRDPARTY' => self::consent( $meta[ self::FIELD_CONSENT_PARTNER ] ?? '' ),
+				'PRIVACYPROFILATION' => self::consent( $meta[ $config['consent_profile'] ] ?? '' ),
+				'PRIVACYTHIRDPARTY' => self::consent( $meta[ $config['consent_partner'] ] ?? '' ),
 				'DISCLAIMERID' => '1699', 'COMMUNICATIONCHANNEL' => '',
 			) );
 			if ( ! preg_match( '/^[0-9]{3}$/', (string) $data['DEALERSITE'] ) ) { wp_die( 'Händler-Standortkennung fehlt oder ist nicht dreistellig.', 422 ); }
