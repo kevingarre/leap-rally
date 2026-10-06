@@ -1,13 +1,17 @@
 <?php
 define( 'ABSPATH', __DIR__ . '/' );
 function register_activation_hook() {}
-function add_action() {}
+$registered_actions = array();
+function add_action( $hook, $callback ) { global $registered_actions; $registered_actions[] = $hook; }
 function add_filter() {}
 function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
 function sanitize_email( $value ) { return filter_var( $value, FILTER_SANITIZE_EMAIL ); }
+function wp_unslash( $value ) { return $value; }
+function maybe_unserialize( $value ) { return $value; }
 function get_transient() { return false; }
 function set_transient() {}
 define( 'DAY_IN_SECONDS', 86400 );
+define( 'ARRAY_A', 'ARRAY_A' );
 require dirname( __DIR__ ) . '/wordpress/leapmotor-formidable-dealer/leapmotor-formidable-dealer.php';
 
 function assert_same( $expected, $actual, $message ) {
@@ -18,6 +22,10 @@ function assert_same( $expected, $actual, $message ) {
 }
 
 $headers = Leapmotor_Formidable_Dealer::headers();
+assert_same( '2.1.1', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
+assert_same( true, in_array( 'frm_after_create_entry', $registered_actions, true ), 'Create hook is missing.' );
+assert_same( true, in_array( 'frm_after_update_entry', $registered_actions, true ), 'Update hook is missing.' );
+assert_same( true, in_array( 'admin_post_leapmotor_resync', $registered_actions, true ), 'Resync action is missing.' );
 assert_same( 62, count( $headers ), 'EMEA export must contain exactly 62 columns.' );
 assert_same( array_search( 'LEVEL4', $headers, true ) + 1, array_search( 'PROCESSTYPE', $headers, true ), 'PROCESSTYPE must follow LEVEL4.' );
 assert_same( 'LEADDATE', $headers[0], 'First EMEA column changed.' );
@@ -51,6 +59,22 @@ assert_same( 130, $form8['zip'], 'Form 8 ZIP mapping failed.' );
 assert_same( 131, $form8['city'], 'Form 8 city mapping failed.' );
 assert_same( null, $form8['contact'], 'Form 8 must not invent a contact-intent field.' );
 assert_same( null, $form8['model'], 'Form 8 must not invent a vehicle-interest field.' );
+
+$wpdb = new class {
+	public $prefix = 'wp_';
+	public function prepare( $sql, $entry_id ) { return $sql . ' /* ' . (int) $entry_id . ' */'; }
+	public function get_results() {
+		return array(
+			array( 'field_id' => '130', 'meta_value' => '01234' ),
+			array( 'field_id' => '132', 'meta_value' => '{"first":"Max","last":"Muster"}' ),
+			array( 'field_id' => '133', 'meta_value' => 'max@example.test' ),
+		);
+	}
+};
+$_POST['item_meta'] = array();
+$stored8 = Leapmotor_Formidable_Dealer::entry_meta( 123, $form8 );
+assert_same( '01234', $stored8[130], 'Stored Formidable ZIP fallback failed.' );
+assert_same( 'max@example.test', $stored8[133], 'Stored Formidable email fallback failed.' );
 
 $payload8 = Leapmotor_Formidable_Dealer::build_sync_payload( 123, $form8, array(
 	130 => '01234', 132 => array( 'first' => 'Max', 'last' => 'Muster' ), 133 => 'max@example.test', 134 => '+49123',

@@ -11,7 +11,9 @@ Integration für die Formidable-Formulare `7` (`leaptischte26`, Glücksrad) und 
 
 Beide Formulare werden zentral übertragen, über Formular-ID und Quelle unterschieden und per UUID dem Backend-Event `e4 Testival` zugeordnet. Formular 8 besitzt keine Kontaktabsicht und kein Wunschmodell; diese beiden Werte werden dort bewusst leer übertragen.
 
-Beim ersten Export werden vorhandene Einträge mit gültiger PLZ, aber ohne Snapshot einmalig serverseitig nachgezogen. Neue Einträge erhalten ihren Snapshot direkt beim Speichern.
+Neue und aktualisierte Einträge werden aus den gespeicherten Formidable-Metadaten synchronisiert; der Ablauf hängt nicht davon ab, dass Formidable alle Felder bis zum Nachlauf in `$_POST` belässt. Auf der Integrationsseite können fehlende oder fehlerhafte Übertragungen idempotent erneut gesendet werden.
+
+Beim ersten Export werden vorhandene Einträge mit gültiger PLZ, aber ohne vollständigen Snapshot einmalig serverseitig nachgezogen. Falls ein historischer Händler keine dreistellige Standortkennung mehr liefert, verwendet der lokale Rückfall-Export den dokumentierten neutralen Wert `000`, statt den gesamten Export abzubrechen.
 
 Aktivierung erzeugt ausschließlich die additive Tabelle `wp_leapmotor_dealer_assignments`. Bestehende Formidable-Tabellen und Einträge werden nicht verändert.
 
