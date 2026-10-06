@@ -4,6 +4,7 @@ function register_activation_hook() {}
 function add_action() {}
 function add_filter() {}
 function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
+function sanitize_email( $value ) { return filter_var( $value, FILTER_SANITIZE_EMAIL ); }
 function get_transient() { return false; }
 function set_transient() {}
 define( 'DAY_IN_SECONDS', 86400 );
@@ -38,5 +39,31 @@ $dealers = array(
 );
 assert_same( $dealers[1], Leapmotor_Formidable_Dealer::select_assignment( $dealers, 'B' ), 'Chosen top-three dealer was not selected.' );
 assert_same( null, Leapmotor_Formidable_Dealer::select_assignment( $dealers, 'MANIPULATED' ), 'Dealer outside top three was accepted.' );
+
+$form7 = Leapmotor_Formidable_Dealer::form_config( 7 );
+$form8 = Leapmotor_Formidable_Dealer::form_config( 8 );
+assert_same( 'leapmotor-tischtennis-gewinnspiel', $form7['source_event'], 'Form 7 source event changed.' );
+assert_same( 98, $form7['zip'], 'Form 7 ZIP mapping changed.' );
+assert_same( 'leapmotor-e4-testival', $form8['source_event'], 'Form 8 source event mapping failed.' );
+assert_same( 'b7be91e4-f2d4-4134-ab39-d025f5f93843', $form7['event_id'], 'Form 7 backend event mapping failed.' );
+assert_same( $form7['event_id'], $form8['event_id'], 'Both WordPress forms must target the same backend event.' );
+assert_same( 130, $form8['zip'], 'Form 8 ZIP mapping failed.' );
+assert_same( 131, $form8['city'], 'Form 8 city mapping failed.' );
+assert_same( null, $form8['contact'], 'Form 8 must not invent a contact-intent field.' );
+assert_same( null, $form8['model'], 'Form 8 must not invent a vehicle-interest field.' );
+
+$payload8 = Leapmotor_Formidable_Dealer::build_sync_payload( 123, $form8, array(
+	130 => '01234', 132 => array( 'first' => 'Max', 'last' => 'Muster' ), 133 => 'max@example.test', 134 => '+49123',
+	137 => 'Stimme ich zu', 139 => 'Stimme ich NICHT zu', 141 => 'Stimme ich zu',
+), 'client', 'token', array( 'dealer_code' => 'D-1' ) );
+assert_same( '8', $payload8['p_source_form_id'], 'Form 8 source form ID failed.' );
+assert_same( 'leapmotor-e4-testival', $payload8['p_source_event'], 'Form 8 source event payload failed.' );
+assert_same( 'b7be91e4-f2d4-4134-ab39-d025f5f93843', $payload8['p_event_id'], 'Form 8 backend event payload failed.' );
+assert_same( '', $payload8['p_contact_intent'], 'Form 8 contact intent must stay empty.' );
+assert_same( '', $payload8['p_vehicle_interest'], 'Form 8 vehicle interest must stay empty.' );
+assert_same( '01234', $payload8['p_zip'], 'Form 8 ZIP lost its leading zero.' );
+assert_same( true, $payload8['p_consent_stay'], 'Form 8 stay-in-touch consent failed.' );
+assert_same( false, $payload8['p_consent_offers'], 'Form 8 offers consent failed.' );
+assert_same( true, $payload8['p_consent_partners'], 'Form 8 partner consent failed.' );
 
 echo "formidable-plugin: ok\n";

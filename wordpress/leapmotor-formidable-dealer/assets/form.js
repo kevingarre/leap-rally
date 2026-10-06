@@ -9,11 +9,11 @@
     });
   }
 
-  function init() {
-    var form = document.getElementById('form_leaptischte26') || document.querySelector('form input[name="form_id"][value="' + cfg.formId + '"]')?.form;
+  function initForm(formCfg) {
+    var form = document.getElementById('form_' + formCfg.formKey) || document.querySelector('form input[name="form_id"][value="' + formCfg.formId + '"]')?.form;
     if (!form) return;
-    var zip = form.querySelector('[name="item_meta[' + cfg.zipField + ']"]');
-    var city = form.querySelector('[name="item_meta[' + cfg.cityField + ']"]');
+    var zip = form.querySelector('[name="item_meta[' + formCfg.zipField + ']"]');
+    var city = form.querySelector('[name="item_meta[' + formCfg.cityField + ']"]');
     if (!zip) return;
 
     zip.type = 'text';
@@ -56,6 +56,10 @@
     }
     zip.addEventListener('input', function () { zip.value = zip.value.replace(/\D/g, '').slice(0, 5); if (zip.value.length === 5) lookup(); else output.innerHTML = ''; });
     zip.addEventListener('blur', lookup);
+  }
+
+  function init() {
+    (cfg.forms || []).forEach(initForm);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
