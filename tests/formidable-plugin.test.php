@@ -22,10 +22,11 @@ function assert_same( $expected, $actual, $message ) {
 }
 
 $headers = Leapmotor_Formidable_Dealer::headers();
-assert_same( '2.1.4', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
+assert_same( '2.1.5', Leapmotor_Formidable_Dealer::VERSION, 'Plugin version was not bumped.' );
 assert_same( true, in_array( 'frm_after_create_entry', $registered_actions, true ), 'Create hook is missing.' );
 assert_same( true, in_array( 'frm_after_update_entry', $registered_actions, true ), 'Update hook is missing.' );
 assert_same( true, in_array( 'admin_post_leapmotor_resync', $registered_actions, true ), 'Resync action is missing.' );
+assert_same( true, in_array( 'admin_post_leapmotor_resync_festival', $registered_actions, true ), 'Festival resync action is missing.' );
 assert_same( 62, count( $headers ), 'EMEA export must contain exactly 62 columns.' );
 assert_same( array_search( 'LEVEL4', $headers, true ) + 1, array_search( 'PROCESSTYPE', $headers, true ), 'PROCESSTYPE must follow LEVEL4.' );
 assert_same( 'LEADDATE', $headers[0], 'First EMEA column changed.' );
@@ -97,5 +98,13 @@ assert_same( '01234', $payload8['p_zip'], 'Form 8 ZIP lost its leading zero.' );
 assert_same( true, $payload8['p_consent_stay'], 'Form 8 stay-in-touch consent failed.' );
 assert_same( false, $payload8['p_consent_offers'], 'Form 8 offers consent failed.' );
 assert_same( true, $payload8['p_consent_partners'], 'Form 8 partner consent failed.' );
+
+$raw8 = Leapmotor_Formidable_Dealer::build_sync_payload( 124, $form8, array(
+	130 => '', 132 => array( 'first' => 'Ohne', 'last' => 'PLZ' ), 133 => 'raw@example.test', 134 => '',
+	137 => 'Stimme ich zu', 139 => 'Stimme ich NICHT zu', 141 => 'Stimme ich NICHT zu',
+), 'client', 'token', null, '2026-10-18T12:00:00+00:00' );
+assert_same( '', $raw8['p_zip'], 'Raw lead must preserve an absent ZIP.' );
+assert_same( null, $raw8['p_dealer_code'], 'Raw lead must not invent a dealer.' );
+assert_same( '2026-10-18T12:00:00+00:00', $raw8['p_lead_date'], 'Historical lead date changed.' );
 
 echo "formidable-plugin: ok\n";

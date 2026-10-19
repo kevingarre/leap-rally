@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Leapmotor Formidable Dealer Assignment
  * Description: Bietet den Leapmotor-Formularen die drei nächsten Händler an und überträgt Leads zentral.
- * Version: 2.1.4
+ * Version: 2.1.5
  * Author: DriveDesk
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 final class Leapmotor_Formidable_Dealer {
-	const VERSION = '2.1.4';
+	const VERSION = '2.1.5';
 	const API_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/nearest_dealers_for_zip';
 	const SYNC_URL = 'https://leapmotor.tt.kevingarre.de/rest/v1/rpc/submit_external_lead';
 	const OPTION_CLIENT_ID = 'leapmotor_integration_client_id';
@@ -54,6 +54,7 @@ final class Leapmotor_Formidable_Dealer {
 		add_action( 'admin_post_leapmotor_emea_export', array( __CLASS__, 'export' ) );
 		add_action( 'admin_post_leapmotor_integration_settings', array( __CLASS__, 'save_settings' ) );
 		add_action( 'admin_post_leapmotor_resync', array( __CLASS__, 'resync' ) );
+		add_action( 'admin_post_leapmotor_resync_festival', array( __CLASS__, 'resync_festival' ) );
 	}
 
 	public static function table_name() {
@@ -157,14 +158,20 @@ final class Leapmotor_Formidable_Dealer {
 		$meta = self::entry_meta( $entry_id, $config );
 		$zip = self::lead_zip( $meta, $config['zip'], $_POST );
 		$meta[ $config['zip'] ] = $zip;
-		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) { return; }
+		if ( ! preg_match( '/^[0-9]{5}$/', $zip ) ) {
+			self::sync_entry( $entry_id, $config, null, $meta );
+			return;
+		}
 		$a = self::$validated_assignments[ $config['form_id'] ] ?? null;
 		if ( ! is_array( $a ) ) {
 			$dealers = self::lookup( $zip );
 			$selected_code = isset( $_POST['leapmotor_dealer_code'] ) ? sanitize_text_field( wp_unslash( $_POST['leapmotor_dealer_code'] ) ) : '';
 			$a = is_wp_error( $dealers ) ? null : self::select_assignment( $dealers, $selected_code );
 		}
-		if ( ! is_array( $a ) ) { return; }
+		if ( ! is_array( $a ) ) {
+			self::sync_entry( $entry_id, $config, null, $meta );
+			return;
+		}
 		self::persist_entry_meta( $entry_id, $config['zip'], $zip );
 		self::persist_entry_meta( $entry_id, $config['city'], $a['lead_city'] );
 		self::persist_assignment( $entry_id, $zip, $a );
@@ -267,32 +274,34 @@ final class Leapmotor_Formidable_Dealer {
 		return array( trim( (string) $client ), trim( (string) $token ) );
 	}
 
-	private static function sync_entry( $entry_id, $config, $a, $meta = null ) {
+	private static function sync_entry( $entry_id, $config, $a, $meta = null, $lead_date = null ) {
 		global $wpdb;
 		list( $client, $token ) = self::integration_credentials();
-		if ( $client === '' || $token === '' ) { self::mark_sync( $entry_id, 'pending', 'Integration noch nicht konfiguriert.' ); return; }
+		if ( $client === '' || $token === '' ) { self::mark_sync( $entry_id, 'pending', 'Integration noch nicht konfiguriert.' ); return false; }
 		if ( ! is_array( $meta ) ) { $meta = self::entry_meta( $entry_id, $config ); }
-		$payload = self::build_sync_payload( $entry_id, $config, $meta, $client, $token, $a );
+		$payload = self::build_sync_payload( $entry_id, $config, $meta, $client, $token, $a, $lead_date );
 		$response = wp_remote_post( self::SYNC_URL, array( 'timeout' => 10, 'headers' => array( 'apikey' => self::API_KEY, 'Content-Type' => 'application/json', 'Accept' => 'application/json' ), 'body' => wp_json_encode( $payload ) ) );
-		if ( is_wp_error( $response ) ) { self::mark_sync( $entry_id, 'error', $response->get_error_message() ); return; }
+		if ( is_wp_error( $response ) ) { self::mark_sync( $entry_id, 'error', $response->get_error_message() ); return false; }
 		$code = wp_remote_retrieve_response_code( $response );
-		if ( $code < 200 || $code >= 300 ) { self::mark_sync( $entry_id, 'error', 'Backend HTTP ' . (int) $code ); return; }
+		if ( $code < 200 || $code >= 300 ) { self::mark_sync( $entry_id, 'error', 'Backend HTTP ' . (int) $code ); return false; }
 		$wpdb->update( self::table_name(), array( 'sync_status' => 'synced', 'sync_error' => null, 'synced_at' => current_time( 'mysql', true ) ), array( 'entry_id' => (int) $entry_id ), array( '%s', '%s', '%s' ), array( '%d' ) );
+		return true;
 	}
 
-	public static function build_sync_payload( $entry_id, $config, $meta, $client, $token, $a ) {
+	public static function build_sync_payload( $entry_id, $config, $meta, $client, $token, $a, $lead_date = null ) {
 		$name = self::name_parts( $meta[ $config['name'] ] ?? '' );
 		$contact = $config['contact'] ? sanitize_text_field( $meta[ $config['contact'] ] ?? '' ) : '';
 		$model = $config['model'] ? self::model_key( $meta[ $config['model'] ] ?? '' ) : '';
 		return array(
 			'p_client_id' => $client, 'p_token' => $token, 'p_source_form_id' => (string) $config['form_id'],
-			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => $config['source_event'], 'p_event_id' => $config['event_id'], 'p_lead_date' => gmdate( 'c' ),
+			'p_source_entry_id' => (string) $entry_id, 'p_source_event' => $config['source_event'], 'p_event_id' => $config['event_id'], 'p_lead_date' => $lead_date ?: gmdate( 'c' ),
 			'p_contact_intent' => $contact, 'p_vehicle_interest' => $model,
 			'p_zip' => sanitize_text_field( $meta[ $config['zip'] ] ?? '' ), 'p_first_name' => $name[0], 'p_last_name' => $name[1],
 			'p_email' => sanitize_email( $meta[ $config['email'] ] ?? '' ), 'p_phone' => sanitize_text_field( $meta[ $config['phone'] ] ?? '' ),
 			'p_consent_stay' => self::consent( $meta[ $config['consent_email'] ] ?? '' ) === '1',
 			'p_consent_offers' => self::consent( $meta[ $config['consent_profile'] ] ?? '' ) === '1',
-			'p_consent_partners' => self::consent( $meta[ $config['consent_partner'] ] ?? '' ) === '1', 'p_dealer_code' => $a['dealer_code'],
+			'p_consent_partners' => self::consent( $meta[ $config['consent_partner'] ] ?? '' ) === '1',
+			'p_dealer_code' => is_array( $a ) ? ( $a['dealer_code'] ?? null ) : null,
 		);
 	}
 
@@ -317,6 +326,7 @@ final class Leapmotor_Formidable_Dealer {
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="leapmotor_integration_settings">'; wp_nonce_field( 'leapmotor_integration_settings' );
 		echo '<table class="form-table"><tr><th><label for="lm-client">Client-ID</label></th><td><input class="regular-text" id="lm-client" name="client_id" value="' . esc_attr( $client ) . '"></td></tr><tr><th><label for="lm-token">Token</label></th><td><input class="regular-text" type="password" id="lm-token" name="token" placeholder="' . ( $token ? 'Gespeichert – leer lassen zum Beibehalten' : '' ) . '"></td></tr></table>'; submit_button( 'Integration speichern' ); echo '</form>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="leapmotor_resync">'; wp_nonce_field( 'leapmotor_resync' ); submit_button( 'Fehlende/fehlerhafte Synchronisierungen erneut senden', 'secondary' ); echo '</form>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="leapmotor_resync_festival">'; wp_nonce_field( 'leapmotor_resync_festival' ); submit_button( 'Festival 16.–18.10. vollständig synchronisieren', 'secondary' ); echo '</form>';
 		echo '<hr><p><a class="button" href="' . esc_url( $url ) . '">Lokale LEAD_EMEA_PERM-CSV exportieren</a></p></div>';
 	}
 
@@ -350,6 +360,45 @@ final class Leapmotor_Formidable_Dealer {
 			self::sync_entry( $item['id'], $config, $a, $meta );
 		}
 		wp_safe_redirect( admin_url( 'admin.php?page=leapmotor-emea-export&resynced=1' ) ); exit;
+	}
+
+	public static function resync_festival() {
+		if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Nicht erlaubt.', 403 ); }
+		check_admin_referer( 'leapmotor_resync_festival' );
+		if ( function_exists( 'set_time_limit' ) ) { @set_time_limit( 0 ); }
+		global $wpdb;
+		$items = $wpdb->get_results(
+			"SELECT i.id,i.form_id,i.created_at FROM {$wpdb->prefix}frm_items i
+			 LEFT JOIN " . self::table_name() . " a ON a.entry_id=i.id
+			 WHERE i.form_id IN (7,8) AND i.is_draft=0
+			   AND i.created_at >= '2026-10-16 00:00:00' AND i.created_at < '2026-10-19 00:00:00'
+			   AND (a.entry_id IS NULL OR a.sync_status<>'synced')
+			 ORDER BY i.id",
+			ARRAY_A
+		);
+		$attempted = 0;
+		$synced = 0;
+		foreach ( $items as $item ) {
+			$attempted++;
+			$config = self::form_config( $item['form_id'] );
+			$meta = self::entry_meta( $item['id'], $config );
+			$zip = trim( sanitize_text_field( $meta[ $config['zip'] ] ?? '' ) );
+			$a = null;
+			if ( preg_match( '/^[0-9]{5}$/', $zip ) ) {
+				$stored_code = $wpdb->get_var( $wpdb->prepare( 'SELECT dealer_code FROM ' . self::table_name() . ' WHERE entry_id=%d', $item['id'] ) );
+				if ( $stored_code ) {
+					$dealers = self::lookup( $zip );
+					$a = is_wp_error( $dealers ) ? null : self::select_assignment( $dealers, $stored_code );
+				}
+			} else {
+				$zip = '';
+				$meta[ $config['zip'] ] = '';
+			}
+			$gmt = get_gmt_from_date( $item['created_at'], 'Y-m-d H:i:s' );
+			$lead_date = gmdate( 'c', strtotime( $gmt . ' UTC' ) );
+			if ( self::sync_entry( $item['id'], $config, $a, $meta, $lead_date ) ) { $synced++; }
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=leapmotor-emea-export&festival_attempted=' . (int) $attempted . '&festival_synced=' . (int) $synced ) ); exit;
 	}
 
 	public static function headers() {
